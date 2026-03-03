@@ -1,0 +1,7 @@
+{
+  "name": "thoughtworks-frontend",
+  "description": "Frontend code generation consuming DDD API contracts",
+  "version": "2.0.0",
+  "skills": "./skills/",
+  "commands": "./commands/"
+}

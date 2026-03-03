@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# SessionStart hook for thoughtworks-all plugin (fullstack)
+
+set -euo pipefail
+
+# Compact trigger index — full content loaded on-demand via Skill tool
+session_context="<EXTREMELY_IMPORTANT>\nYou have the thoughtworks-all plugin installed.\n\nWhen the user's request involves DDD, domain modeling, layered architecture, Java code generation, or frontend development based on DDD API contracts, you MUST invoke the relevant skill BEFORE any response.\n\n| User Intent | Skill to Invoke |\n|---|---|\n| Backend DDD | thoughtworks-backend:thoughtworks-skills-ddd |\n| Frontend consuming DDD APIs | thoughtworks-frontend:thoughtworks-skills-frontend |\n| Fullstack end-to-end | thoughtworks-skills-all |\n\nFor the full skill catalog and trigger rules, invoke the 'using-thoughtworks' skill via the Skill tool.\n</EXTREMELY_IMPORTANT>"
+
+# Output context injection as JSON.
+cat <<EOF
+{
+  "additional_context": "${session_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "${session_context}"
+  }
+}
+EOF
+
+exit 0

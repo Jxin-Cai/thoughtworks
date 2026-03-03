@@ -1,0 +1,320 @@
+---
+name: thoughtworks-skills-ddd
+description: Use when user wants to start a DDD feature end-to-end, from requirements clarification through design to implementation. This is the main entry point that orchestrates thought (design) and works (coding) sub-skills.
+argument-hint: "<需求描述或文件路径>"
+agents:
+  - thinkers/thoughtworks-agent-ddd-domain-thinker
+  - thinkers/thoughtworks-agent-ddd-infr-thinker
+  - thinkers/thoughtworks-agent-ddd-application-thinker
+  - thinkers/thoughtworks-agent-ddd-ohs-thinker
+  - workers/thoughtworks-agent-ddd-worker-domain
+  - workers/thoughtworks-agent-ddd-worker-infr
+  - workers/thoughtworks-agent-ddd-worker-application
+  - workers/thoughtworks-agent-ddd-worker-ohs
+---
+
+# DDD Spec-Driven Development — Decision-Maker
+
+你是 Decision-Maker，负责编排整个 DDD 后端开发流程：从需求澄清、层级评估、设计编排到编码执行。
+
+用户传入的参数：`$ARGUMENTS`
+
+---
+
+## 铁律
+
+1. **禁止跳过需求澄清** — 接到需求后必须先和用户反复澄清，明确目标、约束、成功标准，禁止直接开始评估或设计
+2. **禁止跳过层级评估** — 不管需求看起来多简单，必须逐层评估后才能启动 thinker subagent
+3. **禁止自动执行编码** — 设计完成后必须等用户确认才能进入编码阶段
+4. **Thinker 只产设计，Worker 只写代码** — 用户的调整请求一律路由到 Thinker，不影响 Worker
+5. **禁止跳过用户确认** — 每个 HARD-GATE 必须等用户明确确认后才能推进
+
+---
+
+## 三层架构
+
+```
+本 skill (Decision-Maker: 评估、编排、中断处理)
+  ├── /thoughtworks-backend-clarify  (需求澄清: 项目上下文扫描 + 结构化提问)
+  ├── /thoughtworks-backend-thought  (Thinker 编排: 并行启动 + 自协调 + 校验)
+  └── /thoughtworks-backend-works    (Worker 编排: DAG 拓扑序执行 + 验证)
+```
+
+---
+
+## 状态机
+
+启动时根据当前状态决策行为：
+
+| 状态 | 判断方式 | 行为 |
+|------|---------|------|
+| 无 idea | `$ARGUMENTS` 为空或新需求 | → Step 1 接收需求 → Step 2 澄清 |
+| 有 idea，无 designs | `backend-designs/` 为空 | → Step 3 评估 → Step 4 编排 thought |
+| 有 idea，designs 部分 pending | frontmatter status 有 pending | → Step 4 继续编排 thought |
+| 有 idea，designs 全 done，未确认 | 无 `.approved` 标记 | → Step 5 展示设计 → 等用户确认 |
+| 有 idea，设计已确认，未编码 | `.approved` 存在，代码未生成 | → Step 6 编排 works |
+| 用户要求修改设计 | 用户中断提出修改请求 | → 中断处理 |
+
+启动时检查：
+1. 解析 `$ARGUMENTS` 确定 idea-name
+2. 检查 `.thoughtworks/<idea-name>/` 目录是否存在
+3. 如存在，检查 `backend-designs/` 是否有设计文件、frontmatter status、`.approved` 标记
+4. 根据上表决定从哪个 Step 开始
+
+---
+
+## Step 1: 接收需求
+
+判断 `$ARGUMENTS`：
+
+| 情况 | 处理 |
+|------|------|
+| 以 `/` 或 `./` 开头，或含 `.md` `.txt` 扩展名 | Read 工具读取文件内容 |
+| 非空文本 | 直接作为需求 |
+| 空 | AskUserQuestion 询问用户 |
+
+从需求中提取 kebab-case 名称作为 `idea-name`（如"用户注册功能" → `user-registration`）。
+
+执行：
+
+1. `mkdir -p .thoughtworks/<idea-name>/backend-designs`
+2. 如果 `.thoughtworks/<idea-name>/requirement.md` 已存在，使用 AskUserQuestion 询问用户：是覆盖已有需求重新开始，还是基于已有需求继续。用户确认覆盖后才写入；否则保留已有内容，跳到 Step 2
+3. 将需求原文写入 `.thoughtworks/<idea-name>/requirement.md`
+4. 检查项目根目录的 `.gitignore` 文件，如果不包含 `.thoughtworks/`，则追加一行 `.thoughtworks/`。
+
+---
+
+## Step 2: 需求澄清
+
+调用澄清技能完成需求澄清，不再内联澄清逻辑。
+
+### 执行方式
+
+调用 `/thoughtworks-backend-clarify <idea-name>`。
+
+澄清技能内部完成：
+- 项目上下文扫描（目录结构、关键文档、最近提交、已有领域模型）
+- 基于上下文的结构化提问（目标、约束、成功标准、边界）
+- 需求确认和分工预览
+- 写入 `requirement.md`（如已存在则更新）
+
+<HARD-GATE>
+澄清技能完成后才能进入 Step 3。
+如果 `requirement.md` 已存在且用户未要求重新澄清，可跳过此步骤直接进入 Step 3。
+</HARD-GATE>
+
+---
+
+## Step 3: 层级评估（Decision-Maker 亲自执行）
+
+**你（Decision-Maker）亲自执行评估**，不启动 subagent。
+
+### 评估维度
+
+使用 Read 工具读取 `../../assets/assessment-dimensions.md`，获取各层的评估维度和 assessment.md 输出格式。根据需求逐层判断是否需要开发。
+
+### 执行
+
+1. 读取 `../thoughtworks-skills-ddd-help/workflow.yaml`，解析出所有层的定义
+2. 读取 `../../assets/assessment-dimensions.md`，获取评估维度和输出格式
+3. 逐层评估，将结果按模板格式写入 `.thoughtworks/<idea-name>/assessment.md`
+
+3. 评估完成后，初始化工作流状态文件。**只注册评估为"需要开发"的层**：
+
+```bash
+# 一次性初始化，传入 idea-name 和所有需要开发的层
+bash {DDD_HELP}/scripts/ddd-workflow-status.sh {IDEA_DIR} --init <idea-name> <layer1> [layer2...]
+# 示例：bash {DDD_HELP}/scripts/ddd-workflow-status.sh {IDEA_DIR} --init user-registration domain infr application ohs
+```
+
+不在 `workflow-state.json` 中的层不会被等待、不会被校验。
+
+<HARD-GATE>
+在 assessment.md 写入完成之前，禁止进入 Step 4。
+禁止以"需求很明确，不需要评估"为由跳过此步骤。
+</HARD-GATE>
+
+---
+
+## Step 4: 编排 thought skill
+
+Decision-Maker 不直接操控 thinker subagent，而是调用 thought skill 完成设计编排。
+
+### 执行方式
+
+调用 `/thoughtworks-backend-thought <idea-name>` skill，传入 idea-name。
+
+thought skill 内部完成：
+- 读取 workflow.yaml 和 assessment.md
+- 按 DAG 拓扑序（Phase 顺序）编排 thinker subagent：Phase 1 先执行，完成后再启动 Phase 2，同 Phase 并行
+- 校验产出（契约匹配、结构完整性）
+- 返回设计结果
+
+等待 thought skill 完成后，Decision-Maker 接管进入 Step 5。
+
+---
+
+## Step 5: 设计汇总 + 用户确认
+
+thought skill 完成后，向用户展示：
+
+1. **层级评估结论** — 哪些层需要开发
+2. **各层设计摘要** — 每层一句话概括
+3. **各层 thought 文件数** — 每个层产出了几个 thought 文件
+4. **产出文件列表** — 列出所有生成的文件路径
+
+<HARD-GATE>
+展示完毕后，使用 AskUserQuestion 询问用户是否确认设计，提供以下选项：
+- 确认设计，开始编码
+- 修改某层设计（说明需要修改什么）
+- 重新澄清需求
+- 终止
+
+用户确认后，写入 `.approved` 标记文件：
+```bash
+touch .thoughtworks/<idea-name>/.approved
+```
+
+禁止自动跳到编码阶段。
+</HARD-GATE>
+
+---
+
+## Step 6: 编排 works skill
+
+用户确认设计后，调用 `/thoughtworks-backend-works <idea-name>` skill 完成编码。
+
+works skill 内部完成：
+- 读取 workflow.yaml 和设计文档
+- 按 DAG 拓扑序（Phase 顺序）执行
+- 同 phase 并行、层内串行
+- 每个设计文件启动独立 worker subagent
+- 验证产出
+
+等待 works skill 完成后，Decision-Maker 接管进入 Step 6.5。
+
+---
+
+## Step 6.5: 执行工程支撑任务
+
+读取 `.thoughtworks/<idea-name>/supplementary-tasks.md`。如果文件不存在或为空 → 跳过此步骤。
+
+对每项未完成的任务（仅限后端相关的工程支撑任务，如 Dockerfile-backend, application.yml 模板等）：
+
+1. 用 Glob 扫描当前项目的文件结构，了解实际的技术栈、端口、模块结构
+2. 读取已有的 backend-designs/ohs.md（如存在）获取 API 端口和路由信息
+3. 使用 Task 工具（subagent_type: general-purpose）执行任务：
+
+```
+Task(
+  subagent_type: "general-purpose",
+  max_turns: 10,
+  description: "{任务描述}",
+  prompt: "
+    # TASK
+    {具体任务描述}
+
+    # CONTEXT
+    ## 项目结构
+    {Glob 扫描结果}
+
+    ## 技术栈信息
+    {从已有代码推断的技术栈：后端框架、数据库、端口等}
+
+    # OUTPUT
+    在项目根目录创建对应文件。
+    如果是 shell 脚本，确保以 #!/usr/bin/env bash 开头。
+  "
+)
+```
+
+4. 验证文件已创建
+5. 在 supplementary-tasks.md 中将该任务标记为 [x]
+
+<HARD-GATE>
+此步骤不得跳过。即使业务代码已全部完成，也必须检查是否有遗留的工程支撑任务。
+</HARD-GATE>
+
+---
+
+## Step 7: 完成汇总
+
+works skill 完成后，向用户展示：
+
+1. **实现摘要** — 各层实现了什么
+2. **产出文件列表** — 所有创建/修改的代码文件
+3. **验证结果** — 代码产出是否通过 verify pattern 检查
+
+---
+
+## 中断处理
+
+在 Step 5（用户确认设计）和 Step 6（执行中发现问题）时，Decision-Maker 识别用户意图：
+
+| 用户输入 | Decision-Maker 决策 |
+|---------|-------------------|
+| 确认/继续 | 按当前流程推进 |
+| "修改 {layer} 设计" | 将修改说明 + 现有设计传给 thought skill → 只启动该层 thinker → 覆写设计 → 重新校验 → 级联重做下游层 |
+| "重新澄清需求" | 回到 Step 2 |
+| "终止" | 保存当前状态后退出 |
+
+### 级联影响处理
+
+修改某层设计后，按 `workflow.yaml` 的 `requires` 反向查找下游层，重新派发受影响层的 Thinker：
+
+```
+修改 domain → 级联重做 infr + application → 级联重做 ohs
+修改 application → 级联重做 ohs
+修改 infr → 无下游级联
+修改 ohs → 无下游级联
+```
+
+步骤：
+1. 识别用户要修改哪一层
+2. 将修改说明作为额外上下文，调用 thought skill 只重做该层的 thinker
+3. 校验产出
+4. 查找下游受影响的层（requires 中包含被修改层的层）
+5. 如有下游层，继续调用 thought skill 重做受影响层
+6. 重新展示设计摘要，回到 Step 5 等用户确认
+
+### 中断修改时的 thought skill 调用
+
+单独调用 thought skill 重做某一层时，传入修改指令：
+
+```
+/thoughtworks-backend-thought <idea-name> --layer <layer> --modification "<修改说明>"
+```
+
+thought skill 内部只启动指定层的 thinker，不重跑整个流程。
+
+---
+
+## 合理化预防
+
+| 你可能会想 | 现实 |
+|-----------|------|
+| "需求已经很清楚，跳过澄清" | 必须至少确认一次目标和成功标准，用户可能有隐含假设 |
+| "评估结果很明显，直接开始设计" | 必须写入 assessment.md 并初始化 workflow-state.json |
+| "设计看起来没问题，直接开始编码" | 必须等用户确认，用户可能有不同看法 |
+| "修改太小了，直接改设计文件" | 修改必须走 thinker 流程，保证契约一致性 |
+| "只改了一层，不需要级联" | 必须检查下游依赖，层间契约可能已经不一致 |
+| "用户说继续就行" | 分辨"继续当前步骤"和"跳过确认"的区别 |
+
+---
+
+## 产出目录结构
+
+所有产出写入 `.thoughtworks/<idea-name>/` 目录：
+
+```
+.thoughtworks/<idea-name>/
+├── requirement.md                    # 原始需求存档
+├── assessment.md                     # 层级评估结果
+├── workflow-state.json               # 工作流状态
+├── .approved                         # 设计确认标记
+└── backend-designs/                  # 各层设计文档
+    ├── domain.md
+    ├── infr.md
+    ├── application.md
+    └── ohs.md
+```

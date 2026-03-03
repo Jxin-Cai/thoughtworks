@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Pre-commit hook: check if structural files changed without README.md update.
+# Install: ln -sf ../../hooks/check-readme-sync .git/hooks/pre-commit
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Structural files that should trigger README update
+STRUCTURAL_PATTERNS=(
+  "skills/*/SKILL.md"
+  "commands/*.md"
+  "backend/skills/*/SKILL.md"
+  "backend/commands/*.md"
+  "backend/agents/*/*.md"
+  "frontend/skills/*/SKILL.md"
+  "frontend/commands/*.md"
+  "frontend/agents/*/*.md"
+  ".claude-plugin/plugin.json"
+)
+
+cd "$PLUGIN_ROOT"
+
+# Check if any structural file is staged
+structural_changed=false
+for pattern in "${STRUCTURAL_PATTERNS[@]}"; do
+  if git diff --cached --name-only -- "$pattern" 2>/dev/null | grep -q .; then
+    structural_changed=true
+    break
+  fi
+done
+
+if [ "$structural_changed" = true ]; then
+  # Check if README.md is also staged
+  if ! git diff --cached --name-only -- README.md | grep -q .; then
+    echo ""
+    echo "WARNING: Structural files changed but README.md was not updated."
+    echo "Changed structural files:"
+    for pattern in "${STRUCTURAL_PATTERNS[@]}"; do
+      git diff --cached --name-only -- "$pattern" 2>/dev/null
+    done
+    echo ""
+    echo "Consider updating README.md to reflect these changes."
+    echo "To skip this check: git commit --no-verify"
+    exit 1
+  fi
+fi
+
+exit 0

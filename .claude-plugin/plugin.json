@@ -1,0 +1,16 @@
+{
+  "name": "thoughtworks-all",
+  "description": "DDD Spec-Driven Development framework: fullstack design and code generation",
+  "version": "2.0.0",
+  "author": {
+    "name": "jxin",
+    "email": "jxin@thoughtworks.com"
+  },
+  "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+  "repository": "https://github.com/Jxin-Cai/thoughtworks",
+  "license": "MIT",
+  "keywords": ["ddd", "domain-driven-design", "java", "layered-architecture", "code-generation", "frontend", "fullstack"],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "hooks": "./hooks/hooks.json"
+}

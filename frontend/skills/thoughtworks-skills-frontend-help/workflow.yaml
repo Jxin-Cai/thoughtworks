@@ -1,0 +1,19 @@
+# Frontend 工作流定义
+# thoughtworks-frontend-thought / thoughtworks-frontend-works 读取此文件决定执行顺序
+
+name: frontend-layered
+version: 1
+description: 前端工作流
+
+layers:
+  - id: frontend
+    phase: 1
+    design-template: ../thoughtworks-skills-frontend-thought/assets/frontend-design.md
+    thinker-ref: ../../agents/thinkers/thoughtworks-agent-frontend-thinker.md
+    worker-ref: ../../agents/workers/thoughtworks-agent-frontend-worker.md
+    requires: []
+    verify:
+      - pattern: "**/src/pages/**/*.tsx"
+        description: 验证页面组件已创建
+      - pattern: "**/src/api/**/*.ts"
+        description: 验证 API 调用层已创建
