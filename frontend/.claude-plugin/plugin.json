@@ -1,5 +1,6 @@
 {
   "name": "thoughtworks-frontend",
   "description": "Frontend code generation consuming DDD API contracts",
-  "version": "2.0.0"
+  "version": "2.0.0",
+  "agents": "./agents/"
 }

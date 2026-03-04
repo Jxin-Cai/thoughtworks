@@ -1,5 +1,6 @@
 {
   "name": "thoughtworks-backend",
   "description": "DDD backend: design and code generation for Java layered architecture",
-  "version": "2.0.0"
+  "version": "2.0.0",
+  "agents": "./agents/"
 }

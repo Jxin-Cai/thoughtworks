@@ -9,5 +9,8 @@
   "homepage": "https://github.com/Jxin-Cai/thoughtworks",
   "repository": "https://github.com/Jxin-Cai/thoughtworks",
   "license": "MIT",
-  "keywords": ["ddd", "domain-driven-design", "java", "layered-architecture", "code-generation", "frontend", "fullstack"]
+  "keywords": ["ddd", "domain-driven-design", "java", "layered-architecture", "code-generation", "frontend", "fullstack"],
+  "agents": ["./backend/agents/", "./frontend/agents/"],
+  "skills": ["./skills/", "./backend/skills/", "./frontend/skills/"],
+  "commands": ["./commands/", "./backend/commands/", "./frontend/commands/"]
 }
