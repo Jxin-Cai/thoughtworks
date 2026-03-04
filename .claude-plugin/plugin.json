@@ -10,7 +10,18 @@
   "repository": "https://github.com/Jxin-Cai/thoughtworks",
   "license": "MIT",
   "keywords": ["ddd", "domain-driven-design", "java", "layered-architecture", "code-generation", "frontend", "fullstack"],
-  "agents": ["./backend/agents/", "./frontend/agents/"],
-  "skills": ["./skills/", "./backend/skills/", "./frontend/skills/"],
-  "commands": ["./commands/", "./backend/commands/", "./frontend/commands/"]
+  "agents": [
+    "./backend/agents/thoughtworks-agent-ddd-application-thinker.md",
+    "./backend/agents/thoughtworks-agent-ddd-domain-thinker.md",
+    "./backend/agents/thoughtworks-agent-ddd-infr-thinker.md",
+    "./backend/agents/thoughtworks-agent-ddd-ohs-thinker.md",
+    "./backend/agents/thoughtworks-agent-ddd-worker-application.md",
+    "./backend/agents/thoughtworks-agent-ddd-worker-domain.md",
+    "./backend/agents/thoughtworks-agent-ddd-worker-infr.md",
+    "./backend/agents/thoughtworks-agent-ddd-worker-ohs.md",
+    "./frontend/agents/thoughtworks-agent-frontend-thinker.md",
+    "./frontend/agents/thoughtworks-agent-frontend-worker.md"
+  ],
+  "skills": ["./backend/skills/", "./frontend/skills/"],
+  "commands": ["./backend/commands/", "./frontend/commands/"]
 }
