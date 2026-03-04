@@ -3,6 +3,8 @@ name: thoughtworks-agent-frontend-worker
 description: 前端执行者。根据前端设计文档和 frontend-spec 规范，实现具体的前端代码。在 /thoughtworks-frontend-works 流程中被调用。
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
+maxTurns: 15
+permissionMode: acceptEdits
 skills:
   - thoughtworks-skills-frontend-spec
 ---
