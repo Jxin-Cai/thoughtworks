@@ -39,6 +39,22 @@ claude --plugin-dir ./thoughtworks/backend        # 仅后端
 claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 ```
 
+> ⚠️ 安装或更新插件后，需要重启 Claude Code 才能生效。
+
+## 插件职责边界
+
+三种安装模式的能力范围互不越界：
+
+| 安装模式 | 后端（DDD 四层） | 前端 | 前后端联动 |
+|---------|:-:|:-:|:-:|
+| `thoughtworks-backend` | ✅ | ❌ | ❌ |
+| `thoughtworks-frontend` | ❌ | ✅ | ❌ |
+| `thoughtworks-all` | ✅ | ✅ | ✅ |
+
+- 仅安装后端插件时，即使需求描述涉及前端，也只生成后端代码
+- 仅安装前端插件时，即使需求描述涉及后端，也只生成前端代码
+- 安装全栈插件后，才会自动编排前后端联动（后端先行，前端消费 OHS 导出契约）
+
 ## 使用
 
 ### 全栈（推荐）

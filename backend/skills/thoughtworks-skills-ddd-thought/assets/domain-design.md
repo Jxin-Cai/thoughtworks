@@ -165,9 +165,9 @@ public class {DomainService} {
 
 | 接口名 | 方法签名 | 返回类型 | 行为描述 |
 |--------|---------|---------|---------|
-| {AggregateRoot}Repository | `{方法签名}` | {返回类型} | {行为描述：save 的 insert/update 策略、查询的加载策略、删除的级联策略} |
-| {AggregateRoot}EventPublisher | `{方法签名}` | {返回类型} | {行为描述：投递语义和消费方预期} |
-| {ExternalDomain}AclService | `{方法签名}` | {返回类型} | {行为描述：外部域实际接口、ACL 内部适配逻辑、超时/重试/失败处理} |
+| {AggregateRoot}Repository | `{方法签名}` | {返回类型} | {行为描述：save 时 insert-or-update 策略及冲突处理、查询时的加载策略及关联抓取范围、删除时的级联策略} |
+| {AggregateRoot}EventPublisher | `{方法签名}` | {返回类型} | {行为描述：投递语义（至少一次/恰好一次）、消费方预期行为及幂等要求} |
+| {ExternalDomain}AclService | `{方法签名}` | {返回类型} | {行为描述：外部域实际接口及版本、ACL 内部适配与数据映射逻辑、超时/重试/熔断策略} |
 
 <!-- REQUIRED -->
 ## 实现清单
