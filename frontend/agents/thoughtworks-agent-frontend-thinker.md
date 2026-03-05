@@ -3,7 +3,7 @@ name: thoughtworks-agent-frontend-thinker
 description: 前端设计专家。根据 OHS 层导出契约和需求文档，按照模板和 frontend-spec 规范，产出完整的前端设计文档。在 /thoughtworks-frontend-thought 流程中被调用。
 tools: Read, Write, Glob, Grep
 disallowedTools: Edit
-model: haiku
+model: opus
 maxTurns: 20
 permissionMode: default
 skills:
@@ -26,7 +26,9 @@ skills:
 
 ## 设计步骤
 
-0. **填写依赖契约** — 从 OHS 层设计文档的「导出契约」区提取 API 端点、Request DTO、Response DTO 定义，填入前端模板的「依赖契约」区
+0. **填写依赖契约** — 根据 CONTEXT 中提供的上游信息填写：
+   - **如果 CONTEXT 包含「上游导出契约」或「OHS 层导出契约」** — 从中逐条提取 API 端点、Request DTO、Response DTO 定义填入依赖契约表，子表标题标注（来自 ohs.md 导出契约）
+   - **如果 CONTEXT 包含「OHS 层已有代码」** — 按扫描指引，使用 Glob 定位需求相关的 Controller 和 DTO 文件，用 Read 提取所需的 API 端点、Request/Response DTO 字段定义，填入依赖契约表，子表标题标注（来自已有代码），每行说明列附注源文件路径。只扫描 MISSION 工作目标涉及的能力，不做全量扫描
 1. **设计页面与路由** — 根据 API 端点设计页面，每个主要 API 对应一个页面或页面区域
    - 列出所有页面及其路由路径
    - 标注页面之间的导航关系
@@ -87,12 +89,20 @@ skills:
 
 ### 步骤 2: OHS 契约一致性验证
 
-对照 OHS 层导出契约检查：
+根据依赖契约的来源执行对应的验证策略：
 
-- **依赖契约是否完整覆盖？** — OHS 层导出的每个 API 端点、Request DTO、Response DTO，是否都在本层依赖契约中列出？
-- **每个端点是否有对应的前端 API 调用函数？** — 禁止端点没有对应的前端调用
-- **Request/Response DTO 字段映射是否完整？** — 前端类型定义的字段必须与 OHS 层 DTO 完全对齐
-- **每个 Response 字段是否都有展示位置？** — 禁止 Response 中的字段在前端没有对应的展示组件或区域
+**来自设计文档时：**
+- 对照 OHS 层导出契约检查：每个 API 端点、Request DTO、Response DTO，是否都在本层依赖契约中列出？
+- Request/Response DTO 字段映射是否完整？前端类型定义的字段必须与 OHS 层 DTO 完全对齐
+
+**来自已有代码时：**
+- 使用 Read 工具重新读取说明列中标注的源文件路径，验证依赖契约中记录的 API 端点和 DTO 字段确实存在
+- 如果发现签名不匹配，立即修正依赖契约
+- Request/Response DTO 字段映射是否完整？前端类型定义的字段必须与源代码中的 DTO 定义完全对齐
+
+**共同验证：**
+- 每个端点是否有对应的前端 API 调用函数？禁止端点没有对应的前端调用
+- 每个 Response 字段是否都有展示位置？禁止 Response 中的字段在前端没有对应的展示组件或区域
 
 ### 步骤 3: 前端规范验证
 

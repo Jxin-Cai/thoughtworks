@@ -15,27 +15,33 @@
 <!-- REQUIRED -->
 ## 依赖契约
 
-> 以下接口和对象定义来自 Application 层导出契约，OHS 层作为消费方使用。
+> 以下接口和对象定义来自 Application 层，OHS 层作为消费方使用。
+> 来源为以下之一：① 当前 idea 的 Application 层设计文档导出契约；② 已有代码（标注源文件路径）。
+
+<!-- 来源标注规则：
+- 来自设计文档时，子表标题后标注：（来自 application.md 导出契约）
+- 来自已有代码时，子表标题后标注：（来自已有代码）并在每行「说明」列末尾附注源文件路径
+-->
 
 ### 来自 Application 层
 
-#### ApplicationService 方法
+#### ApplicationService 方法（来自 {application.md 导出契约 / 已有代码}）
 
-| 类名 | 方法签名 | 返回类型 | 用例说明 |
-|------|---------|---------|---------|
-| {Business}ApplicationService | `{方法签名}` | {返回类型} | {用例说明} |
+| 类名 | 方法签名 | 返回类型 | 用例说明 | 本层用途 |
+|------|---------|---------|---------|---------|
+| {Business}ApplicationService | `{方法签名}` | {返回类型} | {用例说明} | {如：Controller 接收请求后委托执行业务逻辑} |
 
-#### Command 定义
+#### Command 定义（来自 {application.md 导出契约 / 已有代码}）
 
-| 类名 | 字段 | 类型 | 约束 |
-|------|------|------|------|
-| {Operation}Command | {字段} | {类型} | {约束} |
+| 类名 | 字段 | 类型 | 约束 | 本层用途 |
+|------|------|------|------|---------|
+| {Operation}Command | {字段} | {类型} | {约束} | {如：由 Request DTO 转换构建后传入 ApplicationService} |
 
-#### 返回类型定义
+#### 返回类型定义（来自 {application.md 导出契约 / 已有代码}）
 
-| 类名 | 字段 | 类型 | 说明 |
-|------|------|------|------|
-| {ReturnType} | {字段} | {类型} | {说明} |
+| 类名 | 字段 | 类型 | 说明 | 本层用途 |
+|------|------|------|------|---------|
+| {ReturnType} | {字段} | {类型} | {说明} | {如：转换为 Response DTO 返回给调用方} |
 
 <!-- OPTIONAL: 无 Domain 层直接依赖时可省略 -->
 ### 来自 Domain 层
@@ -110,6 +116,27 @@
 
 **实现映射**：
 - 调用 `{Business}ApplicationService.{method}()`
+
+<!-- REQUIRED -->
+## 导出契约
+
+### API 端点
+
+| HTTP 方法 | URL | 用途 | Request DTO | Response DTO |
+|-----------|-----|------|-------------|--------------|
+| {METHOD} | /api/{resource} | {一句话描述} | {Operation}Request | {Operation}Response |
+
+### Request DTO 定义
+
+| DTO 类名 | 字段 | 类型 | 校验注解 | 说明 |
+|----------|------|------|---------|------|
+| {Operation}Request | {字段} | {类型} | {校验注解} | {说明} |
+
+### Response DTO 定义
+
+| DTO 类名 | 字段 | 类型 | 说明 |
+|----------|------|------|------|
+| {Operation}Response | {字段} | {类型} | {说明} |
 
 <!-- REQUIRED -->
 ## 实现清单

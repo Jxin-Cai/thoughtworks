@@ -99,6 +99,41 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 如果某层不需要开发，不注册到 workflow-state.json，该层的 Phase 直接跳过。
 
+### CONTEXT 区块构建规则（上游契约来源判定）
+
+对于当前层的每个上游依赖（`workflow.yaml` 中 `requires` 列出的层），按以下优先级判定：
+
+**情况 A：上游设计文档存在**
+即 `backend-designs/{upstream-layer}.md` 存在于当前 idea 目录。
+→ 现有逻辑：提取 `## 导出契约` 区原文，完整内联到 CONTEXT 的 `## 上游导出契约` 子区块。
+
+**情况 B：上游设计文档不存在（上游层被评估为"不需要"）**
+即 `assessment.md` 中该上游层标记为"不需要"。
+→ 在 CONTEXT 中替换为 `## 上游已有代码` 子区块：
+
+```
+## 上游已有代码（{upstream-layer} 层 — 无当前设计文档）
+
+{upstream-layer} 层在本次需求中不需要新开发，已有实现存在于代码库中。
+你需要根据 MISSION 中的工作目标，使用 Glob 和 Grep 工具从已有代码中**按需扫描**所需的上游能力。
+
+### 扫描指引
+- assessment.md 中关于该层的说明："{从 assessment.md 提取该层的说明}"
+- 建议扫描的包路径模式（按需选用）：
+  - 聚合根/实体：`**/domain/**/model/*.java`
+  - 仓储接口：`**/domain/**/repository/*.java`
+  - 领域事件：`**/domain/**/event/*.java`
+  - 防腐层接口：`**/domain/**/acl/*.java`
+  - 领域服务：`**/domain/**/service/*.java`
+  - 应用服务：`**/application/**/*ApplicationService.java`
+  - Command：`**/application/**/*Command.java`
+
+### 扫描原则
+1. **需求驱动** — 只扫描 MISSION 工作目标中涉及的类和方法，不做全量扫描
+2. **签名提取** — 对找到的类，用 Read 工具读取其公有方法签名和关键字段
+3. **来源标注** — 依赖契约子表标题标注（来自已有代码），每行说明列附注源文件路径
+```
+
 ### 构建 subagent prompt
 
 对每个需要的层，从 `workflow.yaml` 中读取该层的 `thinker-ref`（获取 agent name）和 `design-template`（指向 `assets/{layer}-design.md`）路径，然后按以下结构组装 prompt：
@@ -146,17 +181,24 @@ Task(
 
     # CONTEXT（输入文档 — 读取作为上下文）
 
-    ## 上游导出契约（你的依赖契约必须与此精确对应）
-    {从上游设计文档中提取的 ## 导出契约 区的原文，如无上游则省略}
+    {对每个上游层，按 CONTEXT 区块构建规则的情况 A 或 B 生成对应子区块：}
 
-    ## 需求
-    {requirement.md 的完整内容}
+    {情况 A — 上游设计文档存在时：}
+    ## 上游导出契约（你的依赖契约必须与此精确对应）
+    {从上游设计文档中提取的 ## 导出契约 区的原文}
 
     ## 上游设计文档
     如需参考上游设计文档原文，使用 Read 工具按需加载以下文件：
     {列出上游设计文档的绝对路径列表}
 
-    以上文件包含上游层的完整设计，你的依赖契约必须与上游导出契约精确对应。
+    {情况 B — 上游设计文档不存在时：}
+    ## 上游已有代码（{upstream-layer} 层 — 无当前设计文档）
+    {按 CONTEXT 区块构建规则情况 B 的模板生成，包含扫描指引和扫描原则}
+
+    {无上游依赖时（如 domain 层）：省略上游相关子区块}
+
+    ## 需求
+    {requirement.md 的完整内容}
 
     ---
 

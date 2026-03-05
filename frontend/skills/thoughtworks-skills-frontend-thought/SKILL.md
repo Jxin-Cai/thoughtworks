@@ -39,7 +39,7 @@ agents:
 
 检查前置条件：
 1. `.thoughtworks/<idea-name>/frontend-requirement.md` 必须存在
-2. `.thoughtworks/<idea-name>/backend-designs/ohs.md` 必须存在
+2. `.thoughtworks/<idea-name>/backend-designs/ohs.md` 存在，或者项目中已有 OHS 层代码（此时 Thinker 将从已有代码扫描 API 端点）
 
 读取 frontend-assessment.md（如存在），确定前端工作范围。
 
@@ -106,11 +106,28 @@ Task(
 
     # CONTEXT
 
+    {如果 backend-designs/ohs.md 存在：}
     ## OHS 层导出契约
     {从 backend-designs/ohs.md 提取的 ## 导出契约 区原文，如无则提取 ## API 端点 区}
 
     ## OHS 层设计文档
     如需参考 OHS 层完整设计，使用 Read 工具加载：`{ohs.md 的绝对路径}`
+
+    {如果 backend-designs/ohs.md 不存在：}
+    ## OHS 层已有代码（无当前设计文档）
+
+    OHS 层在本次需求中不需要新开发，已有 API 端点存在于代码库中。
+    你需要根据 MISSION 中的工作目标，使用 Glob 和 Grep 工具从已有代码中按需扫描所需的 API 端点。
+
+    ### 扫描指引
+    - 建议扫描的包路径模式：`**/ohs/**/*Controller.java`
+    - 关注 @RequestMapping、@GetMapping、@PostMapping 等注解提取 URL 和方法签名
+    - 关注 Request/Response DTO 类的字段定义
+
+    ### 扫描原则
+    1. 需求驱动 — 只扫描前端需求涉及的 API 端点
+    2. 签名提取 — 读取 Controller 方法签名和 DTO 字段
+    3. 来源标注 — 依赖契约子表标题标注（来自已有代码），每行说明列附注源文件路径
 
     ## 前端需求
     {frontend-requirement.md 完整内容}

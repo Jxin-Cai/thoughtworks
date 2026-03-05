@@ -3,7 +3,7 @@ name: thoughtworks-agent-ddd-application-thinker
 description: DDD Application 层设计专家。根据 Domain 层设计文档，按照模板和 java-spec application 规范，产出完整的 Application 层设计文档。在 /thoughtworks-backend-thought 流程中被调用。
 tools: Read, Write, Glob, Grep
 disallowedTools: Edit
-model: opus
+model: sonnet
 maxTurns: 20
 permissionMode: default
 skills:
@@ -27,7 +27,9 @@ skills:
 
 ## 设计步骤
 
-0. **填写依赖契约** — 从 Domain 层设计文档的「导出契约」区提取聚合根 API、值对象、仓储/事件发布/防腐层接口签名，填入 Application 层模板的「依赖契约」区
+0. **填写依赖契约** — 根据 CONTEXT 中提供的上游信息填写：
+   - **如果 CONTEXT 包含「上游导出契约」** — 从中逐条提取签名填入依赖契约表，子表标题标注（来自 domain.md 导出契约）
+   - **如果 CONTEXT 包含「上游已有代码」** — 按扫描指引，使用 Glob 定位需求相关的 Java 文件，用 Read 提取所需的方法签名和字段定义，填入依赖契约表，子表标题标注（来自已有代码），每行说明列附注源文件路径。只扫描 MISSION 工作目标涉及的能力，不做全量扫描
 1. **识别业务用例** — 从需求中提取所有业务用例
    - 每个写操作用例 → 一个 Command + 一个应用服务方法
    - 每个查询用例 → 一个应用服务方法（readOnly 事务）
@@ -103,11 +105,19 @@ skills:
 
 ### 步骤 3: 上游契约一致性验证
 
-对照 Domain 层导出契约检查：
+根据依赖契约的来源执行对应的验证策略：
 
-- **依赖契约是否完整覆盖？** — Domain 层导出的每个你使用的接口，是否都在本层依赖契约中列出？
-- **编排步骤中调用的每个方法，是否都能在依赖契约中找到？** — 不允许调用依赖契约中没有的接口
-- **事务标注是否完整？** — 每个方法是否都有 @Transactional 标注？
+**来自设计文档时：**
+- 对照上游导出契约检查：你使用的每个接口是否都在依赖契约中列出？
+- 编排步骤中调用的每个方法，是否都能在依赖契约中找到？
+
+**来自已有代码时：**
+- 使用 Read 工具重新读取说明列中标注的源文件路径，验证依赖契约中记录的方法签名确实存在
+- 编排步骤中调用的每个方法，是否都能在依赖契约中找到，且源文件中确实有该方法？
+- 如果发现签名不匹配，立即修正依赖契约
+
+**共同验证：**
+- 事务标注是否完整？每个方法是否都有 @Transactional 标注？
 
 ### 步骤 4: 实现推演验证
 

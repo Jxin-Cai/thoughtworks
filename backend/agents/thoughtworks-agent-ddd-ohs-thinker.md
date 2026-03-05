@@ -27,7 +27,9 @@ skills:
 
 ## 设计步骤
 
-0. **填写依赖契约** — 从 Application 层设计文档的「导出契约」区提取应用服务 API、Command 定义、返回类型定义，填入 OHS 层模板的「依赖契约」区；如需直接使用 Domain 层值对象，也一并填入
+0. **填写依赖契约** — 根据 CONTEXT 中提供的上游信息填写：
+   - **如果 CONTEXT 包含「上游导出契约」** — 从中逐条提取应用服务 API、Command 定义、返回类型定义填入依赖契约表，子表标题标注（来自 application.md 导出契约）；如需直接使用 Domain 层值对象，也一并填入
+   - **如果 CONTEXT 包含「上游已有代码」** — 按扫描指引，使用 Glob 定位需求相关的 Java 文件，用 Read 提取所需的应用服务方法签名、Command 字段和返回类型，填入依赖契约表，子表标题标注（来自已有代码），每行说明列附注源文件路径。只扫描 MISSION 工作目标涉及的能力，不做全量扫描
 1. **设计 API 端点** — 根据 Application 层的业务用例设计 RESTful API
    - URL 小写 kebab-case，资源名词复数：`/api/quote-items/{id}`
    - 标准 HTTP 方法：GET / POST / PUT / PATCH / DELETE
@@ -93,12 +95,20 @@ skills:
 
 ### 步骤 2: 上游契约一致性验证
 
-对照 Application 层导出契约检查：
+根据依赖契约的来源执行对应的验证策略：
 
-- **依赖契约是否完整覆盖？** — Application 层导出的每个应用服务方法、Command、返回类型，是否都在本层依赖契约中列出？
-- **每个 API 端点是否对应一个 ApplicationService 方法？** — 禁止端点没有对应的后端方法
-- **DTO → Command 映射是否逐字段匹配？** — 映射目标字段必须与 Command 定义完全一致
-- **Response DTO 字段是否都能追溯到返回类型定义？** — 禁止凭空发明字段
+**来自设计文档时：**
+- 对照上游导出契约检查：Application 层导出的每个应用服务方法、Command、返回类型，是否都在本层依赖契约中列出？
+- DTO → Command 映射是否逐字段匹配？映射目标字段必须与 Command 定义完全一致
+
+**来自已有代码时：**
+- 使用 Read 工具重新读取说明列中标注的源文件路径，验证依赖契约中记录的方法签名和 Command 字段确实存在
+- 如果发现签名不匹配，立即修正依赖契约
+- DTO → Command 映射是否逐字段匹配？映射目标字段必须与源代码中的 Command 定义完全一致
+
+**共同验证：**
+- 每个 API 端点是否对应一个 ApplicationService 方法？禁止端点没有对应的后端方法
+- Response DTO 字段是否都能追溯到返回类型定义？禁止凭空发明字段
 
 ### 步骤 3: API 规范验证
 

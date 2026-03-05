@@ -15,25 +15,31 @@
 <!-- REQUIRED -->
 ## 依赖契约
 
-> 以下接口和对象定义来自 OHS 层导出契约，前端作为消费方使用。
+> 以下接口和对象定义来自 OHS 层，前端作为消费方使用。
+> 来源为以下之一：① 当前 idea 的 OHS 层设计文档导出契约；② 已有代码（标注源文件路径）。
 
-### API 端点
+<!-- 来源标注规则：
+- 来自设计文档时，子表标题后标注：（来自 ohs.md 导出契约）
+- 来自已有代码时，子表标题后标注：（来自已有代码）并在每行「说明」列末尾附注源文件路径
+-->
 
-| HTTP 方法 | URL | 用途 | Request DTO | Response DTO |
-|-----------|-----|------|-------------|--------------|
-| {METHOD} | /api/{resource} | {一句话描述} | {Operation}Request | {Operation}Response |
+### API 端点（来自 {ohs.md 导出契约 / 已有代码}）
 
-### Request DTO 定义
+| HTTP 方法 | URL | 用途 | Request DTO | Response DTO | 本层用途 |
+|-----------|-----|------|-------------|--------------|---------|
+| {METHOD} | /api/{resource} | {一句话描述} | {Operation}Request | {Operation}Response | {如：{PageName} 页面加载时调用以获取列表数据} |
 
-| DTO 类名 | 字段 | 类型 | 校验规则 | 说明 |
-|----------|------|------|---------|------|
-| {Operation}Request | {字段} | {类型} | required / maxLength(N) 等 | {说明} |
+### Request DTO 定义（来自 {ohs.md 导出契约 / 已有代码}）
 
-### Response DTO 定义
+| DTO 类名 | 字段 | 类型 | 校验规则 | 说明 | 本层用途 |
+|----------|------|------|---------|------|---------|
+| {Operation}Request | {字段} | {类型} | required / maxLength(N) 等 | {说明} | {如：表单提交时构建请求体} |
 
-| DTO 类名 | 字段 | 类型 | 说明 |
-|----------|------|------|------|
-| {Operation}Response | {字段} | {类型} | {说明} |
+### Response DTO 定义（来自 {ohs.md 导出契约 / 已有代码}）
+
+| DTO 类名 | 字段 | 类型 | 说明 | 本层用途 |
+|----------|------|------|------|---------|
+| {Operation}Response | {字段} | {类型} | {说明} | {如：渲染到 {ComponentName} 组件的 {prop} 属性} |
 
 <!-- REQUIRED -->
 ## 页面与路由
