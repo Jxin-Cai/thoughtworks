@@ -90,17 +90,17 @@ bash {DDD_HELP}/scripts/ddd-status.sh {IDEA_DIR}
 3. 读取 `workflow.yaml` 中该层的 `worker-ref` 路径，获取编码指引
 4. 启动 worker agent，使用自定义 agent 类型（从 `workflow.yaml` 的 `worker-ref` 提取 agent name）：
 
-**agent name 映射：** 从 `worker-ref` 路径提取文件名（去掉 `.md`）作为 `subagent_type`：
-- domain → `thoughtworks-agent-ddd-worker-domain`
-- infr → `thoughtworks-agent-ddd-worker-infr`
-- application → `thoughtworks-agent-ddd-worker-application`
-- ohs → `thoughtworks-agent-ddd-worker-ohs`
+**agent name 映射：** 从 `worker-ref` 路径提取文件名（去掉 `.md`），加上 `thoughtworks-backend:` 前缀作为 `subagent_type`：
+- domain → `thoughtworks-backend:thoughtworks-agent-ddd-worker-domain`
+- infr → `thoughtworks-backend:thoughtworks-agent-ddd-worker-infr`
+- application → `thoughtworks-backend:thoughtworks-agent-ddd-worker-application`
+- ohs → `thoughtworks-backend:thoughtworks-agent-ddd-worker-ohs`
 
 自定义 agent 的 body 已包含编码要求、合理化预防、完成标准等静态指引，`skills: [thoughtworks-skills-java-spec]` 已配置自动注入编码规范。动态 prompt 只需包含 TASK、CONTEXT、OUTPUT 三个动态区块：
 
 ```
 Task(
-  subagent_type: "{worker-ref 文件名，去掉 .md}",
+  subagent_type: "thoughtworks-backend:{worker-ref 文件名，去掉 .md}",
   max_turns: 15,
   description: "{Layer}: {设计文件 frontmatter description}",
   prompt: "

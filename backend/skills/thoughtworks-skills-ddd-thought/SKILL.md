@@ -81,7 +81,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 - **tools**：`Read, Write, Glob, Grep`
 - **model**：`sonnet`
 
-主 agent 在构建 Task 调用时，使用 `workflow.yaml` 中 `thinker-ref` 对应的 agent name 作为 `subagent_type`。这样 agent body 和 skills 会自动加载，动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 等动态内容，无需重复内联 INSTRUCTION 和 CODING-SPEC。
+主 agent 在构建 Task 调用时，使用 `thoughtworks-backend:` 前缀 + `workflow.yaml` 中 `thinker-ref` 对应的 agent 文件名（去掉 `.md`）作为 `subagent_type`。这样 agent body 和 skills 会自动加载，动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 等动态内容，无需重复内联 INSTRUCTION 和 CODING-SPEC。
 
 ### 执行方式（主 agent DAG 编排）
 
@@ -138,17 +138,17 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 对每个需要的层，从 `workflow.yaml` 中读取该层的 `thinker-ref`（获取 agent name）和 `design-template`（指向 `assets/{layer}-design.md`）路径，然后按以下结构组装 prompt：
 
-**agent name 映射：** 从 `thinker-ref` 路径提取文件名（去掉 `.md`）作为 `subagent_type`：
-- domain → `thoughtworks-agent-ddd-domain-thinker`
-- infr → `thoughtworks-agent-ddd-infr-thinker`
-- application → `thoughtworks-agent-ddd-application-thinker`
-- ohs → `thoughtworks-agent-ddd-ohs-thinker`
+**agent name 映射：** 从 `thinker-ref` 路径提取文件名（去掉 `.md`），加上 `thoughtworks-backend:` 前缀作为 `subagent_type`：
+- domain → `thoughtworks-backend:thoughtworks-agent-ddd-domain-thinker`
+- infr → `thoughtworks-backend:thoughtworks-agent-ddd-infr-thinker`
+- application → `thoughtworks-backend:thoughtworks-agent-ddd-application-thinker`
+- ohs → `thoughtworks-backend:thoughtworks-agent-ddd-ohs-thinker`
 
 这些自定义 agent 的 body 已包含设计步骤、反思循环、命名规范等静态指引（即原来的 INSTRUCTION 区块内容），`skills: [thoughtworks-skills-java-spec]` 已配置自动注入编码规范（即原来的 CODING-SPEC 区块内容）。因此动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个动态区块。
 
 ```
 Task(
-  subagent_type: "{thinker-ref 文件名，去掉 .md}",
+  subagent_type: "thoughtworks-backend:{thinker-ref 文件名，去掉 .md}",
   max_turns: 20,
   description: "{Layer} 层思考",
   prompt: "

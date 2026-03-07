@@ -58,7 +58,7 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 
 ```
 Task(
-  subagent_type: "thoughtworks-agent-frontend-worker",
+  subagent_type: "thoughtworks-frontend:thoughtworks-agent-frontend-worker",
   max_turns: 15,
   description: "Frontend: {设计文件 description}",
   prompt: "

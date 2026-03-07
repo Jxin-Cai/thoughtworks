@@ -78,7 +78,7 @@ agents:
 
 ```
 Task(
-  subagent_type: "thoughtworks-agent-frontend-thinker",
+  subagent_type: "thoughtworks-frontend:thoughtworks-agent-frontend-thinker",
   max_turns: 20,
   description: "Frontend 层思考",
   prompt: "
