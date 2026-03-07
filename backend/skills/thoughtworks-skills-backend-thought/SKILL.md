@@ -1,5 +1,5 @@
 ---
-name: thoughtworks-skills-ddd-thought
+name: thoughtworks-skills-backend-thought
 description: Use when called by Decision-Maker or directly to execute DDD design phase. Orchestrates thinker subagents for layered design.
 argument-hint: "<idea-name>"
 agents:
@@ -21,7 +21,7 @@ agents:
 
 ## 铁律
 
-1. **上游契约必须内联** — 构建 thinker subagent prompt 时，上游导出契约必须完整内联；上游设计文档全文改为提供路径让 Agent 自行 Read 加载
+1. **上游依赖通过扫描已实现代码获取** — 构建 thinker subagent prompt 时，上游依赖接口通过指引 Thinker 扫描已实现的代码获取，不再从上游设计文档内联导出契约
 2. **禁止在评估前启动设计** — assessment.md 必须已存在才能进入设计
 3. **禁止跳过用户确认** — Step 4 展示设计摘要后，必须等用户确认才能提示下一步
 
@@ -47,7 +47,15 @@ agents:
 
 ## Step 1: 确定 idea 并读取上下文
 
-解析 `$ARGUMENTS` 确定 idea-name。
+解析 `$ARGUMENTS` 确定 idea-name 和可选参数。
+
+### 参数解析
+
+`$ARGUMENTS` 格式：`<idea-name> [--layers <layer1,layer2,...>] [--modification "<修改说明>"]`
+
+- `idea-name`：必选，idea 名称
+- `--layers`：可选，逗号分隔的层列表（如 `domain` 或 `infr,application`）。如不提供，执行所有评估为"需要开发"的层
+- `--modification`：可选，修改说明（中断处理时由 Decision-Maker 传入）
 
 检查前置条件：
 1. `.thoughtworks/<idea-name>/requirement.md` 必须存在
@@ -61,7 +69,7 @@ agents:
 
 ## Step 2: 读取工作流定义
 
-读取 `../thoughtworks-skills-ddd-help/workflow.yaml`（thoughtworks-skills-ddd-help skill 目录下），解析出：
+读取 `../thoughtworks-skills-backend-help/workflow.yaml`（thoughtworks-skills-backend-help skill 目录下），解析出：
 - 所有层的定义（id、phase、design-template、thinker-ref、requires）
 - 层之间的依赖关系（DAG）
 
@@ -69,7 +77,11 @@ agents:
 
 ## Step 3: 分层设计（subagent 执行）
 
-为每个**需要开发**的层启动独立 Task subagent。
+为每个**需要设计**的层启动独立 Task subagent。
+
+**层的确定方式**：
+- 如有 `--layers` 参数，只启动指定层的 Thinker（前提是这些层在 assessment.md 中被评估为"需要开发"）
+- 无 `--layers` 参数时，启动所有评估为"需要开发"的层的 Thinker（保持现有行为）
 
 subagent 之间信息隔离，因此设计文档模板和输入文档必须在 prompt 中提供。
 
@@ -87,29 +99,54 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 主 agent 负责按 `workflow.yaml` 的 Phase 顺序编排，保证上游完成后再启动下游：
 
-1. **Phase 1**：启动所有 phase=1 的层的 thinker subagent（如 domain）
-2. **等待 Phase 1 完成**：所有 Phase 1 的 subagent 返回后，执行 `ddd-workflow-status.sh --check-all` 检查状态
-3. **Phase 2**：Phase 1 全部 done 后，**并行启动**所有 phase=2 的层（如 infr + application，放在同一条消息的多个 Task 调用中）
-4. **等待 Phase 2 完成**
-5. **Phase 3**：Phase 2 全部 done 后，启动 phase=3 的层（如 ohs）
-6. 所有 Phase 完成后，执行 `ddd-workflow-status.sh --check-all` 获取全量校验结果
-7. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
+1. **确定要执行的层**：根据 `--layers` 参数（如有）过滤出本次要执行的层
+2. **按 Phase 分组**：将要执行的层按 Phase 分组
+3. **Phase 1**：启动所有 phase=1 的目标层的 thinker subagent（如 domain）
+4. **等待 Phase 1 完成**：所有 Phase 1 的 subagent 返回后，执行 `ddd-workflow-status.sh --check-all` 检查状态
+5. **Phase 2**：Phase 1 全部 done 后，**并行启动**所有 phase=2 的目标层（如 infr + application，放在同一条消息的多个 Task 调用中）
+6. **等待 Phase 2 完成**
+7. **Phase 3**：Phase 2 全部 done 后，启动 phase=3 的目标层（如 ohs）
+8. 所有目标 Phase 完成后，执行 `ddd-workflow-status.sh --check-all` 获取全量校验结果
+9. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
+
+如果某个 Phase 中没有目标层（因为 `--layers` 过滤或评估为不需要），直接跳过该 Phase。
 
 **禁止使用 --wait-upstream 或 --wait-all 的阻塞轮询模式**（与 Claude Code Bash 120s 超时不兼容）。
 
 如果某层不需要开发，不注册到 workflow-state.json，该层的 Phase 直接跳过。
 
-### CONTEXT 区块构建规则（上游契约来源判定）
+### CONTEXT 区块构建规则（上游依赖来源判定）
 
-对于当前层的每个上游依赖（`workflow.yaml` 中 `requires` 列出的层），按以下优先级判定：
+对于当前层的每个上游依赖（`workflow.yaml` 中 `requires` 列出的层），按以下规则判定：
 
-**情况 A：上游设计文档存在**
-即 `backend-designs/{upstream-layer}.md` 存在于当前 idea 目录。
-→ 现有逻辑：提取 `## 导出契约` 区原文，完整内联到 CONTEXT 的 `## 上游导出契约` 子区块。
+**情况 A：上游层代码已实现（本 Phase 之前的 Phase 已执行 Worker）**
+即上游层的 Worker 已完成编码，代码存在于项目中。
+→ 在 CONTEXT 中生成 `## 上游已实现代码` 子区块，指引 Thinker 扫描已有代码获取依赖接口列表：
 
-**情况 B：上游设计文档不存在（上游层被评估为"不需要"）**
-即 `assessment.md` 中该上游层标记为"不需要"。
-→ 在 CONTEXT 中替换为 `## 上游已有代码` 子区块：
+```
+## 上游已实现代码（{upstream-layer} 层）
+
+{upstream-layer} 层的代码已经实现，你需要通过扫描已有代码来获取你需要依赖的接口列表。
+
+### 扫描指引
+- 建议扫描的包路径模式（按需选用）：
+  - 聚合根/实体：`**/domain/**/model/*.java`
+  - 仓储接口：`**/domain/**/repository/*.java`
+  - 领域事件：`**/domain/**/event/*.java`
+  - 防腐层接口：`**/domain/**/acl/*.java`
+  - 领域服务：`**/domain/**/service/*.java`
+  - 应用服务：`**/application/**/*ApplicationService.java`
+  - Command：`**/application/**/*Command.java`
+
+### 扫描原则
+1. **需求驱动** — 只扫描 MISSION 工作目标中涉及的类和方法，不做全量扫描
+2. **签名提取** — 对找到的类，用 Read 工具读取其公有方法签名和关键字段
+3. **来源标注** — 依赖契约子表标题标注（来自已有代码），每行说明列附注源文件路径
+```
+
+**情况 B：上游层被评估为"不需要"且无已实现代码**
+即 `assessment.md` 中该上游层标记为"不需要"，但项目中可能有历史代码。
+→ 使用与情况 A 相同的 `## 上游已有代码` 子区块模板，但补充说明该层在本次需求中不需要新开发：
 
 ```
 ## 上游已有代码（{upstream-layer} 层 — 无当前设计文档）
@@ -133,6 +170,8 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 2. **签名提取** — 对找到的类，用 Read 工具读取其公有方法签名和关键字段
 3. **来源标注** — 依赖契约子表标题标注（来自已有代码），每行说明列附注源文件路径
 ```
+
+**无上游依赖时**（如 domain 层）：省略上游相关子区块。
 
 ### 构建 subagent prompt
 
@@ -183,15 +222,11 @@ Task(
 
     {对每个上游层，按 CONTEXT 区块构建规则的情况 A 或 B 生成对应子区块：}
 
-    {情况 A — 上游设计文档存在时：}
-    ## 上游导出契约（你的依赖契约必须与此精确对应）
-    {从上游设计文档中提取的 ## 导出契约 区的原文}
+    {情况 A — 上游层代码已实现时：}
+    ## 上游已实现代码（{upstream-layer} 层）
+    {按 CONTEXT 区块构建规则情况 A 的模板生成，包含扫描指引和扫描原则}
 
-    ## 上游设计文档
-    如需参考上游设计文档原文，使用 Read 工具按需加载以下文件：
-    {列出上游设计文档的绝对路径列表}
-
-    {情况 B — 上游设计文档不存在时：}
+    {情况 B — 上游层被评估为"不需要"时：}
     ## 上游已有代码（{upstream-layer} 层 — 无当前设计文档）
     {按 CONTEXT 区块构建规则情况 B 的模板生成，包含扫描指引和扫描原则}
 

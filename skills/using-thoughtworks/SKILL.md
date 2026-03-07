@@ -27,10 +27,10 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
-| `thoughtworks-skills-ddd` | User wants backend DDD feature | Main entry: requirements → design → implementation |
-| `thoughtworks-skills-ddd-clarify` | User wants to clarify backend requirements | Project context scan + structured requirement clarification |
-| `thoughtworks-skills-ddd-thought` | User wants backend design only | Orchestrates thinker subagents for layered design docs |
-| `thoughtworks-skills-ddd-works` | User wants to code from backend design | Orchestrates worker subagents for Java implementation |
+| `thoughtworks-skills-backend` | User wants backend DDD feature | Main entry: requirements → design → implementation |
+| `thoughtworks-skills-backend-clarify` | User wants to clarify backend requirements | Project context scan + structured requirement clarification |
+| `thoughtworks-skills-backend-thought` | User wants backend design only | Orchestrates thinker subagents for layered design docs |
+| `thoughtworks-skills-backend-works` | User wants to code from backend design | Orchestrates worker subagents for Java implementation |
 | `thoughtworks-skills-java-spec` | Need Java DDD coding spec | Routes to layer-specific coding constraints |
 
 ### Frontend
@@ -97,9 +97,12 @@ User message received
   Step 1: Receive requirement
   Step 2: → /thoughtworks-backend-clarify (Project scan + clarify)
   Step 3: Layer assessment → assessment.md
-  Step 4: → /thoughtworks-backend-thought (Design)
-  Step 5: User confirms design → .approved
-  Step 6: → /thoughtworks-backend-works (Coding)
+  Step 4: Phase loop (for each phase):
+    4.1 → /thoughtworks-backend-thought --layers <phase layers> (Design)
+    4.2 User confirms phase design (HARD-GATE)
+    4.3 → /thoughtworks-backend-works --layers <phase layers> (Coding)
+  Step 5: Mark .approved
+  Step 6: Engineering support tasks
   Step 7: Final summary
 ```
 
@@ -124,12 +127,14 @@ User message received
   Step 2: → /thoughtworks-backend-clarify (Backend clarify)
   Step 3: → /thoughtworks-frontend-clarify (Frontend clarify)
   Step 4: Backend layer assessment → assessment.md
-  Step 5: → /thoughtworks-backend-thought (Backend design)
-  Step 6: User confirms backend design → .approved
-  Step 7: → /thoughtworks-backend-works (Backend coding)
-  Step 8: Frontend assessment → frontend-assessment.md
-  Step 9: → /thoughtworks-frontend-thought (Frontend design)
-  Step 10: User confirms frontend design → .frontend-approved
-  Step 11: → /thoughtworks-frontend-works (Frontend coding)
-  Step 12: Fullstack summary
+  Step 5: Backend phase loop (for each phase):
+    5.1 → /thoughtworks-backend-thought --layers <phase layers> (Design)
+    5.2 User confirms phase design
+    5.3 → /thoughtworks-backend-works --layers <phase layers> (Coding)
+  Step 6: Mark .approved
+  Step 7: Frontend assessment → frontend-assessment.md
+  Step 8: → /thoughtworks-frontend-thought (Frontend design)
+  Step 9: User confirms frontend design → .frontend-approved
+  Step 10: → /thoughtworks-frontend-works (Frontend coding)
+  Step 11: Fullstack summary
 ```

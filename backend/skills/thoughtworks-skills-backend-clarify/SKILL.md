@@ -1,5 +1,5 @@
 ---
-name: thoughtworks-skills-ddd-clarify
+name: thoughtworks-skills-backend-clarify
 description: Use when backend DDD requirements need clarification. Scans project context first, then clarifies requirements with user through structured questions.
 argument-hint: "<idea-name>"
 ---

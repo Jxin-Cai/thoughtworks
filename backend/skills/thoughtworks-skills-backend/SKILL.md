@@ -1,5 +1,5 @@
 ---
-name: thoughtworks-skills-ddd
+name: thoughtworks-skills-backend
 description: Use when user wants to start a DDD feature end-to-end, from requirements clarification through design to implementation. This is the main entry point that orchestrates thought (design) and works (coding) sub-skills.
 argument-hint: "<需求描述或文件路径>"
 agents:
@@ -50,10 +50,10 @@ agents:
 | 状态 | 判断方式 | 行为 |
 |------|---------|------|
 | 无 idea | `$ARGUMENTS` 为空或新需求 | → Step 1 接收需求 → Step 2 澄清 |
-| 有 idea，无 designs | `backend-designs/` 为空 | → Step 3 评估 → Step 4 编排 thought |
-| 有 idea，designs 部分 pending | frontmatter status 有 pending | → Step 4 继续编排 thought |
-| 有 idea，designs 全 done，未确认 | 无 `.approved` 标记 | → Step 5 展示设计 → 等用户确认 |
-| 有 idea，设计已确认，未编码 | `.approved` 存在，代码未生成 | → Step 6 编排 works |
+| 有 idea，无 designs | `backend-designs/` 为空 | → Step 3 评估 → Step 4 Phase 循环编排 |
+| 有 idea，designs 部分 pending | frontmatter status 有 pending | → Step 4 继续 Phase 循环编排 |
+| 有 idea，designs 全 done，未确认 | 无 `.approved` 标记 | → Step 5 标记完成 |
+| 有 idea，设计已确认，未编码 | `.approved` 存在，代码未生成 | → Step 4 从未编码的 Phase 继续 |
 | 用户要求修改设计 | 用户中断提出修改请求 | → 中断处理 |
 
 启动时检查：
@@ -116,7 +116,7 @@ agents:
 
 ### 执行
 
-1. 读取 `../thoughtworks-skills-ddd-help/workflow.yaml`，解析出所有层的定义
+1. 读取 `../thoughtworks-skills-backend-help/workflow.yaml`，解析出所有层的定义
 2. 读取 `../../assets/assessment-dimensions.md`，获取评估维度和输出格式
 3. 逐层评估，将结果按模板格式写入 `.thoughtworks/<idea-name>/assessment.md`
 
@@ -137,66 +137,78 @@ bash {DDD_HELP}/scripts/ddd-workflow-status.sh {IDEA_DIR} --init <idea-name> <la
 
 ---
 
-## Step 4: 编排 thought skill
+## Step 4: 按 Phase 编排设计与编码
 
-Decision-Maker 不直接操控 thinker subagent，而是调用 thought skill 完成设计编排。
+Decision-Maker 不直接操控 thinker/worker subagent，而是调用 thought 和 works 子技能完成编排。
 
 ### 执行方式
 
-调用 `/thoughtworks-backend-thought <idea-name>` skill，传入 idea-name。
+读取 `../thoughtworks-skills-backend-help/workflow.yaml`，解析出所有层的 Phase 定义。结合 assessment.md 中评估为"需要开发"的层，按 Phase 顺序循环编排：
 
-thought skill 内部完成：
-- 读取 workflow.yaml 和 assessment.md
-- 按 DAG 拓扑序（Phase 顺序）编排 thinker subagent：Phase 1 先执行，完成后再启动 Phase 2，同 Phase 并行
-- 校验产出（契约匹配、结构完整性）
-- 返回设计结果
+```
+Phase 1: domain
+Phase 2: infr, application（并行）
+Phase 3: ohs
+```
 
-等待 thought skill 完成后，Decision-Maker 接管进入 Step 5。
+对每个 Phase 执行以下步骤：
+
+#### 4.1 设计（Thinker）
+
+调用 `/thoughtworks-backend-thought <idea-name> --layers <本 Phase 需要开发的层列表>`
+
+例如：
+- Phase 1: `/thoughtworks-backend-thought <idea-name> --layers domain`
+- Phase 2: `/thoughtworks-backend-thought <idea-name> --layers infr,application`
+- Phase 3: `/thoughtworks-backend-thought <idea-name> --layers ohs`
+
+如果本 Phase 中所有层都被评估为"不需要开发"，跳过该 Phase。
+
+#### 4.2 用户确认（HARD-GATE）
+
+thought skill 完成后，展示本 Phase 的设计摘要：
+1. **本 Phase 层级** — 哪些层已完成设计
+2. **各层设计摘要** — 每层一句话概括
+3. **产出文件列表** — 本 Phase 生成的设计文件
+
+使用 AskUserQuestion 询问用户是否确认本 Phase 设计，提供以下选项：
+- 确认设计，继续
+- 修改某层设计（说明需要修改什么）
+- 终止
+
+<HARD-GATE>
+用户确认后才能进入 4.3 编码阶段。禁止自动跳到编码。
+</HARD-GATE>
+
+#### 4.3 编码（Worker）
+
+调用 `/thoughtworks-backend-works <idea-name> --layers <本 Phase 需要开发的层列表>`
+
+例如：
+- Phase 1: `/thoughtworks-backend-works <idea-name> --layers domain`
+- Phase 2: `/thoughtworks-backend-works <idea-name> --layers infr,application`
+- Phase 3: `/thoughtworks-backend-works <idea-name> --layers ohs`
+
+#### 4.4 验证编码产出
+
+works skill 返回后，验证本 Phase 的编码产出是否通过 verify pattern 检查。
+
+所有 Phase 完成后 → Step 5。
 
 ---
 
-## Step 5: 设计汇总 + 用户确认
+## Step 5: 标记完成
 
-thought skill 完成后，向用户展示：
-
-1. **层级评估结论** — 哪些层需要开发
-2. **各层设计摘要** — 每层一句话概括
-3. **各层 thought 文件数** — 每个层产出了几个 thought 文件
-4. **产出文件列表** — 列出所有生成的文件路径
-
-<HARD-GATE>
-展示完毕后，使用 AskUserQuestion 询问用户是否确认设计，提供以下选项：
-- 确认设计，开始编码
-- 修改某层设计（说明需要修改什么）
-- 重新澄清需求
-- 终止
-
-用户确认后，写入 `.approved` 标记文件：
+所有 Phase 的设计与编码完成后，写入确认标记：
 ```bash
 touch .thoughtworks/<idea-name>/.approved
 ```
 
-禁止自动跳到编码阶段。
-</HARD-GATE>
+进入 Step 6。
 
 ---
 
-## Step 6: 编排 works skill
-
-用户确认设计后，调用 `/thoughtworks-backend-works <idea-name>` skill 完成编码。
-
-works skill 内部完成：
-- 读取 workflow.yaml 和设计文档
-- 按 DAG 拓扑序（Phase 顺序）执行
-- 同 phase 并行、层内串行
-- 每个设计文件启动独立 worker subagent
-- 验证产出
-
-等待 works skill 完成后，Decision-Maker 接管进入 Step 6.5。
-
----
-
-## Step 6.5: 执行工程支撑任务
+## Step 6: 执行工程支撑任务
 
 读取 `.thoughtworks/<idea-name>/supplementary-tasks.md`。如果文件不存在或为空 → 跳过此步骤。
 
@@ -250,7 +262,7 @@ works skill 完成后，向用户展示：
 
 ## 中断处理
 
-在 Step 5（用户确认设计）和 Step 6（执行中发现问题）时，Decision-Maker 识别用户意图：
+在 Step 4（Phase 循环中的用户确认和执行中发现问题）时，Decision-Maker 识别用户意图：
 
 | 用户输入 | Decision-Maker 决策 |
 |---------|-------------------|
@@ -276,14 +288,14 @@ works skill 完成后，向用户展示：
 3. 校验产出
 4. 查找下游受影响的层（requires 中包含被修改层的层）
 5. 如有下游层，继续调用 thought skill 重做受影响层
-6. 重新展示设计摘要，回到 Step 5 等用户确认
+6. 重新展示设计摘要，回到 Step 4.2 等用户确认
 
 ### 中断修改时的 thought skill 调用
 
 单独调用 thought skill 重做某一层时，传入修改指令：
 
 ```
-/thoughtworks-backend-thought <idea-name> --layer <layer> --modification "<修改说明>"
+/thoughtworks-backend-thought <idea-name> --layers <layer> --modification "<修改说明>"
 ```
 
 thought skill 内部只启动指定层的 thinker，不重跑整个流程。

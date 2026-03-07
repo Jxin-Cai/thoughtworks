@@ -1,5 +1,5 @@
 ---
-name: thoughtworks-skills-ddd-works
+name: thoughtworks-skills-backend-works
 description: Use when user wants to start coding, execute implementation checklists from design docs, or resume previously interrupted development work.
 argument-hint: "<idea-name>"
 agents:
@@ -34,17 +34,20 @@ agents:
 
 ---
 
-## Step 1: 选择 idea
+## Step 1: 选择 idea 和解析参数
 
-判断 `$ARGUMENTS`：
-- 有参数 → 使用指定的 idea-name
-- 无参数 → `ls .thoughtworks/` 列出所有 idea，用 AskUserQuestion 让用户选择
+### 参数解析
+
+`$ARGUMENTS` 格式：`<idea-name> [--layers <layer1,layer2,...>]`
+
+- `idea-name`：idea 名称。如 `$ARGUMENTS` 为空，`ls .thoughtworks/` 列出所有 idea，用 AskUserQuestion 让用户选择
+- `--layers`：可选，逗号分隔的层列表（如 `domain` 或 `infr,application`）。如不提供，执行所有有 pending 设计文件的层
 
 验证 `.thoughtworks/<idea-name>/backend-designs/` 目录存在且包含设计文件。不存在则提示先运行 `/thoughtworks-backend-thought`。
 
 设置变量：
 - `IDEA_DIR` = `.thoughtworks/<idea-name>`
-- `DDD_HELP` = 本 SKILL.md 所在目录的兄弟目录 `thoughtworks-skills-ddd-help/`（即 `../thoughtworks-skills-ddd-help/`）
+- `DDD_HELP` = 本 SKILL.md 所在目录的兄弟目录 `thoughtworks-skills-backend-help/`（即 `../thoughtworks-skills-backend-help/`）
 - `DESIGNS_DIR` = `{IDEA_DIR}/backend-designs`
 
 ---
@@ -73,6 +76,10 @@ bash {DDD_HELP}/scripts/ddd-status.sh {IDEA_DIR}
 ## Step 3: 按 Phase 执行
 
 根据 `workflow.yaml` 中的层定义和依赖关系，按 DAG 拓扑序执行。
+
+**层的确定方式**：
+- 如有 `--layers` 参数，只执行指定层的设计文件
+- 无 `--layers` 参数时，执行所有有 pending 设计文件的层（保持现有行为）
 
 初始化 session 追踪变量：`session_completed = []`（记录本次 session 完成的设计文件）
 

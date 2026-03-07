@@ -8,7 +8,7 @@ description: DDD 四层架构工作流
 layers:
   - id: domain
     phase: 1
-    design-template: ../thoughtworks-skills-ddd-thought/assets/domain-design.md
+    design-template: ../thoughtworks-skills-backend-thought/assets/domain-design.md
     thinker-ref: ../../agents/thinkers/thoughtworks-agent-ddd-domain-thinker.md
     worker-ref: ../../agents/workers/thoughtworks-agent-ddd-worker-domain.md
     requires: []
@@ -20,7 +20,7 @@ layers:
 
   - id: infr
     phase: 2
-    design-template: ../thoughtworks-skills-ddd-thought/assets/infr-design.md
+    design-template: ../thoughtworks-skills-backend-thought/assets/infr-design.md
     thinker-ref: ../../agents/thinkers/thoughtworks-agent-ddd-infr-thinker.md
     worker-ref: ../../agents/workers/thoughtworks-agent-ddd-worker-infr.md
     requires: [domain]
@@ -34,7 +34,7 @@ layers:
 
   - id: application
     phase: 2
-    design-template: ../thoughtworks-skills-ddd-thought/assets/application-design.md
+    design-template: ../thoughtworks-skills-backend-thought/assets/application-design.md
     thinker-ref: ../../agents/thinkers/thoughtworks-agent-ddd-application-thinker.md
     worker-ref: ../../agents/workers/thoughtworks-agent-ddd-worker-application.md
     requires: [domain]
@@ -46,7 +46,7 @@ layers:
 
   - id: ohs
     phase: 3
-    design-template: ../thoughtworks-skills-ddd-thought/assets/ohs-design.md
+    design-template: ../thoughtworks-skills-backend-thought/assets/ohs-design.md
     thinker-ref: ../../agents/thinkers/thoughtworks-agent-ddd-ohs-thinker.md
     worker-ref: ../../agents/workers/thoughtworks-agent-ddd-worker-ohs.md
     requires: [application, domain]

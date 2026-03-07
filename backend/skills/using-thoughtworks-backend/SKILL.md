@@ -21,10 +21,10 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
-| `thoughtworks-skills-ddd` | User wants backend DDD feature | Main entry: requirements → design → implementation |
-| `thoughtworks-skills-ddd-clarify` | User wants to clarify backend requirements | Project context scan + structured requirement clarification |
-| `thoughtworks-skills-ddd-thought` | User wants backend design only | Orchestrates thinker subagents for layered design docs |
-| `thoughtworks-skills-ddd-works` | User wants to code from backend design | Orchestrates worker subagents for Java implementation |
+| `thoughtworks-skills-backend` | User wants backend DDD feature | Main entry: requirements → design → implementation |
+| `thoughtworks-skills-backend-clarify` | User wants to clarify backend requirements | Project context scan + structured requirement clarification |
+| `thoughtworks-skills-backend-thought` | User wants backend design only | Orchestrates thinker subagents for layered design docs |
+| `thoughtworks-skills-backend-works` | User wants to code from backend design | Orchestrates worker subagents for Java implementation |
 | `thoughtworks-skills-java-spec` | Need Java DDD coding spec | Routes to layer-specific coding constraints |
 
 ## Slash Commands
@@ -73,8 +73,11 @@ User message received
   Step 1: Receive requirement
   Step 2: → /thoughtworks-backend-clarify (Project scan + clarify)
   Step 3: Layer assessment → assessment.md
-  Step 4: → /thoughtworks-backend-thought (Design)
-  Step 5: User confirms design → .approved
-  Step 6: → /thoughtworks-backend-works (Coding)
+  Step 4: Phase loop (for each phase):
+    4.1 → /thoughtworks-backend-thought --layers <phase layers> (Design)
+    4.2 User confirms phase design (HARD-GATE)
+    4.3 → /thoughtworks-backend-works --layers <phase layers> (Coding)
+  Step 5: Mark .approved
+  Step 6: Engineering support tasks
   Step 7: Final summary
 ```
