@@ -75,3 +75,19 @@
 - 仓储层：@MybatisTest 或 H2 内存库集成测试
 - Controller 层：@WebMvcTest + MockMvc 验证参数校验和响应格式
 - 命名：`should_预期行为_when_条件()`，结构：Given-When-Then
+
+#### 代码质量规范
+
+- **重构**：识别并规避《重构（Refactoring）》中描述的代码坏味道，例如：
+    - 重复代码（Duplicated Code）
+    - 过长方法（Long Method）
+    - 过大类（Large Class）
+    - 过长参数列表（Long Parameter List）
+    - 发散式变化（Divergent Change）
+    - 霰弹式修改（Shotgun Surgery）
+- **Effective Java**：遵循《Effective Java》编码建议，例如：
+    - 使用构建器（Builder）处理多参数构造
+    - 优先使用枚举而非 int 常量
+    - 最小化可变性
+    - 合理使用 Optional
+    - 优先使用标准异常
