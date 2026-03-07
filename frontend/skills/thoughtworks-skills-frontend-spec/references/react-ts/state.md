@@ -12,9 +12,12 @@
 ## 服务端状态（TanStack Query）
 
 - 所有 API 数据获取必须通过 `useQuery` / `useMutation` 管理
-- 自定义 hook 封装查询逻辑，放在 `src/hooks/` 下
+- 查询 hook 按 FSD 层级放置：
+  - Entity CRUD hook 放在 `src/entities/{entity}/model/`（如 `useUserList`、`useUserDetail`）
+  - Feature 场景 hook 放在 `src/features/{feature}/model/`（如 `useCreateOrder`、`useFilterOrders`）
 
 ```typescript
+// src/entities/user/model/useUserList.ts
 function useUserList(params: UserQueryParams) {
   return useQuery({
     queryKey: ['users', params],
@@ -42,7 +45,8 @@ const useAuthStore = create<AuthStore>((set) => ({
 }));
 ```
 
-- 每个 store 单独一个文件，放在 `src/stores/` 下
+- 全局 store 放在 `src/shared/config/stores/`（如 `useAuthStore`、`useThemeStore`）
+- Feature 专属 store 放在 `src/features/{feature}/model/`（如 `useCartStore`）
 - store 保持扁平结构，避免深层嵌套
 
 ## 约束

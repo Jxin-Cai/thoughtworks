@@ -9,11 +9,17 @@ layers:
   - id: frontend
     phase: 1
     design-template: ../thoughtworks-skills-frontend-thought/assets/frontend-design.md
-    thinker-ref: ../../agents/thinkers/thoughtworks-agent-frontend-thinker.md
-    worker-ref: ../../agents/workers/thoughtworks-agent-frontend-worker.md
+    thinker-ref: ../../agents/thoughtworks-agent-frontend-thinker.md
+    worker-ref: ../../agents/thoughtworks-agent-frontend-worker.md
     requires: []
     verify:
       - pattern: "**/src/pages/**/*.tsx"
         description: 验证页面组件已创建
-      - pattern: "**/src/api/**/*.ts"
-        description: 验证 API 调用层已创建
+      - pattern: "**/src/features/**/*.{ts,tsx}"
+        description: 验证 Feature slice 已创建
+      - pattern: "**/src/entities/**/*.{ts,tsx}"
+        description: 验证 Entity slice 已创建
+      - pattern: "**/src/shared/api/**/*.ts"
+        description: 验证 API 客户端基础封装已创建
+      - pattern: "**/src/app/router/**/*.{ts,tsx}"
+        description: 验证路由配置已创建

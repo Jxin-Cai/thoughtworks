@@ -3,8 +3,8 @@ name: thoughtworks-skills-frontend
 description: Use when user wants to start frontend development consuming DDD API contracts. This is the frontend entry point that orchestrates thought (design) and works (coding) sub-skills.
 argument-hint: "<idea-name>"
 agents:
-  - thinkers/thoughtworks-agent-frontend-thinker
-  - workers/thoughtworks-agent-frontend-worker
+  - thoughtworks-agent-frontend-thinker
+  - thoughtworks-agent-frontend-worker
 ---
 
 # Frontend Spec-Driven Development — Decision-Maker

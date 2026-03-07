@@ -3,7 +3,7 @@ name: thoughtworks-skills-frontend-works
 description: Use when user wants to start frontend coding, execute implementation checklists from frontend design docs.
 argument-hint: "<idea-name>"
 agents:
-  - workers/thoughtworks-agent-frontend-worker
+  - thoughtworks-agent-frontend-worker
 ---
 
 # Frontend Spec-Driven Development — 执行流程

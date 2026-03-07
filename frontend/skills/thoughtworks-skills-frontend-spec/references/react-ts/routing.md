@@ -3,12 +3,12 @@
 ## 技术选型
 
 - 使用 React Router v6+
-- 路由定义集中在 `src/router/` 目录下
+- 路由定义集中在 `src/app/router/` 目录下
 
 ## 路由定义
 
 ```typescript
-// src/router/index.tsx
+// src/app/router/index.tsx
 import { createBrowserRouter } from 'react-router-dom';
 
 const router = createBrowserRouter([
@@ -28,9 +28,10 @@ const router = createBrowserRouter([
 
 - 所有页面组件使用 `React.lazy()` 动态导入
 - 外层包裹 `<Suspense fallback={<Loading />}>` 提供加载态
+- 懒加载导入路径使用 `@pages/` 层级别名
 
 ```typescript
-const UserListPage = lazy(() => import('@/pages/user-management/UserListPage'));
+const UserListPage = lazy(() => import('@pages/user-management/UserListPage'));
 ```
 
 ## 路径命名
@@ -48,7 +49,7 @@ const UserListPage = lazy(() => import('@/pages/user-management/UserListPage'));
 ## 路由守卫
 
 - 需要鉴权的路由通过高阶组件或 wrapper 组件实现守卫
-- 守卫逻辑统一放在 `src/router/guards/` 下
+- 守卫逻辑统一放在 `src/app/router/guards/` 下
 - 未登录用户重定向到 `/login`，登录后回跳原地址
 
 ## 约束

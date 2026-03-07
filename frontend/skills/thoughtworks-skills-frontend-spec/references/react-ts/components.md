@@ -29,20 +29,44 @@ interface UserProfileProps {
 }
 ```
 
-## 组件分层
+## 组件分层（FSD）
 
-| 类型 | 目录 | 职责 |
-|---|---|---|
-| 页面组件 | `src/pages/` | 数据获取、布局编排、路由参数处理 |
-| 业务组件 | `src/components/` | UI 渲染、用户交互、事件回调 |
+| FSD 层 | 目录 | 职责 | 示例 |
+|--------|------|------|------|
+| Pages | `src/pages/` | 路由入口，组合 Features 和 Widgets，处理路由参数 | `OrderListPage` |
+| Widgets | `src/widgets/` | 跨页面共享的独立 UI 区块（可选层） | `HeaderNavigation`、`SidebarMenu` |
+| Features | `src/features/{feature}/ui/` | 用户场景驱动的功能组件（含交互逻辑） | `OrderCreateForm`、`OrderFilter` |
+| Entities | `src/entities/{entity}/ui/` | 业务实体的 UI 表达（纯展示为主） | `OrderCard`、`UserAvatar` |
+| Shared | `src/shared/ui/` | 通用原子组件（与业务无关） | `Button`、`Modal`、`Table` |
 
-- 页面组件通过 hooks 获取数据，将数据作为 props 传递给业务组件
-- 业务组件不直接调用 API，保持纯展示 + 回调模式
+### 层级职责边界
+
+- **Pages** — 只做组合和路由参数处理，不包含业务逻辑，将 Feature 和 Widget 组件拼装为完整页面
+- **Widgets** — 可跨页面复用的 UI 区块，可组合多个 Feature 和 Entity 组件
+- **Features** — 一个 Feature 对应一个用户场景（如"创建订单"），包含该场景的组件、状态、API 调用
+- **Entities** — 一个 Entity 对应一个业务实体（如"订单"），包含该实体的展示组件、CRUD hooks、类型定义
+- **Shared** — 与业务完全无关的基础组件和工具
+
+### Feature 组件结构示例
+
+```
+src/features/order-create/
+├── ui/
+│   ├── OrderCreateForm.tsx     # 表单组件
+│   └── OrderCreateDialog.tsx   # 弹窗容器（可选）
+├── model/
+│   ├── useCreateOrder.ts       # 创建订单的 mutation hook
+│   └── types.ts                # 该 feature 专属类型
+├── api/
+│   └── createOrder.ts          # API 调用函数
+└── index.ts                    # 导出：OrderCreateForm, useCreateOrder
+```
 
 ## 数据获取
 
 - 禁止在组件内直接调用 `axios` / `fetch`
-- 所有数据获取封装到 `src/hooks/` 下的自定义 hook 中
+- Entity 层的数据获取 hook 放在 `entities/{entity}/model/`（如 `useUserList`、`useOrderDetail`）
+- Feature 层的数据获取 hook 放在 `features/{feature}/model/`（如 `useCreateOrder`、`useOrderFilter`）
 - hook 内部使用 React Query 管理请求状态
 
 ## 表单处理
