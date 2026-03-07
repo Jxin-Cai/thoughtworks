@@ -16,8 +16,8 @@ argument-hint: "<需求描述或文件路径>"
 
 1. **后端先于前端** — 必须先完成后端 OHS 层设计，前端才能开始
 2. **禁止跳过需求澄清** — 后端和前端的需求都必须通过各自的澄清技能完成
-3. **禁止跳过用户确认** — 每个阶段完成后必须等用户确认
-4. **禁止自动执行编码** — 设计完成后必须等用户确认才能进入编码阶段
+3. **子技能完成后立即推进** — 每个子技能调用完成后，编排器必须立即推进到下一步，不要停下来等待用户额外指令
+4. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
 
 ---
 
@@ -100,7 +100,9 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 - 写入/更新 `requirement.md`
 
 <HARD-GATE>
-用户确认后端需求后才能继续。
+`/thoughtworks-backend-clarify` 必须完成（requirement.md 已写入）后才能进入 Step 3。
+如果 `.thoughtworks/<idea-name>/requirement.md` 已存在且用户在 Step 1 选择了基于已有需求继续，可跳过此步骤直接进入 Step 3。
+子技能完成后立即推进到 Step 3，不要等待用户额外指令。
 </HARD-GATE>
 
 ---
@@ -118,7 +120,9 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 注意：此时后端 OHS 设计尚未完成，澄清技能会基于后端需求（而非 OHS 契约）来引导前端需求讨论。
 
 <HARD-GATE>
-用户确认前端需求后才能继续。
+`/thoughtworks-frontend-clarify` 必须完成（frontend-requirement.md 已写入）后才能进入 Step 4。
+如果 `.thoughtworks/<idea-name>/frontend-requirement.md` 已存在且用户选择基于已有需求继续，可跳过此步骤直接进入 Step 4。
+子技能完成后立即推进到 Step 4，不要等待用户额外指令。
 </HARD-GATE>
 
 ---
@@ -159,27 +163,20 @@ thought skill 内部完成：
 - 校验产出（契约匹配、结构完整性）
 - 返回设计结果
 
+thought 子技能完成后立即推进到 Step 6，不要等待用户额外指令。
+
 ---
 
 ## Step 6: 后端设计确认
 
-向用户展示：
+`/thoughtworks-backend-thought` 子技能已在内部完成了设计展示和用户确认。
 
-1. **层级评估结论** — 哪些层需要开发
-2. **各层设计摘要** — 每层一句话概括
-3. **产出文件列表** — 列出所有生成的文件路径
-
-<HARD-GATE>
-使用 AskUserQuestion 询问用户是否确认后端设计：
-- 确认设计，开始编码
-- 修改某层设计（说明需要修改什么）
-- 终止
-
-用户确认后：
+标记后端设计已确认：
 ```bash
 touch .thoughtworks/<idea-name>/.approved
 ```
-</HARD-GATE>
+
+确认完成后立即推进到 Step 7，不要等待用户额外指令。
 
 ---
 
@@ -192,6 +189,8 @@ works skill 内部完成：
 - 按 DAG 拓扑序执行，同 phase 并行、层内串行
 - 每个设计文件启动独立 worker subagent
 - 验证产出
+
+works 子技能完成后立即推进到 Step 8，不要等待用户额外指令。
 
 ---
 
@@ -222,32 +221,28 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea
 
 调用 `/thoughtworks-frontend-thought <idea-name>`。
 
+thought 子技能完成后立即推进到 Step 10，不要等待用户额外指令。
+
 ---
 
 ## Step 10: 前端设计确认
 
-向用户展示：
-1. **页面列表** — 设计了哪些页面
-2. **API 调用映射** — 每个页面调用哪些后端 API
-3. **产出文件列表** — 列出生成的前端设计文件路径
+`/thoughtworks-frontend-thought` 子技能已在内部完成了设计展示和用户确认。
 
-<HARD-GATE>
-使用 AskUserQuestion 询问用户是否确认前端设计：
-- 确认设计，开始编码
-- 修改设计
-- 终止
-
-用户确认后：
+标记前端设计已确认：
 ```bash
 touch .thoughtworks/<idea-name>/.frontend-approved
 ```
-</HARD-GATE>
+
+确认完成后立即推进到 Step 11，不要等待用户额外指令。
 
 ---
 
 ## Step 11: 前端编码编排
 
 调用 `/thoughtworks-frontend-works <idea-name>`。
+
+works 子技能完成后立即推进到 Step 11.5，不要等待用户额外指令。
 
 ---
 
@@ -306,13 +301,7 @@ Task(
 
 ## 中断处理
 
-在设计确认阶段（Step 6 / Step 10），编排器识别用户意图：
-
-| 用户输入 | 编排器决策 |
-|---------|----------|
-| 确认/继续 | 按当前流程推进 |
-| "修改 {layer} 设计" | 调用 thought skill 只重做该层 → 校验 → 级联重做下游层 → 重新确认 |
-| "终止" | 保存当前状态后退出 |
+设计确认在子技能内部完成（thought 子技能的 HARD-GATE）。如果用户在子技能内部选择了"修改设计"或"终止"，子技能会自行处理。
 
 ### 后端级联影响处理
 

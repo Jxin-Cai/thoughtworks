@@ -9,10 +9,20 @@ IDEA_DIR="${1:?用法: ddd-status.sh <idea-dir> [--pretty]}"
 PRETTY="${2:-}"
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
 
-# 检查目录存在
+# 检查目录存在 — 不存在时返回 not_started 状态而非报错
 if [ ! -d "$BACKEND_DESIGNS_DIR" ]; then
-  echo '{"error": "backend-designs 目录不存在，请先运行 /thoughtworks-backend-thought"}' >&2
-  exit 1
+  IDEA_NAME=$(basename "$IDEA_DIR")
+  json="{\"idea\":\"$IDEA_NAME\",\"layers\":[],\"overall\":{\"total\":0,\"done\":0,\"pending\":0,\"in_progress\":0,\"failed\":0},\"state\":\"not_started\",\"next_thoughts\":[]}"
+  if [ "${2:-}" = "--pretty" ]; then
+    echo ""
+    echo "== $IDEA_NAME =="
+    echo ""
+    echo "State: not_started (backend-designs 目录尚未创建)"
+    echo ""
+  else
+    echo "$json"
+  fi
+  exit 0
 fi
 
 # 收集设计文件列表

@@ -9,8 +9,18 @@ PRETTY="${2:-}"
 FRONTEND_DESIGNS_DIR="$IDEA_DIR/frontend-designs"
 
 if [ ! -d "$FRONTEND_DESIGNS_DIR" ]; then
-  echo '{"error": "frontend-designs 目录不存在，请先运行 /thoughtworks-frontend-thought"}' >&2
-  exit 1
+  IDEA_NAME=$(basename "$IDEA_DIR")
+  json="{\"idea\":\"$IDEA_NAME\",\"layers\":[],\"overall\":{\"total\":0,\"done\":0,\"pending\":0,\"in_progress\":0,\"failed\":0},\"state\":\"not_started\"}"
+  if [ "${2:-}" = "--pretty" ]; then
+    echo ""
+    echo "== $IDEA_NAME (frontend) =="
+    echo ""
+    echo "State: not_started (frontend-designs 目录尚未创建)"
+    echo ""
+  else
+    echo "$json"
+  fi
+  exit 0
 fi
 
 design_files=""
