@@ -22,6 +22,6 @@
     "./frontend/agents/thoughtworks-agent-frontend-thinker.md",
     "./frontend/agents/thoughtworks-agent-frontend-worker.md"
   ],
-  "skills": ["./backend/skills/", "./frontend/skills/"],
-  "commands": ["./backend/commands/", "./frontend/commands/"]
+  "skills": ["./skills/", "./backend/skills/", "./frontend/skills/"],
+  "commands": ["./commands/", "./backend/commands/", "./frontend/commands/"]
 }

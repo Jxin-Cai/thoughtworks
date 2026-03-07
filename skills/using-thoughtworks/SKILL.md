@@ -27,21 +27,21 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
-| `thoughtworks-backend:thoughtworks-skills-ddd` | User wants backend DDD feature | Main entry: requirements → design → implementation |
-| `thoughtworks-backend:thoughtworks-skills-ddd-clarify` | User wants to clarify backend requirements | Project context scan + structured requirement clarification |
-| `thoughtworks-backend:thoughtworks-skills-ddd-thought` | User wants backend design only | Orchestrates thinker subagents for layered design docs |
-| `thoughtworks-backend:thoughtworks-skills-ddd-works` | User wants to code from backend design | Orchestrates worker subagents for Java implementation |
-| `thoughtworks-backend:thoughtworks-skills-java-spec` | Need Java DDD coding spec | Routes to layer-specific coding constraints |
+| `thoughtworks-skills-ddd` | User wants backend DDD feature | Main entry: requirements → design → implementation |
+| `thoughtworks-skills-ddd-clarify` | User wants to clarify backend requirements | Project context scan + structured requirement clarification |
+| `thoughtworks-skills-ddd-thought` | User wants backend design only | Orchestrates thinker subagents for layered design docs |
+| `thoughtworks-skills-ddd-works` | User wants to code from backend design | Orchestrates worker subagents for Java implementation |
+| `thoughtworks-skills-java-spec` | Need Java DDD coding spec | Routes to layer-specific coding constraints |
 
 ### Frontend
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
-| `thoughtworks-frontend:thoughtworks-skills-frontend` | User wants frontend development | Main entry: requirements → design → implementation |
-| `thoughtworks-frontend:thoughtworks-skills-frontend-clarify` | User wants to clarify frontend requirements | Project context scan + structured frontend requirement clarification |
-| `thoughtworks-frontend:thoughtworks-skills-frontend-thought` | User wants frontend design only | Orchestrates frontend thinker for design docs |
-| `thoughtworks-frontend:thoughtworks-skills-frontend-works` | User wants to code from frontend design | Orchestrates frontend worker for implementation |
-| `thoughtworks-frontend:thoughtworks-skills-frontend-spec` | Need frontend coding spec | Routes to tech-stack-specific frontend coding constraints |
+| `thoughtworks-skills-frontend` | User wants frontend development | Main entry: requirements → design → implementation |
+| `thoughtworks-skills-frontend-clarify` | User wants to clarify frontend requirements | Project context scan + structured frontend requirement clarification |
+| `thoughtworks-skills-frontend-thought` | User wants frontend design only | Orchestrates frontend thinker for design docs |
+| `thoughtworks-skills-frontend-works` | User wants to code from frontend design | Orchestrates frontend worker for implementation |
+| `thoughtworks-skills-frontend-spec` | Need frontend coding spec | Routes to tech-stack-specific frontend coding constraints |
 
 ## Slash Commands
 

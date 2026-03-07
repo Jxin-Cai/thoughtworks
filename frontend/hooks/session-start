@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-session_context="<EXTREMELY_IMPORTANT>\nYou have the thoughtworks-frontend plugin installed.\n\nWhen the user's request involves frontend development based on DDD API contracts, you MUST invoke the relevant skill BEFORE any response.\n\n| User Intent | Skill to Invoke |\n|---|---|\n| Frontend end-to-end | thoughtworks-skills-frontend |\n| Frontend requirements clarification | thoughtworks-skills-frontend-clarify |\n| Frontend design only | thoughtworks-skills-frontend-thought |\n| Frontend coding only | thoughtworks-skills-frontend-works |\n| Frontend coding spec | thoughtworks-skills-frontend-spec |\n</EXTREMELY_IMPORTANT>"
+session_context="<EXTREMELY_IMPORTANT>\nYou have the thoughtworks-frontend plugin installed.\n\nWhen the user's request involves frontend development based on DDD API contracts, you MUST invoke the relevant skill BEFORE any response.\n\n| User Intent | Skill to Invoke |\n|---|---|\n| Frontend end-to-end | thoughtworks-skills-frontend |\n| Clarify frontend requirements | thoughtworks-skills-frontend-clarify |\n| Frontend design only | thoughtworks-skills-frontend-thought |\n| Frontend coding only | thoughtworks-skills-frontend-works |\n\nUse the Skill tool to invoke these skills.\n</EXTREMELY_IMPORTANT>"
 
 cat <<EOF
 {
