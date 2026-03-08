@@ -1,12 +1,12 @@
 ---
 name: thoughtworks-skills-backend-clarify
-description: Use when backend DDD requirements need clarification. Scans project context first, then clarifies requirements with user through structured questions.
-argument-hint: "<idea-name>"
+description: Use when backend DDD requirements need clarification. Scans project context first, then clarifies requirements with user through structured questions, and performs domain decomposition into bounded contexts.
+argument-hint: "<需求描述文本>"
 ---
 
 # 后端需求澄清技能
 
-你是后端需求澄清专家，负责在开始 DDD 设计之前，充分理解项目现状和用户需求。
+你是后端需求澄清专家，负责在开始 DDD 设计之前，充分理解项目现状和用户需求，并执行领域拆分将需求分解为独立的迭代单元。
 
 用户传入的参数：`$ARGUMENTS`
 
@@ -17,6 +17,8 @@ argument-hint: "<idea-name>"
 1. **禁止跳过项目上下文扫描** — 必须先了解项目现状，再向用户提问
 2. **控制提问节奏** — 使用 AskUserQuestion 工具，相关维度可合并提问（最多 2-3 个），不相关维度分开问
 3. **禁止自行假设需求** — 所有不确定的点必须向用户确认
+4. **禁止跳过领域拆分** — 即使需求只涉及一个聚合，也必须执行拆分分析并确认
+5. **聚合上下文 = 迭代单元** — 拆分粒度为聚合上下文（可含多个聚合根），不是单个聚合根
 
 ---
 
@@ -51,26 +53,153 @@ argument-hint: "<idea-name>"
 
 ---
 
-## Step 3: 需求确认
+## Step 3: 领域拆分
 
-澄清完成后，向用户展示：
+需求澄清完成后，执行 DDD 战略分析，将需求拆分为独立的聚合上下文（迭代单元）。
 
-1. **需求理解总结** — 用自己的话复述需求要点，确认理解无误
-2. **Thinker 分工预览** — 说明会让哪些 thinker 负责哪些层的设计
-3. **功能组织方式** — 说明各层产出如何协同、依赖关系如何
+### 3.1 DDD 战略分析
 
-使用 AskUserQuestion 询问用户是否确认，或需要调整。
+基于已澄清的需求和项目上下文，执行以下分析：
+
+1. **识别聚合上下文** — 分析需求涉及的业务概念，按以下维度划分聚合上下文：
+   - **事务边界**：哪些操作必须在同一事务中完成？
+   - **业务独立性**：哪些业务概念可以独立变化、独立部署？
+   - **变更频率**：哪些概念经常一起变更？
+   - **数据一致性**：哪些数据之间需要强一致性？
+
+2. **参考已有代码** — 检查 Step 1 扫描到的已有领域模型：
+   - 如果新需求属于已有上下文的扩展，复用已有名称
+   - 如果新需求与已有上下文有交叉，明确边界
+
+3. **分析上下文间依赖关系** — 构建有向无环图（DAG）：
+   - 识别哪些上下文依赖其他上下文的数据或能力
+   - **禁止循环依赖** — 如果发现循环依赖，重新调整上下文边界
+   - 标记依赖方向（如 order 依赖 product，product 不依赖 order）
+
+4. **为每个上下文命名** — 使用 kebab-case，作为 idea-name（如 `product-management`、`order-processing`）
+
+### 3.2 特殊情况处理
+
+| 情况 | 处理方式 |
+|------|---------|
+| 单上下文 | 仍执行分析，产出单项方案，idea-name 即为该上下文名称 |
+| 扩展已有上下文 | 复用已有 `.thoughtworks/<name>/` 目录名称 |
+| 边界模糊 | 向用户提问确认（"A 和 B 是否应该在同一个上下文中？"） |
+| 跨上下文的聚合根 | 拆分到主要职责所在的上下文，另一个上下文通过依赖契约引用 |
+
+### 3.3 展示拆分方案
+
+向用户展示拆分结果：
+
+1. **上下文列表**（Markdown 表格）：
+
+| # | 上下文 (idea-name) | 核心概念 | 聚合根 | 依赖上游 |
+|---|-------------------|---------|-------|---------|
+| 1 | product-management | 商品、分类、品牌 | Product | 无 |
+| 2 | inventory-management | 库存、仓库 | Inventory | product-management |
+| 3 | order-processing | 订单、订单项 | Order | product-management, inventory-management |
+
+2. **DAG 依赖图**（文字描述或 ASCII）：
+```
+product-management → inventory-management → order-processing
+                   ↘                      ↗
+```
+
+3. **执行顺序**（拓扑序）：按 DAG 拓扑排序后的执行顺序
+
+4. **各上下文需求概要** — 每个上下文一段简短描述
+
+使用 AskUserQuestion 确认拆分方案，提供选项：
+- 确认方案
+- 调整拆分（合并/拆分/重命名/调整依赖）
+
+---
+
+## Step 4: 拆分确认
 
 <HARD-GATE>
-用户确认后才能结束澄清流程。
-禁止以"需求已经很清楚"为由跳过澄清。即使需求看起来完整，至少确认一次目标和成功标准。
+用户确认拆分方案后才能继续。
+支持以下调整操作：
+- **合并**：将两个上下文合并为一个
+- **拆分**：将一个上下文拆为多个
+- **重命名**：修改上下文的 idea-name
+- **调整依赖**：修改上下文间的依赖关系
+
+用户调整后，重新展示更新的方案，再次确认。
+禁止以"拆分已经很合理"为由跳过确认。
 </HARD-GATE>
 
 ---
 
-## Step 4: 写入需求文档
+## Step 5: 多目录创建与需求写入
 
-用户确认后，将需求写入 `.thoughtworks/<idea-name>/requirement.md`。
+用户确认拆分方案后：
+
+1. **检查 `.gitignore`** — 如果项目根目录的 `.gitignore` 不包含 `.thoughtworks/`，则追加一行 `.thoughtworks/`
+
+2. **创建上下文目录** — 对每个上下文执行：
+```bash
+mkdir -p .thoughtworks/<context-idea-name>/backend-designs
+```
+
+3. **写入需求文档** — 对每个上下文，将需求写入 `.thoughtworks/<context-idea-name>/requirement.md`，包含以下结构化元数据：
+
+```markdown
+# <上下文名称> 需求文档
+
+## 元数据
+
+- **上下文名称**: <context-idea-name>
+- **所属领域拆分**: [<所有同批上下文的 idea-name 列表，逗号分隔>]
+- **上游依赖**: [<依赖的上下文 idea-name 列表，无依赖则为空>]
+
+## 需求描述
+
+<该上下文的详细需求描述>
+
+## 聚合根
+
+- <聚合根 1>: <简要说明>
+- <聚合根 2>: <简要说明>
+
+## 业务规则
+
+- <规则 1>
+- <规则 2>
+
+## 跨上下文交互
+
+- 依赖 <上游上下文>: <交互说明>
+- 被 <下游上下文> 依赖: <交互说明>
+
+## 成功标准
+
+- <标准 1>
+- <标准 2>
+```
+
+4. **输出上下文清单** — 向调用者输出上下文清单，供 Decision-Maker 或全栈编排器解析：
+
+**Markdown 表格**：
+
+| # | context-idea-name | 依赖上游 | 状态 |
+|---|-------------------|---------|------|
+| 1 | product-management | 无 | 待开发 |
+| 2 | inventory-management | product-management | 待开发 |
+| 3 | order-processing | product-management, inventory-management | 待开发 |
+
+**JSON DAG**（用于程序解析）：
+
+```json
+{
+  "contexts": [
+    {"name": "product-management", "depends_on": []},
+    {"name": "inventory-management", "depends_on": ["product-management"]},
+    {"name": "order-processing", "depends_on": ["product-management", "inventory-management"]}
+  ],
+  "topological_order": ["product-management", "inventory-management", "order-processing"]
+}
+```
 
 ---
 
@@ -82,3 +211,6 @@ argument-hint: "<idea-name>"
 | "需求已经很清楚，跳过澄清" | 必须至少确认一次目标和成功标准，用户可能有隐含假设 |
 | "git log 没什么用" | 最近提交能揭示项目当前的开发重点和潜在冲突 |
 | "已有代码不影响新需求" | 已有领域模型决定了新功能的集成方式和命名一致性 |
+| "不需要拆分，放一起更方便" | 领域拆分保证了每个迭代单元的聚焦性和可管理性，即使只有一个上下文也必须经过分析确认 |
+| "放一起更高效" | 大需求线性处理会导致设计膨胀、应用服务跨多个不相关聚合、迭代粒度过粗 |
+| "已有上下文不用分析" | 新需求可能需要扩展已有上下文或与其交互，必须分析已有上下文的边界 |
