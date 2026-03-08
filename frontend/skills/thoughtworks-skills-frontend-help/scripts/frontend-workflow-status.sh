@@ -54,7 +54,7 @@ read_idea() {
 
 get_tracked_layers() {
   if [ ! -f "$STATE_FILE" ]; then return; fi
-  sed -n '/"tracked_layers"/,/^[[:space:]]*}/p' "$STATE_FILE" | grep -oE '"(frontend)"[[:space:]]*:' | sed 's/"//g;s/[[:space:]]*://g'
+  grep -oE '"(frontend)"[[:space:]]*:' "$STATE_FILE" | sed 's/"//g;s/[[:space:]]*://g'
 }
 
 get_tracked_status() {
@@ -150,11 +150,13 @@ update_layer_status() {
       [ -n "$items" ] && files_arr="[$items]"
     fi
 
-    local entry="\"$layer\": { \"status\": \"$st\", \"files\": $files_arr }"
-    if [ -z "$layers_json" ]; then layers_json="$entry"; else layers_json="$layers_json, $entry"; fi
+    local entry="    \"$layer\": {\n      \"status\": \"$st\",\n      \"files\": $files_arr\n    }"
+    if [ -z "$layers_json" ]; then layers_json="$entry"; else layers_json="$layers_json,\n$entry"; fi
   done
 
-  locked_write "{ \"idea\": \"$idea\", \"tracked_layers\": { $layers_json } }"
+  local content
+  content=$(printf "{\n  \"idea\": \"$idea\",\n  \"tracked_layers\": {\n$layers_json\n  }\n}")
+  locked_write "$content"
 }
 
 case "$MODE" in
@@ -184,7 +186,10 @@ case "$MODE" in
       fi
       entry="\"$layer\": { \"status\": \"$st\", \"files\": $files_arr }"
       if [ -z "$layers_json" ]; then layers_json="$entry"; else layers_json="$layers_json, $entry"; fi
-      [ "$st" != "done" ] && all_done=false
+      case "$st" in
+        done|coded) ;;
+        *) all_done=false ;;
+      esac
     done
     if $all_done && [ -n "$tracked" ]; then overall="all_done"; else overall="in_progress"; fi
     echo "{ \"idea\": \"$idea\", \"tracked_layers\": { $layers_json }, \"overall\": \"$overall\" }"
@@ -204,19 +209,20 @@ case "$MODE" in
         frontend) ;;
         *) echo "{\"error\": \"无效层名: $layer，可选: frontend\"}" >&2; exit 1 ;;
       esac
-      entry="\"$layer\": { \"status\": \"pending\", \"files\": [] }"
-      if [ -z "$layers_json" ]; then layers_json="$entry"; else layers_json="$layers_json, $entry"; fi
+      entry="    \"$layer\": {\n      \"status\": \"pending\",\n      \"files\": []\n    }"
+      if [ -z "$layers_json" ]; then layers_json="$entry"; else layers_json="$layers_json,\n$entry"; fi
     done
     mkdir -p "$(dirname "$STATE_FILE")"
-    locked_write "{ \"idea\": \"$IDEA_NAME\", \"tracked_layers\": { $layers_json } }"
+    init_content=$(printf "{\n  \"idea\": \"$IDEA_NAME\",\n  \"tracked_layers\": {\n$layers_json\n  }\n}")
+    locked_write "$init_content"
     echo "{\"initialized\": true, \"idea\": \"$IDEA_NAME\", \"layers\": [$(echo "$LAYERS" | sed 's/ /", "/g;s/^/"/;s/$/"/' )]}"
     ;;
 
   --set)
     LAYER="${3:?--set 需要指定层名}"
-    STATUS="${4:?--set 需要指定状态 (pending|in_progress|done|failed)}"
+    STATUS="${4:?--set 需要指定状态 (pending|designing|designed|coding|coded|failed)}"
     case "$STATUS" in
-      pending|in_progress|done|failed) ;;
+      pending|designing|designed|coding|coded|failed) ;;
       *) echo "{\"error\": \"无效状态: $STATUS\"}" >&2; exit 1 ;;
     esac
     if [ ! -f "$STATE_FILE" ]; then
@@ -240,7 +246,10 @@ case "$MODE" in
     all_done=true
     for layer in $tracked; do
       st=$(get_tracked_status "$layer")
-      [ "$st" != "done" ] && all_done=false
+      case "$st" in
+        done|coded) ;;
+        *) all_done=false ;;
+      esac
     done
     if $all_done; then
       validation_output=""

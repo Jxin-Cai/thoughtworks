@@ -144,7 +144,7 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 3. 评估完成后，初始化工作流状态文件。**只注册评估为"需要开发"的层**：
 
 ```bash
-bash {DDD_HELP}/scripts/ddd-workflow-status.sh {IDEA_DIR} --init <idea-name> <layer1> [layer2...]
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init <idea-name> <layer1> [layer2...]
 ```
 
 <HARD-GATE>
@@ -164,6 +164,16 @@ Phase 3: ohs
 ```
 
 对每个 Phase 执行以下步骤：
+
+### 5.0 检查上游就绪（Phase 2+）
+
+从 Phase 2 开始，在启动 Thinker 之前，先检查本 Phase 各层的上游是否已编码完成：
+
+```bash
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-upstream <layer>
+```
+
+只有 `upstream_ready: true` 时才能启动该 Phase 的 Thinker。如果上游尚未 `coded`，需要先完成上游 Phase 的编码。
 
 ### 5.1 设计（Thinker）
 

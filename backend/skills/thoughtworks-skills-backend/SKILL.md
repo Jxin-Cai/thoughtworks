@@ -52,6 +52,9 @@ agents:
 | 无 idea | `$ARGUMENTS` 为空或新需求 | → Step 1 接收需求 → Step 2 澄清 |
 | 有 idea，无 designs | `backend-designs/` 为空 | → Step 3 评估 → Step 4 Phase 循环编排 |
 | 有 idea，designs 部分 pending | frontmatter status 有 pending | → Step 4 继续 Phase 循环编排 |
+| 有 idea，某层 designing | `workflow-state.json` 某层为 `designing` | → Step 4 从该层重新启动 Thinker |
+| 有 idea，某层 designed | `workflow-state.json` 某层为 `designed`，未确认 | → Step 4.2 等用户确认该 Phase 设计 |
+| 有 idea，某层 coding | `workflow-state.json` 某层为 `coding` | → Step 4.3 从该层重新启动 Worker |
 | 有 idea，designs 全 done，未确认 | 无 `.approved` 标记 | → Step 5 标记完成 |
 | 有 idea，设计已确认，未编码 | `.approved` 存在，代码未生成 | → Step 4 从未编码的 Phase 继续 |
 | 用户要求修改设计 | 用户中断提出修改请求 | → 中断处理 |
@@ -124,8 +127,8 @@ agents:
 
 ```bash
 # 一次性初始化，传入 idea-name 和所有需要开发的层
-bash {DDD_HELP}/scripts/ddd-workflow-status.sh {IDEA_DIR} --init <idea-name> <layer1> [layer2...]
-# 示例：bash {DDD_HELP}/scripts/ddd-workflow-status.sh {IDEA_DIR} --init user-registration domain infr application ohs
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init <idea-name> <layer1> [layer2...]
+# 示例：bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init user-registration domain infr application ohs
 ```
 
 不在 `workflow-state.json` 中的层不会被等待、不会被校验。
@@ -152,6 +155,16 @@ Phase 3: ohs
 ```
 
 对每个 Phase 执行以下步骤：
+
+#### 4.0 检查上游就绪（Phase 2+）
+
+从 Phase 2 开始，在启动 Thinker 之前，先检查本 Phase 各层的上游是否已编码完成：
+
+```bash
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-upstream <layer>
+```
+
+只有 `upstream_ready: true` 时才能启动该 Phase 的 Thinker。如果上游尚未 `coded`，需要先完成上游 Phase 的编码。
 
 #### 4.1 设计（Thinker）
 

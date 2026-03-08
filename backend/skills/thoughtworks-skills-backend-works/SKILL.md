@@ -58,12 +58,13 @@ agents:
 2. 运行状态查询脚本获取结构化状态：
 
 ```bash
-bash {DDD_HELP}/scripts/ddd-status.sh {IDEA_DIR}
+bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 ```
 
 3. 解析返回的 JSON，确定：
    - `state`：整体状态（`not_started` / `in_progress` / `blocked` / `all_done`）
    - `current_phase`：当前应执行的 Phase
+   - `workflow_phases`：各层的工作流状态（`designing` / `designed` / `coding` / `coded`）
    - 各 phase 的设计文件列表和 frontmatter status
 
 **处理各状态：**
@@ -86,9 +87,20 @@ bash {DDD_HELP}/scripts/ddd-status.sh {IDEA_DIR}
 ### 执行逻辑
 
 1. 从 `current_phase` 开始，找到该 phase 中所有有 pending 设计文件的层
-2. 同一 phase 内的不同层可以**并行**（同时启动多个 Task 调用放在同一条消息中），每层内部的设计文件**串行**（按 frontmatter order 排序）
-3. 当前 phase 所有层的设计文件全部 done 后，进入下一个 phase
-4. 重复直到所有 phase 完成
+2. **标记层进入编码阶段**：对该 phase 中每个将要执行的层，在开始执行其第一个设计文件前，运行：
+   ```bash
+   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} coding
+   ```
+3. 同一 phase 内的不同层可以**并行**（同时启动多个 Task 调用放在同一条消息中），每层内部的设计文件**串行**（按 frontmatter order 排序）
+4. 当前 phase 所有层的设计文件全部 done 后，**标记层编码完成**：对该 phase 中每个完成的层，运行：
+   ```bash
+   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} coded
+   ```
+   如果某层执行失败（有 failed 设计文件），则运行：
+   ```bash
+   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} failed
+   ```
+5. 进入下一个 phase，重复直到所有 phase 完成
 
 ### 对每个设计文件的执行流程
 
@@ -221,7 +233,7 @@ Task(
 所有 Phase 执行完毕后，重新运行状态查询脚本：
 
 ```bash
-bash {DDD_HELP}/scripts/ddd-status.sh {IDEA_DIR}
+bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 ```
 
 根据返回的 JSON 输出：
@@ -266,5 +278,5 @@ bash {DDD_HELP}/scripts/ddd-status.sh {IDEA_DIR}
 
 `/thoughtworks-backend-works` 支持断点续传：
 - 每个设计文件完成后立即更新 frontmatter status
-- 下次运行时通过 `ddd-status.sh` 获取状态，从第一个 `pending` 设计文件继续
+- 下次运行时通过 `backend-status.sh` 获取状态，从第一个 `pending` 设计文件继续
 - 已 `done` 的设计文件不会重复执行

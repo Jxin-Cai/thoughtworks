@@ -102,11 +102,11 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 1. **确定要执行的层**：根据 `--layers` 参数（如有）过滤出本次要执行的层
 2. **按 Phase 分组**：将要执行的层按 Phase 分组
 3. **Phase 1**：启动所有 phase=1 的目标层的 thinker subagent（如 domain）
-4. **等待 Phase 1 完成**：所有 Phase 1 的 subagent 返回后，执行 `ddd-workflow-status.sh --check-all` 检查状态
+4. **等待 Phase 1 完成**：所有 Phase 1 的 subagent 返回后，执行 `backend-workflow-status.sh --check-all` 检查状态
 5. **Phase 2**：Phase 1 全部 done 后，**并行启动**所有 phase=2 的目标层（如 infr + application，放在同一条消息的多个 Task 调用中）
 6. **等待 Phase 2 完成**
 7. **Phase 3**：Phase 2 全部 done 后，启动 phase=3 的目标层（如 ohs）
-8. 所有目标 Phase 完成后，执行 `ddd-workflow-status.sh --check-all` 获取全量校验结果
+8. 所有目标 Phase 完成后，执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
 9. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
 
 如果某个 Phase 中没有目标层（因为 `--layers` 过滤或评估为不需要），直接跳过该 Phase。
@@ -195,7 +195,7 @@ Task(
 
     执行以下命令标记本层开始设计：
     ```bash
-    bash {DDD_HELP}/scripts/ddd-workflow-status.sh {IDEA_DIR} --set {layer} in_progress
+    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} designing
     ```
 
     ---
@@ -244,7 +244,7 @@ Task(
 
     完成后执行：
     ```bash
-    bash {DDD_HELP}/scripts/ddd-workflow-status.sh {IDEA_DIR} --set {layer} done
+    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} designed
     ```
 
     ## frontmatter 要求
@@ -294,7 +294,7 @@ Task(
 
 ### 产出验证
 
-每个 Phase 的 subagent 全部返回后，主 agent 执行 `ddd-workflow-status.sh --check-all` 获取校验结果。
+每个 Phase 的 subagent 全部返回后，主 agent 执行 `backend-workflow-status.sh --check-all` 获取校验结果。
 
 根据 `validation.status` 判断：
 - `pass` — 全部通过，进入 Step 4

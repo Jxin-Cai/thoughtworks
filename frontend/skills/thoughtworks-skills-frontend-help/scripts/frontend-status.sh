@@ -44,10 +44,37 @@ extract_depends() {
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
+STATE_FILE="$IDEA_DIR/frontend-workflow-state.json"
 
 get_layer_phase() {
   local layer_id="$1"
-  awk "/^  - id: ${layer_id}$/,/^  - id:/" "$WORKFLOW" | grep "phase:" | head -1 | sed 's/.*phase:[[:space:]]*//'
+  awk -v lid="$layer_id" '
+    BEGIN { found=0 }
+    $0 ~ "^  - id: " lid "$" { found=1; next }
+    found && /^  - id:/ { exit }
+    found && /phase:/ { gsub(/.*phase:[[:space:]]*/, ""); print; exit }
+  ' "$WORKFLOW"
+}
+
+# 从 frontend-workflow-state.json 读取某层的工作流状态
+get_workflow_status() {
+  local layer="$1"
+  if [ ! -f "$STATE_FILE" ]; then echo ""; return; fi
+  awk -v layer="$layer" '
+    BEGIN { in_tracked=0; in_layer=0 }
+    /"tracked_layers"/ { in_tracked=1; next }
+    in_tracked && !in_layer {
+      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
+    }
+    in_tracked && in_layer {
+      if ($0 ~ /"status"/) {
+        gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "")
+        gsub(/".*/, "")
+        print
+        exit
+      }
+    }
+  ' "$STATE_FILE"
 }
 
 layer_count=0
@@ -135,14 +162,29 @@ elif [ "$overall_done" -gt 0 ] || [ "$overall_in_progress" -gt 0 ]; then state="
 else state="not_started"
 fi
 
-json="{\"idea\":\"$IDEA_NAME\",\"layers\":[$layers_json],\"overall\":{\"total\":$overall_total,\"done\":$overall_done,\"pending\":$overall_pending,\"in_progress\":$overall_in_progress,\"failed\":$overall_failed},\"state\":\"$state\"}"
+# 构建 workflow_phases JSON（从 frontend-workflow-state.json）
+workflow_phases_json=""
+if [ -f "$STATE_FILE" ]; then
+  for layer_id in frontend; do
+    wf_st=$(get_workflow_status "$layer_id")
+    [ -z "$wf_st" ] && continue
+    entry="\"$layer_id\":\"$wf_st\""
+    if [ -z "$workflow_phases_json" ]; then
+      workflow_phases_json="$entry"
+    else
+      workflow_phases_json="$workflow_phases_json,$entry"
+    fi
+  done
+fi
+
+json="{\"idea\":\"$IDEA_NAME\",\"layers\":[$layers_json],\"overall\":{\"total\":$overall_total,\"done\":$overall_done,\"pending\":$overall_pending,\"in_progress\":$overall_in_progress,\"failed\":$overall_failed},\"state\":\"$state\",\"workflow_phases\":{$workflow_phases_json}}"
 
 if [ "$PRETTY" = "--pretty" ]; then
   echo ""
   echo "== $IDEA_NAME (frontend) =="
   echo ""
-  printf "%-15s %-7s %-10s %-6s %-8s %s\n" "Layer" "Phase" "Thoughts" "Done" "Pending" "Status"
-  printf "%-15s %-7s %-10s %-6s %-8s %s\n" "───────────────" "───────" "──────────" "──────" "────────" "──────────"
+  printf "%-15s %-7s %-10s %-6s %-8s %-12s %s\n" "Layer" "Phase" "Thoughts" "Done" "Pending" "WF-State" "Status"
+  printf "%-15s %-7s %-10s %-6s %-8s %-12s %s\n" "───────────────" "───────" "──────────" "──────" "────────" "────────────" "──────────"
   for layer_id in $unique_layers; do
     phase=$(get_layer_phase "$layer_id")
     l_total=0 l_done=0 l_pending=0
@@ -153,7 +195,9 @@ if [ "$PRETTY" = "--pretty" ]; then
       [ "${all_statuses[$i]}" = "pending" ] && l_pending=$((l_pending + 1))
     done
     if [ "$l_done" -eq "$l_total" ]; then status_str="✓ done"; else status_str="○ pending"; fi
-    printf "%-15s %-7s %-10s %-6s %-8s %s\n" "$layer_id" "$phase" "$l_total" "$l_done" "$l_pending" "$status_str"
+    wf_st=$(get_workflow_status "$layer_id")
+    [ -z "$wf_st" ] && wf_st="-"
+    printf "%-15s %-7s %-10s %-6s %-8s %-12s %s\n" "$layer_id" "$phase" "$l_total" "$l_done" "$l_pending" "$wf_st" "$status_str"
   done
   echo ""
   echo "State: $state"

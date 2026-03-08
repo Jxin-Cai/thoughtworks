@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# DDD 工作流状态管理脚本
+# 后端工作流状态管理脚本
 # 用法:
-#   ddd-workflow-status.sh <idea-dir>                          — 查看当前状态（非阻塞）
-#   ddd-workflow-status.sh <idea-dir> --init <idea-name> <layer1> [layer2...]  — 初始化状态文件
-#   ddd-workflow-status.sh <idea-dir> --set <layer> <status>   — 设置某层状态
-#   ddd-workflow-status.sh <idea-dir> --check-upstream <layer> — 非阻塞检查上游是否 ready
-#   ddd-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成（含校验）
+#   backend-workflow-status.sh <idea-dir>                          — 查看当前状态（非阻塞）
+#   backend-workflow-status.sh <idea-dir> --init <idea-name> <layer1> [layer2...]  — 初始化状态文件
+#   backend-workflow-status.sh <idea-dir> --set <layer> <status>   — 设置某层状态
+#   backend-workflow-status.sh <idea-dir> --check-upstream <layer> — 非阻塞检查上游是否 ready
+#   backend-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成（含校验）
 #
 # 状态文件: <idea-dir>/workflow-state.json
-# 状态机: pending → in_progress → done / failed
+# 状态机: pending → designing → designed → coding → coded / failed
 #
 # 重要变更（v2）:
 #   - 移除 --wait-upstream / --wait-all 的阻塞轮询模式（与 Claude Code Bash 120s 超时不兼容）
@@ -16,10 +16,15 @@
 #   - 新增 --check-upstream / --check-all 非阻塞检查模式
 #   - 新增 flock 文件锁防止并发写入竞态
 #   - 简化状态机：移除 waiting/blocked 中间态，由主 agent DAG 编排保证顺序
+#
+# 重要变更（v3）:
+#   - 精细化状态：pending → designing → designed → coding → coded / failed
+#   - 向后兼容：--check-upstream / --check-all 中 done 与 coded 等价
+#   - --set 不再接受 in_progress / done（旧状态值被拒绝）
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: ddd-workflow-status.sh <idea-dir> [--init|--set|--check-upstream|--check-all]}"
+IDEA_DIR="${1:?用法: backend-workflow-status.sh <idea-dir> [--init|--set|--check-upstream|--check-all]}"
 MODE="${2:-status}"
 
 STATE_FILE="$IDEA_DIR/workflow-state.json"
@@ -27,7 +32,7 @@ DESIGNS_DIR="$IDEA_DIR/designs"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
-VALIDATE_SCRIPT="$SCRIPT_DIR/ddd-output-validate.sh"
+VALIDATE_SCRIPT="$SCRIPT_DIR/backend-output-validate.sh"
 LOCK_FILE="${STATE_FILE}.lock"
 
 # ── 文件锁（防止并发写入竞态）──
@@ -77,7 +82,7 @@ get_tracked_layers() {
   if [ ! -f "$STATE_FILE" ]; then
     return
   fi
-  sed -n '/"tracked_layers"/,/^[[:space:]]*}/p' "$STATE_FILE" | grep -oE '"(domain|infr|application|ohs)"[[:space:]]*:' | sed 's/"//g;s/[[:space:]]*://g'
+  grep -oE '"(domain|infr|application|ohs)"[[:space:]]*:' "$STATE_FILE" | sed 's/"//g;s/[[:space:]]*://g'
 }
 
 get_tracked_status() {
@@ -143,7 +148,12 @@ get_tracked_files() {
 
 get_requires() {
   local layer_id="$1"
-  awk "/^  - id: ${layer_id}$/,/^  - id:/" "$WORKFLOW" | grep "requires:" | head -1 | sed 's/.*requires:[[:space:]]*//' | sed 's/\[//;s/\]//;s/,/ /g' | tr -s ' '
+  awk -v lid="$layer_id" '
+    BEGIN { found=0 }
+    $0 ~ "^  - id: " lid "$" { found=1; next }
+    found && /^  - id:/ { exit }
+    found && /requires:/ { gsub(/.*requires:[[:space:]]*/, ""); gsub(/\[/, ""); gsub(/\]/, ""); gsub(/,/, " "); print; exit }
+  ' "$WORKFLOW" | tr -s ' '
 }
 
 is_tracked() {
@@ -193,15 +203,17 @@ update_layer_status() {
       [ -n "$items" ] && files_arr="[$items]"
     fi
 
-    local entry="\"$layer\": { \"status\": \"$st\", \"files\": $files_arr }"
+    local entry="    \"$layer\": {\n      \"status\": \"$st\",\n      \"files\": $files_arr\n    }"
     if [ -z "$layers_json" ]; then
       layers_json="$entry"
     else
-      layers_json="$layers_json, $entry"
+      layers_json="$layers_json,\n$entry"
     fi
   done
 
-  locked_write "{ \"idea\": \"$idea\", \"tracked_layers\": { $layers_json } }"
+  local content
+  content=$(printf "{\n  \"idea\": \"$idea\",\n  \"tracked_layers\": {\n$layers_json\n  }\n}")
+  locked_write "$content"
 }
 
 build_layers_snapshot() {
@@ -270,8 +282,9 @@ case "$MODE" in
       fi
 
       case "$st" in
-        done)         has_done=true ;;
-        in_progress)  has_in_progress=true; all_done=false; all_pending=false ;;
+        done|coded)   has_done=true ;;
+        designing|coding)  has_in_progress=true; all_done=false; all_pending=false ;;
+        designed)     all_done=false; all_pending=false ;;
         failed)       has_failed=true; all_done=false; all_pending=false ;;
         pending)      has_pending=true; all_done=false ;;
         *)            all_done=false; all_pending=false ;;
@@ -310,27 +323,28 @@ case "$MODE" in
         domain|infr|application|ohs) ;;
         *) echo "{\"error\": \"无效层名: $layer，可选: domain|infr|application|ohs\"}" >&2; exit 1 ;;
       esac
-      entry="\"$layer\": { \"status\": \"pending\", \"files\": [] }"
+      entry="    \"$layer\": {\n      \"status\": \"pending\",\n      \"files\": []\n    }"
       if [ -z "$layers_json" ]; then
         layers_json="$entry"
       else
-        layers_json="$layers_json, $entry"
+        layers_json="$layers_json,\n$entry"
       fi
     done
 
     mkdir -p "$(dirname "$STATE_FILE")"
-    locked_write "{ \"idea\": \"$IDEA_NAME\", \"tracked_layers\": { $layers_json } }"
+    init_content=$(printf "{\n  \"idea\": \"$IDEA_NAME\",\n  \"tracked_layers\": {\n$layers_json\n  }\n}")
+    locked_write "$init_content"
     echo "{\"initialized\": true, \"idea\": \"$IDEA_NAME\", \"layers\": [$(echo "$LAYERS" | sed 's/ /", "/g;s/^/"/;s/$/"/' )]}"
     ;;
 
   # ── --set 模式 ──
   --set)
     LAYER="${3:?--set 需要指定层名}"
-    STATUS="${4:?--set 需要指定状态 (pending|in_progress|done|failed)}"
+    STATUS="${4:?--set 需要指定状态 (pending|designing|designed|coding|coded|failed)}"
 
     case "$STATUS" in
-      pending|in_progress|done|failed) ;;
-      *) echo "{\"error\": \"无效状态: $STATUS，可选: pending|in_progress|done|failed\"}" >&2; exit 1 ;;
+      pending|designing|designed|coding|coded|failed) ;;
+      *) echo "{\"error\": \"无效状态: ${STATUS}，可选: pending|designing|designed|coding|coded|failed\"}" >&2; exit 1 ;;
     esac
 
     if [ ! -f "$STATE_FILE" ]; then
@@ -383,7 +397,7 @@ case "$MODE" in
     for req in $wait_for; do
       st=$(get_tracked_status "$req")
       case "$st" in
-        done) ;;
+        done|coded) ;;
         failed)
           failed_layer="$req"
           break
@@ -425,7 +439,7 @@ case "$MODE" in
     for layer in $tracked; do
       st=$(get_tracked_status "$layer")
       case "$st" in
-        done) ;;
+        done|coded) ;;
         failed)  has_failed=true; all_done=false ;;
         *)       all_done=false ;;
       esac
@@ -453,7 +467,7 @@ case "$MODE" in
 
   *)
     echo "未知模式: $MODE" >&2
-    echo "用法: ddd-workflow-status.sh <idea-dir> [--init|--set|--check-upstream|--check-all]" >&2
+    echo "用法: backend-workflow-status.sh <idea-dir> [--init|--set|--check-upstream|--check-all]" >&2
     exit 1
     ;;
 esac

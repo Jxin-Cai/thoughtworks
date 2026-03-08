@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# DDD 状态查询脚本
-# 用法: ddd-status.sh <idea-dir> [--pretty]
+# 后端状态查询脚本
+# 用法: backend-status.sh <idea-dir> [--pretty]
 # 输出: 结构化 JSON（默认）或人类可读表格（--pretty）
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: ddd-status.sh <idea-dir> [--pretty]}"
+IDEA_DIR="${1:?用法: backend-status.sh <idea-dir> [--pretty]}"
 PRETTY="${2:-}"
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
 
@@ -51,15 +51,58 @@ extract_depends() {
 # 读取 workflow.yaml 获取层的 phase 和 requires
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
+STATE_FILE="$IDEA_DIR/workflow-state.json"
 
 get_layer_phase() {
   local layer_id="$1"
-  awk "/^  - id: ${layer_id}$/,/^  - id:/" "$WORKFLOW" | grep "phase:" | head -1 | sed 's/.*phase:[[:space:]]*//'
+  awk -v lid="$layer_id" '
+    BEGIN { found=0 }
+    $0 ~ "^  - id: " lid "$" { found=1; next }
+    found && /^  - id:/ { exit }
+    found && /phase:/ { gsub(/.*phase:[[:space:]]*/, ""); print; exit }
+  ' "$WORKFLOW"
 }
 
 get_layer_requires() {
   local layer_id="$1"
-  awk "/^  - id: ${layer_id}$/,/^  - id:/" "$WORKFLOW" | grep "requires:" | head -1 | sed 's/.*requires:[[:space:]]*//' | sed 's/\[//;s/\]//;s/,/ /g'
+  awk -v lid="$layer_id" '
+    BEGIN { found=0 }
+    $0 ~ "^  - id: " lid "$" { found=1; next }
+    found && /^  - id:/ { exit }
+    found && /requires:/ { gsub(/.*requires:[[:space:]]*/, ""); gsub(/\[/, ""); gsub(/\]/, ""); gsub(/,/, " "); print; exit }
+  ' "$WORKFLOW"
+}
+
+# 从 workflow-state.json 读取某层的工作流状态
+get_workflow_status() {
+  local layer="$1"
+  if [ ! -f "$STATE_FILE" ]; then echo ""; return; fi
+  awk -v layer="$layer" '
+    BEGIN { in_tracked=0; in_layer=0 }
+    /"tracked_layers"/ { in_tracked=1; next }
+    in_tracked && !in_layer {
+      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
+    }
+    in_tracked && in_layer {
+      if ($0 ~ /"status"/) {
+        gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "")
+        gsub(/".*/, "")
+        print
+        exit
+      }
+    }
+  ' "$STATE_FILE"
+}
+
+# 检查某层的工作流状态是否为 coded 或 done（上游就绪条件）
+is_layer_wf_coded() {
+  local check_layer="$1"
+  local wf_st
+  wf_st=$(get_workflow_status "$check_layer")
+  case "$wf_st" in
+    coded|done) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # 收集所有 thought 文件信息
@@ -212,9 +255,18 @@ for i in $(seq 0 $((layer_count - 1))); do
   for req in $requires; do
     req=$(echo "$req" | tr -d ' ')
     [ -z "$req" ] && continue
-    if ! is_layer_done "$req"; then
-      cross_ok=0
-      break
+    # 先检查 workflow-state.json 中上游是否 coded|done
+    if [ -f "$STATE_FILE" ]; then
+      if ! is_layer_wf_coded "$req"; then
+        cross_ok=0
+        break
+      fi
+    else
+      # 无 workflow-state.json 时回退到 frontmatter 检查
+      if ! is_layer_done "$req"; then
+        cross_ok=0
+        break
+      fi
     fi
   done
   [ "$cross_ok" -eq 0 ] && continue
@@ -238,15 +290,30 @@ for i in $(seq 0 $((layer_count - 1))); do
   fi
 done
 
+# 构建 workflow_phases JSON（从 workflow-state.json）
+workflow_phases_json=""
+if [ -f "$STATE_FILE" ]; then
+  for layer_id in domain infr application ohs; do
+    wf_st=$(get_workflow_status "$layer_id")
+    [ -z "$wf_st" ] && continue
+    entry="\"$layer_id\":\"$wf_st\""
+    if [ -z "$workflow_phases_json" ]; then
+      workflow_phases_json="$entry"
+    else
+      workflow_phases_json="$workflow_phases_json,$entry"
+    fi
+  done
+fi
+
 # 输出
-json="{\"idea\":\"$IDEA_NAME\",\"layers\":[$layers_json],\"overall\":{\"total\":$overall_total,\"done\":$overall_done,\"pending\":$overall_pending,\"in_progress\":$overall_in_progress,\"failed\":$overall_failed},\"state\":\"$state\",\"next_thoughts\":[$next_thoughts]}"
+json="{\"idea\":\"$IDEA_NAME\",\"layers\":[$layers_json],\"overall\":{\"total\":$overall_total,\"done\":$overall_done,\"pending\":$overall_pending,\"in_progress\":$overall_in_progress,\"failed\":$overall_failed},\"state\":\"$state\",\"workflow_phases\":{$workflow_phases_json},\"next_thoughts\":[$next_thoughts]}"
 
 if [ "$PRETTY" = "--pretty" ]; then
   echo ""
   echo "== $IDEA_NAME =="
   echo ""
-  printf "%-15s %-7s %-10s %-6s %-8s %s\n" "Layer" "Phase" "Thoughts" "Done" "Pending" "Status"
-  printf "%-15s %-7s %-10s %-6s %-8s %s\n" "───────────────" "───────" "──────────" "──────" "────────" "──────────"
+  printf "%-15s %-7s %-10s %-6s %-8s %-12s %s\n" "Layer" "Phase" "Thoughts" "Done" "Pending" "WF-State" "Status"
+  printf "%-15s %-7s %-10s %-6s %-8s %-12s %s\n" "───────────────" "───────" "──────────" "──────" "────────" "────────────" "──────────"
 
   for layer_id in $unique_layers; do
     phase=$(get_layer_phase "$layer_id")
@@ -264,7 +331,9 @@ if [ "$PRETTY" = "--pretty" ]; then
     else
       status_str="○ pending"
     fi
-    printf "%-15s %-7s %-10s %-6s %-8s %s\n" "$layer_id" "$phase" "$l_total" "$l_done" "$l_pending" "$status_str"
+    wf_st=$(get_workflow_status "$layer_id")
+    [ -z "$wf_st" ] && wf_st="-"
+    printf "%-15s %-7s %-10s %-6s %-8s %-12s %s\n" "$layer_id" "$phase" "$l_total" "$l_done" "$l_pending" "$wf_st" "$status_str"
   done
 
   printf "%-15s %-7s %-10s %-6s %-8s\n" "───────────────" "───────" "──────────" "──────" "────────"

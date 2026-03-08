@@ -50,6 +50,11 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 
 ## Step 3: 执行
 
+**标记进入编码阶段**：在开始执行第一个设计文件前，运行：
+```bash
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend coding
+```
+
 对每个 pending 的设计文件：
 
 1. 读取设计文件，提取 frontmatter 和实现清单
@@ -105,6 +110,16 @@ Task(
 
 **每个设计文件最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户
 5. 验证通过后，将 frontmatter status 更新为 `done`
+
+**标记编码完成**：所有设计文件执行完毕后（全部 done），运行：
+```bash
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend coded
+```
+
+如果有失败的设计文件，运行：
+```bash
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend failed
+```
 
 ---
 

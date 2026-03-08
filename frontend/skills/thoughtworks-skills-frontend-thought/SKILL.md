@@ -107,7 +107,7 @@ Task(
 
     执行以下命令标记开始设计：
     ```bash
-    bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend in_progress
+    bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend designing
     ```
 
     ---
@@ -167,7 +167,7 @@ Task(
 
     完成后执行：
     ```bash
-    bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend done
+    bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend designed
     ```
 
     ## frontmatter 要求

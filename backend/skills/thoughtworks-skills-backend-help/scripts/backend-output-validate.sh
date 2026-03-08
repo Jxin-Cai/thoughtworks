@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# DDD 设计文档校验脚本
-# 用法: ddd-output-validate.sh <idea-dir> [--layer <layer>]
+# 后端设计文档校验脚本
+# 用法: backend-output-validate.sh <idea-dir> [--layer <layer>]
 # 输出: JSON 格式校验结果
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: ddd-output-validate.sh <idea-dir> [--layer <layer>]}"
+IDEA_DIR="${1:?用法: backend-output-validate.sh <idea-dir> [--layer <layer>]}"
 shift
 FILTER_LAYER=""
 while [ $# -gt 0 ]; do
