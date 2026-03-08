@@ -27,6 +27,7 @@ argument-hint: "<需求描述或文件路径>"
 本 skill (全栈编排器: 接收需求、调度澄清、评估、编排设计和编码)
   ├── /thoughtworks-backend-clarify       (后端需求澄清)
   ├── /thoughtworks-frontend-clarify  (前端需求澄清)
+  ├── /thoughtworks-branch            (功能分支管理: 创建 feature/<idea-name>)
   ├── /thoughtworks-backend-thought       (后端设计编排)
   ├── /thoughtworks-backend-works         (后端编码编排)
   ├── /thoughtworks-frontend-thought  (前端设计编排)
@@ -120,8 +121,21 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 注意：此时后端 OHS 设计尚未完成，澄清技能会基于后端需求（而非 OHS 契约）来引导前端需求讨论。
 
 <HARD-GATE>
-`/thoughtworks-frontend-clarify` 必须完成（frontend-requirement.md 已写入）后才能进入 Step 4。
-如果 `.thoughtworks/<idea-name>/frontend-requirement.md` 已存在且用户选择基于已有需求继续，可跳过此步骤直接进入 Step 4。
+`/thoughtworks-frontend-clarify` 必须完成（frontend-requirement.md 已写入）后才能进入 Step 3.5。
+如果 `.thoughtworks/<idea-name>/frontend-requirement.md` 已存在且用户选择基于已有需求继续，可跳过此步骤直接进入 Step 3.5。
+子技能完成后立即推进到 Step 3.5，不要等待用户额外指令。
+</HARD-GATE>
+
+---
+
+## Step 3.5: 功能分支管理
+
+调用 `/thoughtworks-branch <idea-name>`。
+
+分支技能会自动检查当前 git 环境，在 main/master 上时创建 `feature/<idea-name>` 分支，确保后续所有设计和编码产出在功能分支上进行。
+
+<HARD-GATE>
+分支技能完成后才能进入 Step 4。
 子技能完成后立即推进到 Step 4，不要等待用户额外指令。
 </HARD-GATE>
 

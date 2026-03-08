@@ -37,6 +37,7 @@ agents:
 ```
 本 skill (Decision-Maker: 评估、编排、中断处理)
   ├── /thoughtworks-backend-clarify  (需求澄清: 项目上下文扫描 + 结构化提问)
+  ├── /thoughtworks-branch           (功能分支管理: 创建 feature/<idea-name>)
   ├── /thoughtworks-backend-thought  (Thinker 编排: 并行启动 + 自协调 + 校验)
   └── /thoughtworks-backend-works    (Worker 编排: DAG 拓扑序执行 + 验证)
 ```
@@ -103,8 +104,20 @@ agents:
 - 写入 `requirement.md`（如已存在则更新）
 
 <HARD-GATE>
-澄清技能完成后才能进入 Step 3。
-如果 `requirement.md` 已存在且用户未要求重新澄清，可跳过此步骤直接进入 Step 3。
+澄清技能完成后才能进入 Step 2.5。
+如果 `requirement.md` 已存在且用户未要求重新澄清，可跳过此步骤直接进入 Step 2.5。
+</HARD-GATE>
+
+---
+
+## Step 2.5: 功能分支管理
+
+调用 `/thoughtworks-branch <idea-name>`。
+
+分支技能会自动检查当前 git 环境，在 main/master 上时创建 `feature/<idea-name>` 分支，确保后续设计和编码产出在功能分支上进行。
+
+<HARD-GATE>
+分支技能完成后才能进入 Step 3。
 </HARD-GATE>
 
 ---

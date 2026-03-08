@@ -70,7 +70,19 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 - 写入 `frontend-requirement.md`
 
 <HARD-GATE>
-澄清技能完成后才能进入 Step 3。
+澄清技能完成后才能进入 Step 2.5。
+</HARD-GATE>
+
+---
+
+## Step 2.5: 功能分支管理
+
+调用 `/thoughtworks-branch <idea-name>`。
+
+分支技能会自动检查当前 git 环境，在 main/master 上时创建 `feature/<idea-name>` 分支，确保后续设计和编码产出在功能分支上进行。
+
+<HARD-GATE>
+分支技能完成后才能进入 Step 3。
 </HARD-GATE>
 
 ---

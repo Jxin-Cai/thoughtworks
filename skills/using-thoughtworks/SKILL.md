@@ -22,6 +22,7 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 | Skill | Trigger | Description |
 |-------|---------|-------------|
 | `thoughtworks-skills-all` | User wants fullstack end-to-end | Orchestrates backend DDD + frontend in sequence |
+| `thoughtworks-skills-branch` | Manage feature branch for an idea | Creates feature/<idea-name> from main/master, called by orchestrators |
 
 ### Backend (DDD)
 
@@ -56,6 +57,7 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 | `/thoughtworks-frontend-clarify` | Frontend requirements clarification |
 | `/thoughtworks-frontend-thought` | Frontend design phase only |
 | `/thoughtworks-frontend-works` | Frontend coding phase only |
+| `/thoughtworks-branch` | Feature branch management for an idea |
 
 ## Trigger Rules
 
@@ -96,6 +98,7 @@ User message received
 /thoughtworks-backend (Decision-Maker)
   Step 1: Receive requirement
   Step 2: → /thoughtworks-backend-clarify (Project scan + clarify)
+  Step 2.5: → /thoughtworks-branch (Feature branch management)
   Step 3: Layer assessment → assessment.md
   Step 4: Phase loop (for each phase):
     4.1 → /thoughtworks-backend-thought --layers <phase layers> (Design)
@@ -112,6 +115,7 @@ User message received
 /thoughtworks-frontend (Decision-Maker)
   Step 1: Receive idea-name (requires backend OHS design)
   Step 2: → /thoughtworks-frontend-clarify (Project scan + clarify)
+  Step 2.5: → /thoughtworks-branch (Feature branch management)
   Step 3: Frontend assessment
   Step 4: → /thoughtworks-frontend-thought (Design)
   Step 5: User confirms design → .frontend-approved
@@ -126,6 +130,7 @@ User message received
   Step 1: Receive requirement
   Step 2: → /thoughtworks-backend-clarify (Backend clarify)
   Step 3: → /thoughtworks-frontend-clarify (Frontend clarify)
+  Step 3.5: → /thoughtworks-branch (Feature branch management)
   Step 4: Backend layer assessment → assessment.md
   Step 5: Backend phase loop (for each phase):
     5.1 → /thoughtworks-backend-thought --layers <phase layers> (Design)
