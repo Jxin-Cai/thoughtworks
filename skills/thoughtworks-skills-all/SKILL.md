@@ -1,12 +1,12 @@
 ---
 name: thoughtworks-skills-all
-description: Use when user wants fullstack end-to-end development. Orchestrates backend DDD and frontend in sequence. Supports multi-context domain decomposition with per-context frontend.
+description: Use when user wants fullstack end-to-end development. Orchestrates backend DDD and frontend in sequence.
 argument-hint: "<需求描述或文件路径>"
 ---
 
 # Fullstack Spec-Driven Development — 全栈编排器
 
-你是全栈编排器，负责直接编排后端 DDD 和前端开发的完整流程。你不依赖后端/前端的 Decision-Maker 入口，而是自己调度各个子技能完成编排。支持将大需求拆分为多个聚合上下文，每个上下文独立完成后端 + 前端的完整循环。
+你是全栈编排器，负责直接编排后端 DDD 和前端开发的完整流程。你不依赖后端/前端的 Decision-Maker 入口，而是自己调度各个子技能完成编排。
 
 用户传入的参数：`$ARGUMENTS`
 
@@ -14,11 +14,10 @@ argument-hint: "<需求描述或文件路径>"
 
 ## 铁律
 
-1. **后端先于前端** — 每个上下文必须先完成后端 OHS 层，该上下文的前端才能开始
-2. **禁止跳过需求澄清** — 后端需求必须通过澄清技能完成（含领域拆分），前端需求在每个上下文的后端完成后独立澄清
+1. **后端先于前端** — 必须先完成后端 OHS 层，前端才能开始
+2. **禁止跳过需求澄清** — 后端需求必须通过澄清技能完成（含聚合分析），前端需求在后端完成后独立澄清
 3. **子技能完成后立即推进** — 每个子技能调用完成后，编排器必须立即推进到下一步，不要停下来等待用户额外指令
 4. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
-5. **按 DAG 拓扑序执行上下文** — 有依赖的上下文必须等上游上下文完成后才能开始
 
 ---
 
@@ -26,14 +25,14 @@ argument-hint: "<需求描述或文件路径>"
 
 ```
 本 skill (全栈编排器: 接收需求、调度澄清、评估、编排设计和编码)
-  ├── /thoughtworks-skills-backend-clarify       (后端需求澄清 + 领域拆分)
-  ├── /thoughtworks-skills-frontend-clarify  (前端需求澄清 — per-context)
-  ├── /thoughtworks-branch            (功能分支管理: 创建 feature/<context-idea-name> — per-context)
+  ├── /thoughtworks-skills-backend-clarify       (后端需求澄清 + 聚合分析)
+  ├── /thoughtworks-skills-frontend-clarify  (前端需求澄清)
+  ├── /thoughtworks-branch            (功能分支管理: 创建 feature/<idea-name>)
   ├── /thoughtworks-skills-backend-thought       (后端设计编排)
   ├── /thoughtworks-skills-backend-works         (后端编码编排)
   ├── /thoughtworks-skills-frontend-thought  (前端设计编排)
   ├── /thoughtworks-skills-frontend-works    (前端编码编排)
-  └── /thoughtworks-skills-merge             (功能分支合并: squash merge feature/<context-idea-name> → main/master — per-context)
+  └── /thoughtworks-skills-merge             (功能分支合并: squash merge feature/<idea-name> → main/master)
 ```
 
 ---
@@ -67,7 +66,7 @@ argument-hint: "<需求描述或文件路径>"
 - 数据库初始化脚本（schema.sql, migration）
 - 其他不属于 DDD 四层或前端的工程任务
 
-如果识别到工程支撑任务，将任务列表写入 `.thoughtworks/.supplementary-tasks.md`（全局临时文件，不属于特定上下文）：
+如果识别到工程支撑任务，将任务列表写入 `.thoughtworks/<idea-name>/supplementary-tasks.md`：
 
 ```md
 # 工程支撑任务
@@ -80,78 +79,61 @@ argument-hint: "<需求描述或文件路径>"
 
 ---
 
-## Step 2: 后端需求澄清与领域拆分
+## Step 2: 后端需求澄清与聚合分析
 
 调用 `/thoughtworks-skills-backend-clarify <需求原文>`。
 
 澄清技能内部完成：
 - 项目上下文扫描（目录结构、关键文档、最近提交、已有领域模型）
 - 基于上下文的结构化提问（目标、约束、成功标准、边界）
-- DDD 战略分析和领域拆分
-- 需求确认和拆分方案确认
-- 创建各上下文目录并写入 `requirement.md`
-- 输出上下文清单（Markdown 表格 + JSON DAG）
+- DDD 战略分析和聚合识别
+- 需求确认和聚合方案确认
+- 创建 `.thoughtworks/<idea-name>/` 目录并写入 `requirement.md`（含聚合分析章节）
 
 ### 解析澄清输出
 
-从 clarify 技能的输出中解析：
-- **上下文清单**：所有上下文的 idea-name 列表
-- **DAG 依赖关系**：各上下文的依赖关系
-- **拓扑序**：`topological_order` 列表，决定执行顺序
+确认 `.thoughtworks/<idea-name>/requirement.md` 已写入。
 
 <HARD-GATE>
-`/thoughtworks-skills-backend-clarify` 必须完成（各上下文的 requirement.md 已写入）后才能进入 Step 3。
-如果已有上下文目录且 requirement.md 包含元数据，可跳过此步骤（断点续传），从 requirement.md 重建 DAG。
+`/thoughtworks-skills-backend-clarify` 必须完成（requirement.md 已写入）后才能进入 Step 3。
+如果已有 requirement.md，可跳过此步骤（断点续传）。
 子技能完成后立即推进到 Step 3，不要等待用户额外指令。
 </HARD-GATE>
 
 ---
 
-## Step 3: 多上下文全栈循环（核心编排）
+## Step 3: 全栈线性编排（核心编排）
 
-按 `topological_order` 逐个执行每个上下文的完整后端 + 前端循环。
+单 idea 的完整后端 + 前端循环。
 
 ```
-for context in topological_order:
-  3.1  检查上游就绪
-  3.2  创建功能分支
-  --- 后端 ---
-  3.3  后端层级评估
-  3.4  后端 Phase 循环
-  3.5  标记后端完成（.approved）
-  --- 前端 ---
-  3.6  前端需求澄清
-  3.7  前端评估
-  3.8  前端设计
-  3.9  前端设计确认（.frontend-approved）
-  3.10 前端编码
-  3.11 展示上下文完成进度
-  3.12 合并当前上下文分支
+3.1  创建功能分支
+--- 后端 ---
+3.2  后端层级评估
+3.3  后端 Phase 循环
+3.4  标记后端完成（.approved）
+--- 前端 ---
+3.5  前端需求澄清
+3.6  前端评估
+3.7  前端设计
+3.8  前端设计确认（.frontend-approved）
+3.9  前端编码
+3.10 展示完成状态
+3.11 合并分支
 ```
 
-### 3.1 检查上游就绪
+### 3.1 创建功能分支
 
-检查当前上下文的所有上游依赖是否已完成：
+调用 `/thoughtworks-branch <idea-name>`。
 
-```bash
-# 对 depends_on 中的每个上游上下文：
-ls .thoughtworks/<upstream-context>/.approved
-```
-
-所有上游的 `.approved` 存在时才能继续。
-
-### 3.2 创建功能分支
-
-调用 `/thoughtworks-branch <context-idea-name>`。
-
-分支技能会自动检查当前 git 环境，为当前上下文创建 `feature/<context-idea-name>` 分支。
+分支技能会自动检查当前 git 环境，创建 `feature/<idea-name>` 分支。
 
 <HARD-GATE>
-分支技能完成后才能进入 3.3。
-子技能完成后立即推进到 3.3，不要等待用户额外指令。
+分支技能完成后才能进入 3.2。
+子技能完成后立即推进到 3.2，不要等待用户额外指令。
 </HARD-GATE>
 
-### 3.3 后端层级评估
+### 3.2 后端层级评估
 
 **全栈编排器亲自执行评估**，不启动 subagent。
 
@@ -163,19 +145,19 @@ ls .thoughtworks/<upstream-context>/.approved
 
 1. 读取 `backend/skills/thoughtworks-skills-backend-help/workflow.yaml`，解析出所有层的定义
 2. 读取 `../assets/assessment-dimensions.md`，获取评估维度和输出格式
-3. 逐层评估，将结果按模板格式写入 `.thoughtworks/<context-idea-name>/assessment.md`
+3. 逐层评估，将结果按模板格式写入 `.thoughtworks/<idea-name>/assessment.md`
 
 4. 评估完成后，初始化工作流状态文件。**只注册评估为"需要开发"的层**：
 
 ```bash
-bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init <context-idea-name> <layer1> [layer2...]
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init <idea-name> <layer1> [layer2...]
 ```
 
 <HARD-GATE>
-在 assessment.md 写入完成之前，禁止进入 3.4。
+在 assessment.md 写入完成之前，禁止进入 3.3。
 </HARD-GATE>
 
-### 3.4 后端 Phase 循环
+### 3.3 后端 Phase 循环
 
 读取 `backend/skills/thoughtworks-skills-backend-help/workflow.yaml`，解析出所有层的 Phase 定义。结合 assessment.md 中评估为"需要开发"的层，按 Phase 顺序循环编排：
 
@@ -187,7 +169,7 @@ Phase 3: ohs
 
 对每个 Phase 执行以下步骤：
 
-#### 3.4.0 检查上游就绪（Phase 2+）
+#### 3.3.0 检查上游就绪（Phase 2+）
 
 从 Phase 2 开始，在启动 Thinker 之前，先检查本 Phase 各层的上游是否已编码完成：
 
@@ -197,51 +179,51 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-upstream <
 
 只有 `upstream_ready: true` 时才能启动该 Phase 的 Thinker。
 
-#### 3.4.1 设计（Thinker）
+#### 3.3.1 设计（Thinker）
 
-调用 `/thoughtworks-skills-backend-thought <context-idea-name> --layers <本 Phase 需要开发的层列表>`
+调用 `/thoughtworks-skills-backend-thought <idea-name> --layers <本 Phase 需要开发的层列表>`
 
 如果本 Phase 中所有层都被评估为"不需要开发"，跳过该 Phase。
 
-thought 子技能完成后立即推进到 3.4.2，不要等待用户额外指令。
+thought 子技能完成后立即推进到 3.3.2，不要等待用户额外指令。
 
-#### 3.4.2 用户确认
+#### 3.3.2 用户确认
 
 thought skill 内部已完成设计展示和用户确认（HARD-GATE）。
 
-#### 3.4.3 编码（Worker）
+#### 3.3.3 编码（Worker）
 
-调用 `/thoughtworks-skills-backend-works <context-idea-name> --layers <本 Phase 需要开发的层列表>`
+调用 `/thoughtworks-skills-backend-works <idea-name> --layers <本 Phase 需要开发的层列表>`
 
 works 子技能完成后立即推进到下一个 Phase，不要等待用户额外指令。
 
-所有 Phase 完成后 → 3.5。
+所有 Phase 完成后 → 3.4。
 
-### 3.5 标记后端完成
+### 3.4 标记后端完成
 
 标记后端设计与编码已全部完成：
 ```bash
-touch .thoughtworks/<context-idea-name>/.approved
+touch .thoughtworks/<idea-name>/.approved
 ```
 
-确认完成后立即推进到 3.6，不要等待用户额外指令。
+确认完成后立即推进到 3.5，不要等待用户额外指令。
 
-### 3.6 前端需求澄清
+### 3.5 前端需求澄清
 
-调用 `/thoughtworks-skills-frontend-clarify <context-idea-name>`。
+调用 `/thoughtworks-skills-frontend-clarify <idea-name>`。
 
 此时后端 OHS 设计已完成，澄清技能可以基于 OHS 导出契约精确引导前端需求讨论。
 
 <HARD-GATE>
-`/thoughtworks-skills-frontend-clarify` 必须完成（frontend-requirement.md 已写入）后才能进入 3.7。
-子技能完成后立即推进到 3.7，不要等待用户额外指令。
+`/thoughtworks-skills-frontend-clarify` 必须完成（frontend-requirement.md 已写入）后才能进入 3.6。
+子技能完成后立即推进到 3.6，不要等待用户额外指令。
 </HARD-GATE>
 
-### 3.7 前端评估
+### 3.6 前端评估
 
 读取 `backend-designs/ohs.md` 的导出契约，评估前端需要做什么。
 
-将评估结果写入 `.thoughtworks/<context-idea-name>/frontend-assessment.md`：
+将评估结果写入 `.thoughtworks/<idea-name>/frontend-assessment.md`：
 
 ```markdown
 # 前端评估
@@ -255,72 +237,68 @@ touch .thoughtworks/<context-idea-name>/.approved
 
 初始化前端工作流状态：
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <context-idea-name> frontend
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea-name> frontend
 ```
 
 创建前端设计目录：
 ```bash
-mkdir -p .thoughtworks/<context-idea-name>/frontend-designs
+mkdir -p .thoughtworks/<idea-name>/frontend-designs
 ```
 
-### 3.8 前端设计编排
+### 3.7 前端设计编排
 
-调用 `/thoughtworks-skills-frontend-thought <context-idea-name>`。
+调用 `/thoughtworks-skills-frontend-thought <idea-name>`。
 
-thought 子技能完成后立即推进到 3.9，不要等待用户额外指令。
+thought 子技能完成后立即推进到 3.8，不要等待用户额外指令。
 
-### 3.9 前端设计确认
+### 3.8 前端设计确认
 
 `/thoughtworks-skills-frontend-thought` 子技能已在内部完成了设计展示和用户确认。
 
 标记前端设计已确认：
 ```bash
-touch .thoughtworks/<context-idea-name>/.frontend-approved
+touch .thoughtworks/<idea-name>/.frontend-approved
 ```
 
-确认完成后立即推进到 3.10，不要等待用户额外指令。
+确认完成后立即推进到 3.9，不要等待用户额外指令。
 
-### 3.10 前端编码编排
+### 3.9 前端编码编排
 
-调用 `/thoughtworks-skills-frontend-works <context-idea-name>`。
+调用 `/thoughtworks-skills-frontend-works <idea-name>`。
 
-works 子技能完成后立即推进到 3.11，不要等待用户额外指令。
+works 子技能完成后立即推进到 3.10，不要等待用户额外指令。
 
-### 3.11 展示上下文完成进度
+### 3.10 展示完成状态
 
-展示多上下文进度表格：
+展示完成摘要：
 
-| # | 上下文 | 后端 | 前端 | 状态 |
-|---|-------|------|------|------|
-| 1 | product-management | ✅ | ✅ | 已完成 |
-| 2 | inventory-management | ✅ | 🔄 | 前端进行中 |
-| 3 | order-processing | ⏳ | ⏳ | 等待上游 |
+| 阶段 | 层级 | 状态 |
+|------|------|------|
+| 后端 | domain, infr, application, ohs | ✅ |
+| 前端 | frontend | ✅ |
 
-展示完成后立即推进到 3.12，不要等待用户额外指令。
+展示完成后立即推进到 3.11，不要等待用户额外指令。
 
-### 3.12 合并当前上下文分支
+### 3.11 合并分支
 
-调用 `/thoughtworks-skills-merge <context-idea-name>`。
+调用 `/thoughtworks-skills-merge <idea-name>`。
 
-merge 技能将 `feature/<context-idea-name>` squash merge 回默认分支（main/master），生成一条合并提交消息，并删除本地功能分支。
+merge 技能将 `feature/<idea-name>` squash merge 回默认分支（main/master），生成一条合并提交消息，并删除本地功能分支。
 
 <HARD-GATE>
-merge 技能完成后才能继续下一个上下文。
-子技能完成后立即推进到下一个上下文，不要等待用户额外指令。
+merge 技能完成后才能进入 Step 4。
 </HARD-GATE>
-
-继续下一个上下文 → 回到 3.1。
 
 ---
 
 ## Step 4: 执行工程支撑任务
 
-所有上下文完成后，读取 `.thoughtworks/.supplementary-tasks.md`。如果文件不存在或为空 → 跳过此步骤。
+读取 `.thoughtworks/<idea-name>/supplementary-tasks.md`。如果文件不存在或为空 → 跳过此步骤。
 
 对每项未完成的任务：
 
 1. 用 Glob 扫描当前项目的文件结构，了解实际的技术栈、端口、模块结构
-2. 读取已有的各上下文 backend-designs/ohs.md（如存在）获取 API 端口和路由信息
+2. 读取已有的 backend-designs/ohs.md（如存在）获取 API 端口和路由信息
 3. 使用 Task 工具（subagent_type: general-purpose）执行任务：
 
 ```
@@ -347,7 +325,7 @@ Task(
 ```
 
 4. 验证文件已创建
-5. 在 `.supplementary-tasks.md` 中将该任务标记为 [x]
+5. 在 `supplementary-tasks.md` 中将该任务标记为 [x]
 
 <HARD-GATE>
 此步骤不得跳过。即使业务代码已全部完成，也必须检查是否有遗留的工程支撑任务。
@@ -359,16 +337,9 @@ Task(
 
 向用户展示：
 
-1. **上下文完成状态表格**：
-
-| # | 上下文 | 后端层级 | 前端页面 | 状态 |
-|---|-------|---------|---------|------|
-| 1 | product-management | domain, infr, application, ohs | ProductList, ProductDetail | ✅ |
-| 2 | inventory-management | domain, infr, application | InventoryDashboard | ✅ |
-| 3 | order-processing | domain, infr, application, ohs | OrderForm, OrderList | ✅ |
-
-2. **各上下文实现摘要** — 后端 + 前端各一段话
-3. **全栈验证** — 各上下文前端 API 调用是否与后端 OHS 端点对齐
+1. **实现摘要** — 后端 + 前端各一段话
+2. **各层完成状态** — 后端各层 + 前端状态
+3. **全栈验证** — 前端 API 调用是否与后端 OHS 端点对齐
 4. **工程支撑产出** — 部署脚本、Docker 配置等（如有）
 
 ---
@@ -377,12 +348,9 @@ Task(
 
 设计确认在子技能内部完成（thought 子技能的 HARD-GATE）。如果用户在子技能内部选择了"修改设计"或"终止"，子技能会自行处理。
 
-### 上下文级中断
-
 | 用户输入 | 编排器决策 |
 |---------|-----------|
 | 确认/继续 | 按当前流程推进 |
-| "跳过当前上下文" | 标记当前上下文为跳过，继续下一个（注意：如有下游上下文依赖当前上下文，需警告用户） |
 | "重新澄清需求" | 回到 Step 2 |
 | "终止" | 保存当前状态后退出 |
 
@@ -401,22 +369,14 @@ Task(
 
 全栈编排器支持从中断处恢复：
 
-### 重建 DAG
-
-从 `.thoughtworks/` 下各目录的 `requirement.md` 中读取 `所属领域拆分` 和 `上游依赖` 字段，重建上下文清单和拓扑序。
-
 ### 确定续传位置
 
-对每个上下文，检查：
+检查 `.thoughtworks/<idea-name>/` 目录：
 1. `.frontend-approved` 存在 + 前端代码已生成 → 已完成，跳过
-2. `.approved` 存在但无 `.frontend-approved` → 从前端阶段继续（3.6）
+2. `.approved` 存在但无 `.frontend-approved` → 从前端阶段继续（3.5）
 3. `workflow-state.json` 存在 → 检查后端各层状态，从中断处继续
 4. `assessment.md` 存在 → 从后端 Phase 循环继续
 5. `requirement.md` 存在但无 assessment → 从后端层级评估开始
-
-### 旧版兼容
-
-如果 `requirement.md` 不包含 `所属领域拆分` 元数据字段，视为旧版单上下文，按单项拓扑序执行。
 
 ---
 
@@ -425,39 +385,30 @@ Task(
 | 你可能会想 | 现实 |
 |-----------|------|
 | "直接调用 /thoughtworks-skills-backend 更简单" | 全栈编排器需要自主控制流程节奏，中转会导致确认步骤重复 |
-| "前端澄清可以全局提前做" | 多上下文下前端依赖各上下文独立的 OHS 契约，提前全局澄清无法精确映射 |
+| "前端澄清可以提前做" | 前端依赖 OHS 契约，提前澄清无法精确映射 |
 | "评估逻辑和后端 Decision-Maker 重复了" | 编排思路一致是设计意图，各编排器独立闭环，不互相依赖 |
 | "后端编码完再做前端设计太慢" | 前端设计依赖 OHS 导出契约，必须等后端设计完成 |
-| "只有一个上下文，不需要循环" | 单上下文也走相同的循环结构，保证逻辑一致性 |
-| "上游还没完成，先做下游" | 必须按 DAG 拓扑序执行，下游依赖上游的导出契约 |
 
 ---
 
 ## 产出目录结构
 
-多上下文全栈场景下：
-
 ```
-.thoughtworks/
-├── .supplementary-tasks.md              # 全局工程支撑任务（不属于特定上下文）
-├── product-management/                  # 上下文 1
-│   ├── requirement.md                   # 后端需求（含元数据）
-│   ├── assessment.md                    # 后端层级评估
-│   ├── workflow-state.json              # 后端工作流状态
-│   ├── .approved                        # 后端完成标记
-│   ├── backend-designs/                 # 后端设计文档
-│   │   ├── domain.md
-│   │   ├── infr.md
-│   │   ├── application.md
-│   │   └── ohs.md
-│   ├── frontend-requirement.md          # 前端需求
-│   ├── frontend-assessment.md           # 前端评估
-│   ├── frontend-workflow-state.json     # 前端工作流状态
-│   ├── .frontend-approved               # 前端完成标记
-│   └── frontend-designs/               # 前端设计文档
-│       └── frontend.md
-├── inventory-management/                # 上下文 2
-│   └── ...
-└── order-processing/                    # 上下文 3
-    └── ...
+.thoughtworks/<idea-name>/
+├── requirement.md                # 需求存档（含聚合分析章节）
+├── assessment.md                 # 后端层级评估结果
+├── workflow-state.json           # 后端工作流状态
+├── .approved                     # 后端完成标记
+├── backend-designs/              # 后端设计文档
+│   ├── domain.md
+│   ├── infr.md
+│   ├── application.md
+│   └── ohs.md
+├── supplementary-tasks.md        # 工程支撑任务（如有）
+├── frontend-requirement.md       # 前端需求
+├── frontend-assessment.md        # 前端评估
+├── frontend-workflow-state.json  # 前端工作流状态
+├── .frontend-approved            # 前端完成标记
+└── frontend-designs/             # 前端设计文档
+    └── frontend.md
 ```

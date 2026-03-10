@@ -36,8 +36,7 @@ agents:
 ├── requirement.md                    # 原始需求存档（由 Decision-Maker 写入）
 ├── assessment.md                     # 层级评估结果（由 Decision-Maker 写入）
 └── backend-designs/                  # 各层设计文档（含 frontmatter + 实现清单）
-    ├── domain.md                     # 领域层设计（含 frontmatter + 实现清单）
-    ├── domain-{N}-{topic}.md         # 复杂场景拆分为多文件
+    ├── domain.md                     # 领域层设计（按聚合分章节）
     ├── infr.md                       # 基础设施层设计
     ├── application.md                # 应用层设计
     └── ohs.md                        # OHS 层设计
@@ -207,6 +206,14 @@ Task(
     具体包括：
     {主 agent 根据评估结论列出的该层需要完成的具体工作项，每项一行}
 
+    {仅 domain 层追加以下内容：}
+    ## 聚合结构要求
+
+    requirement.md 的聚合分析章节列出了所有识别的聚合及其依赖关系。
+    按聚合分析中的建议实现顺序，为每个聚合输出独立的 `## 聚合: {Name}` 章节。
+    如果只有一个聚合，仍使用 `## 聚合: {Name}` 结构。
+    每个聚合章节内包含完整设计（聚合根与实体、值对象、仓储接口等）和独立的 `### 导出契约`。
+
     你的设计方案完成后，必须回头逐条验证上述每个工作项都有对应的设计产出。
 
     ---
@@ -272,8 +279,9 @@ Task(
 
     ## 拆分规则
 
-    - 默认产出单文件 `{layer}.md`，order 为 1
-    - 当预估内容超过约 3000 字时，按功能独立性拆分为 `{layer}-{order}-{topic}.md`（如 `domain-1-user-aggregate.md`、`domain-2-order-aggregate.md`）
+    - **domain 层始终单文件** `domain.md`，内部按聚合分章节（`## 聚合: {Name}`），不拆分为多个 domain-N-xxx.md 文件
+    - 其他层（infr / application / ohs）默认产出单文件 `{layer}.md`，order 为 1
+    - 当其他层预估内容超过约 3000 字时，按功能独立性拆分为 `{layer}-{order}-{topic}.md`
     - 有关联的内容不拆，保持在同一文件中
     - 拆分后的文件通过 depends_on 声明同层内依赖
 

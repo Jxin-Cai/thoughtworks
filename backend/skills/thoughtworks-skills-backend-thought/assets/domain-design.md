@@ -2,6 +2,8 @@
 
 按以下结构输出，所有占位符 `{...}` 替换为实际内容。没有的章节整节删除，不要留空章节。
 
+**多聚合规则**：requirement.md 聚合分析中识别了多少个聚合，就输出多少个 `## 聚合: {AggregateName}` 章节。只有一个聚合时，仍使用 `## 聚合: {Name}` 结构。
+
 ---
 
 ```markdown
@@ -10,12 +12,14 @@
 <!-- REQUIRED -->
 ## 结论
 
-（一句话概括：这一层要做什么，涉及哪些聚合根）
+（一句话概括：涉及哪些聚合，各聚合核心职责）
 
-<!-- REQUIRED -->
-## 聚合根与实体
+<!-- 对每个聚合重复以下结构 -->
+## 聚合: {AggregateName}
 
-### {AggregateRootName}
+### 聚合根与实体
+
+#### {AggregateRootName}
 
 **职责**：（一句话）
 
@@ -42,13 +46,13 @@ public static {AggregateRoot} create({参数列表}) {
 **不变量**：
 - 规则描述 → 违反时行为
 
-### {Entity}（聚合内实体，如有）
+#### {Entity}（聚合内实体，如有）
 
 （同上格式，省略不变量）
 
-## 值对象
+### 值对象
 
-### {ValueObjectName}
+#### {ValueObjectName}
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -60,10 +64,9 @@ public static {AggregateRoot} create({参数列表}) {
 **业务方法**（如有）：
 - `{ValueObject} withXxx({参数})` — 返回新对象，描述
 
-<!-- REQUIRED -->
-## 仓储接口
+### 仓储接口
 
-### {AggregateRoot}Repository
+#### {AggregateRoot}Repository
 
 ```java
 public interface {AggregateRoot}Repository {
@@ -84,9 +87,9 @@ public interface {AggregateRoot}Repository {
 }
 ```
 
-## 领域事件
+### 领域事件
 
-### {AggregateRoot}{Action}Event
+#### {AggregateRoot}{Action}Event
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -95,7 +98,7 @@ public interface {AggregateRoot}Repository {
 **触发时机**：...
 **消费方预期**：...
 
-### {AggregateRoot}EventPublisher
+#### {AggregateRoot}EventPublisher
 
 ```java
 public interface {AggregateRoot}EventPublisher {
@@ -109,9 +112,9 @@ public interface {AggregateRoot}EventPublisher {
 }
 ```
 
-## 防腐层接口
+### 防腐层接口
 
-### {ExternalDomain}AclService
+#### {ExternalDomain}AclService
 
 ```java
 public interface {ExternalDomain}AclService {
@@ -125,9 +128,9 @@ public interface {ExternalDomain}AclService {
 }
 ```
 
-## 领域服务
+### 领域服务
 
-### {DomainServiceName}
+#### {DomainServiceName}
 
 **职责**：（跨聚合编排逻辑描述）
 
@@ -145,29 +148,30 @@ public class {DomainService} {
 1. ...
 2. ...
 
-<!-- REQUIRED -->
-## 导出契约
+### 导出契约
 
-### 聚合根与实体 API
+#### 聚合根与实体 API
 
 | 类名 | 方法签名 | 返回类型 | 说明 |
 |------|---------|---------|------|
 | {AggregateRoot} | `{方法签名}` | {返回类型} | {说明} |
 
 <!-- OPTIONAL: 无值对象时可省略 -->
-### 值对象定义
+#### 值对象定义
 
 | 类名 | 字段 | 类型 | 说明 |
 |------|------|------|------|
 | {ValueObject} | {字段} | {类型} | {说明} |
 
-### 接口签名
+#### 接口签名
 
 | 接口名 | 方法签名 | 返回类型 | 行为描述 |
 |--------|---------|---------|---------|
 | {AggregateRoot}Repository | `{方法签名}` | {返回类型} | {行为描述：save 时 insert-or-update 策略及冲突处理、查询时的加载策略及关联抓取范围、删除时的级联策略} |
 | {AggregateRoot}EventPublisher | `{方法签名}` | {返回类型} | {行为描述：投递语义（至少一次/恰好一次）、消费方预期行为及幂等要求} |
 | {ExternalDomain}AclService | `{方法签名}` | {返回类型} | {行为描述：外部域实际接口及版本、ACL 内部适配与数据映射逻辑、超时/重试/熔断策略} |
+
+<!-- 聚合结束，继续下一个聚合的 ## 聚合: {AnotherAggregateName} -->
 
 <!-- REQUIRED -->
 ## 实现清单

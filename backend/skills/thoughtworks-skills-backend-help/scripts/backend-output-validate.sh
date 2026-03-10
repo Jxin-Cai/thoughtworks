@@ -172,7 +172,7 @@ extract_col2() {
   }'
 }
 
-# 从导出契约区之前的正文内容
+# 从导出契约区之前的正文内容（application 层使用）
 extract_body_before_export() {
   local file="$1"
   awk '
@@ -180,6 +180,53 @@ extract_body_before_export() {
     fm < 2 { next }
     /^## 导出契约/ { exit }
     { print }
+  ' "$file"
+}
+
+# ── domain 多聚合结构辅助函数 ──
+
+# 检查 domain.md 是否包含至少一个聚合级导出契约（### 导出契约）
+has_aggregate_export_contracts() {
+  local file="$1"
+  grep -q "^### 导出契约" "$file" 2>/dev/null
+}
+
+# 提取 domain.md 所有聚合的 ### 导出契约下指定 #### 子表的合并内容
+extract_all_aggregate_h4_content() {
+  local file="$1" h4_title="$2"
+  awk -v h4="#### ${h4_title}" '
+    /^## 聚合:/ { in_agg=1; in_export=0; in_h4=0; next }
+    /^## / && !/^## 聚合:/ { in_agg=0; in_export=0; in_h4=0; next }
+    in_agg && /^### 导出契约/ { in_export=1; in_h4=0; next }
+    in_agg && /^### / && !/^### 导出契约/ { in_export=0; in_h4=0; next }
+    in_export && $0 == h4 { in_h4=1; next }
+    in_export && in_h4 && /^####/ { in_h4=0; next }
+    in_export && in_h4 && /^###/ { in_h4=0; in_export=0; next }
+    in_h4 { print }
+  ' "$file"
+}
+
+# 提取 domain.md 所有聚合的 ### 导出契约的全部内容（合并）
+extract_all_aggregate_export_content() {
+  local file="$1"
+  awk '
+    /^## 聚合:/ { in_agg=1; in_export=0; next }
+    /^## / && !/^## 聚合:/ { in_agg=0; in_export=0; next }
+    in_agg && /^### 导出契约/ { in_export=1; next }
+    in_agg && /^### / && !/^### 导出契约/ { in_export=0; next }
+    in_export { print }
+  ' "$file"
+}
+
+# 提取 domain.md 中所有聚合章节的正文（每个聚合的导出契约之前的内容合并）
+extract_aggregate_body_before_export() {
+  local file="$1"
+  awk '
+    /^## 聚合:/ { in_agg=1; print_body=1; next }
+    /^## / && !/^## 聚合:/ { in_agg=0; print_body=0; next }
+    in_agg && /^### 导出契约/ { print_body=0; next }
+    in_agg && /^### / && print_body==0 { next }
+    in_agg && print_body { print }
   ' "$file"
 }
 
@@ -265,7 +312,15 @@ for layer in $TRACKED_LAYERS; do
 
     # ====== S5: 导出契约存在（仅 domain 和 application） ======
     case "$layer" in
-      domain|application)
+      domain)
+        # domain 层：导出契约在 ## 聚合: xxx 下的 ### 导出契约
+        if has_aggregate_export_contracts "$filepath"; then
+          add_check "$layer" "$fname" "S5" "true"
+        else
+          add_check "$layer" "$fname" "S5" "false" "缺少 ### 导出契约 章节（应在 ## 聚合: xxx 下）"
+        fi
+        ;;
+      application)
         if has_section "$filepath" "导出契约"; then
           add_check "$layer" "$fname" "S5" "true"
         else
@@ -287,7 +342,33 @@ for layer in $TRACKED_LAYERS; do
 
     # ====== S7: 导出契约中每张子表至少有一行数据（仅 domain 和 application） ======
     case "$layer" in
-      domain|application)
+      domain)
+        # domain 层：检查每个聚合的 ### 导出契约下的 #### 子表
+        if has_aggregate_export_contracts "$filepath"; then
+          all_export_content=$(extract_all_aggregate_export_content "$filepath")
+          sub_sections=$(echo "$all_export_content" | grep '^#### ' | sed 's/^#### //')
+          s7_pass=true
+          s7_detail=""
+          if [ -n "$sub_sections" ]; then
+            while IFS= read -r sub; do
+              [ -z "$sub" ] && continue
+              sub_content=$(extract_all_aggregate_h4_content "$filepath" "$sub")
+              sub_data_rows=$(echo "$sub_content" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
+              if [ "$sub_data_rows" -eq 0 ]; then
+                s7_pass=false
+                s7_detail="导出契约子表 '${sub}' 没有数据行"
+                break
+              fi
+            done <<< "$sub_sections"
+          fi
+          if [ "$s7_pass" = "true" ]; then
+            add_check "$layer" "$fname" "S7" "true"
+          else
+            add_check "$layer" "$fname" "S7" "false" "$s7_detail"
+          fi
+        fi
+        ;;
+      application)
         if has_section "$filepath" "导出契约"; then
           export_content=$(extract_section_content "$filepath" "导出契约")
           # 找到所有 ### 子区
@@ -321,18 +402,41 @@ for layer in $TRACKED_LAYERS; do
 
     # ====== I1: 导出契约中的方法签名能在正文中找到 ======
     case "$layer" in
-      domain|application)
+      domain)
+        # domain 层：从所有聚合的导出契约中提取签名，在聚合正文中查找
+        if has_aggregate_export_contracts "$filepath"; then
+          all_export_content=$(extract_all_aggregate_export_content "$filepath")
+          body_content=$(extract_aggregate_body_before_export "$filepath")
+          export_sigs=$(echo "$all_export_content" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+          i1_pass=true
+          i1_detail=""
+          if [ -n "$export_sigs" ]; then
+            while IFS= read -r sig; do
+              [ -z "$sig" ] && continue
+              if ! echo "$body_content" | grep -qF "$sig"; then
+                i1_pass=false
+                i1_detail="导出契约中 \`${sig}\` 在正文中未找到对应"
+                break
+              fi
+            done <<< "$export_sigs"
+          fi
+          if [ "$i1_pass" = "true" ]; then
+            add_check "$layer" "$fname" "I1" "true"
+          else
+            add_check "$layer" "$fname" "I1" "false" "$i1_detail"
+          fi
+        fi
+        ;;
+      application)
         if has_section "$filepath" "导出契约"; then
           export_content=$(extract_section_content "$filepath" "导出契约")
           body_content=$(extract_body_before_export "$filepath")
-          # 提取导出契约所有子表的方法签名（第二列）
           export_sigs=$(echo "$export_content" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
           i1_pass=true
           i1_detail=""
           if [ -n "$export_sigs" ]; then
             while IFS= read -r sig; do
               [ -z "$sig" ] && continue
-              # 在正文中查找该签名字符串
               if ! echo "$body_content" | grep -qF "$sig"; then
                 i1_pass=false
                 i1_detail="导出契约中 \`${sig}\` 在正文中未找到对应"
@@ -354,7 +458,9 @@ for layer in $TRACKED_LAYERS; do
       impl_data_count=$(extract_section_content "$filepath" "实现清单" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
 
       export_data_count=0
-      if has_section "$filepath" "导出契约"; then
+      if [ "$layer" = "domain" ] && has_aggregate_export_contracts "$filepath"; then
+        export_data_count=$(extract_all_aggregate_export_content "$filepath" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
+      elif has_section "$filepath" "导出契约"; then
         export_data_count=$(extract_section_content "$filepath" "导出契约" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
       fi
 
@@ -398,7 +504,8 @@ if is_tracked "infr" && is_tracked "domain"; then
     domain_file=$(get_layer_file "domain")
     infr_files_list=$(get_layer_files_cached "infr")
     if [ -n "$domain_file" ] && [ -f "$domain_file" ]; then
-      domain_iface_sigs=$(extract_subsection_content "$domain_file" "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+      # domain 多聚合结构：从所有聚合的 ### 导出契约 > #### 接口签名 中合并提取
+      domain_iface_sigs=$(extract_all_aggregate_h4_content "$domain_file" "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
       for fname in $infr_files_list; do
         filepath="$BACKEND_DESIGNS_DIR/$fname"
         [ -f "$filepath" ] || continue
@@ -433,7 +540,8 @@ if is_tracked "application" && is_tracked "domain"; then
     domain_file=$(get_layer_file "domain")
     app_files_list=$(get_layer_files_cached "application")
     if [ -n "$domain_file" ] && [ -f "$domain_file" ]; then
-      domain_agg_sigs=$(extract_subsection_content "$domain_file" "聚合根与实体 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+      # domain 多聚合结构：从所有聚合的 ### 导出契约 > #### 聚合根与实体 API 中合并提取
+      domain_agg_sigs=$(extract_all_aggregate_h4_content "$domain_file" "聚合根与实体 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
       for fname in $app_files_list; do
         filepath="$BACKEND_DESIGNS_DIR/$fname"
         [ -f "$filepath" ] || continue
@@ -468,7 +576,8 @@ if is_tracked "application" && is_tracked "domain"; then
     domain_file=$(get_layer_file "domain")
     app_files_list=$(get_layer_files_cached "application")
     if [ -n "$domain_file" ] && [ -f "$domain_file" ]; then
-      domain_iface_sigs=$(extract_subsection_content "$domain_file" "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+      # domain 多聚合结构：从所有聚合的 ### 导出契约 > #### 接口签名 中合并提取
+      domain_iface_sigs=$(extract_all_aggregate_h4_content "$domain_file" "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
       for fname in $app_files_list; do
         filepath="$BACKEND_DESIGNS_DIR/$fname"
         [ -f "$filepath" ] || continue
