@@ -23,6 +23,7 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 |-------|---------|-------------|
 | `thoughtworks-skills-all` | User wants fullstack end-to-end | Orchestrates backend DDD + frontend in sequence |
 | `thoughtworks-skills-branch` | Manage feature branch for an idea | Creates feature/<idea-name> from main/master, called by orchestrators |
+| `thoughtworks-skills-merge` | Merge feature branch back to main | Squash merges feature/<idea-name> to main/master, called by orchestrators |
 
 ### Backend (DDD)
 
@@ -48,24 +49,25 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 | Command | Maps to |
 |---------|---------|
-| `/thoughtworks-all` | Fullstack: backend DDD + frontend end-to-end |
-| `/thoughtworks-backend` | Backend DDD workflow |
-| `/thoughtworks-backend-clarify` | Backend requirements clarification |
-| `/thoughtworks-backend-thought` | Backend design phase only |
-| `/thoughtworks-backend-works` | Backend coding phase only |
-| `/thoughtworks-frontend` | Frontend workflow |
-| `/thoughtworks-frontend-clarify` | Frontend requirements clarification |
-| `/thoughtworks-frontend-thought` | Frontend design phase only |
-| `/thoughtworks-frontend-works` | Frontend coding phase only |
+| `/thoughtworks-skills-all` | Fullstack: backend DDD + frontend end-to-end |
+| `/thoughtworks-skills-backend` | Backend DDD workflow |
+| `/thoughtworks-skills-backend-clarify` | Backend requirements clarification |
+| `/thoughtworks-skills-backend-thought` | Backend design phase only |
+| `/thoughtworks-skills-backend-works` | Backend coding phase only |
+| `/thoughtworks-skills-frontend` | Frontend workflow |
+| `/thoughtworks-skills-frontend-clarify` | Frontend requirements clarification |
+| `/thoughtworks-skills-frontend-thought` | Frontend design phase only |
+| `/thoughtworks-skills-frontend-works` | Frontend coding phase only |
 | `/thoughtworks-branch` | Feature branch management for an idea |
+| `/thoughtworks-skills-merge` | Feature branch squash merge back to main |
 
 ## Trigger Rules
 
 | User Intent | Skill to Invoke |
 |-------------|----------------|
-| DDD, domain modeling, layered architecture, Java backend | Backend skills (`/thoughtworks-backend`) |
-| Frontend pages, components, UI consuming API | Frontend skills (`/thoughtworks-frontend`) |
-| Fullstack, end-to-end, both backend and frontend | Fullstack skill (`/thoughtworks-all`) |
+| DDD, domain modeling, layered architecture, Java backend | Backend skills (`/thoughtworks-skills-backend`) |
+| Frontend pages, components, UI consuming API | Frontend skills (`/thoughtworks-skills-frontend`) |
+| Fullstack, end-to-end, both backend and frontend | Fullstack skill (`/thoughtworks-skills-all`) |
 
 ## The Rule
 
@@ -73,9 +75,9 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 ```
 User message received
-  → Is this DDD backend-related? → /thoughtworks-backend
-  → Is this frontend consuming DDD APIs? → /thoughtworks-frontend
-  → Is this fullstack? → /thoughtworks-all
+  → Is this DDD backend-related? → /thoughtworks-skills-backend
+  → Is this frontend consuming DDD APIs? → /thoughtworks-skills-frontend
+  → Is this fullstack? → /thoughtworks-skills-all
   → None of the above → Respond normally
 ```
 
@@ -86,60 +88,63 @@ User message received
 | "I can just write the code directly" | DDD code needs design-first. Use the skill. |
 | "This is a simple domain model" | Simple models still need contract validation. Use the skill. |
 | "I already know DDD patterns" | The skill enforces specific contract-driven workflows. Use it. |
-| "Let me just create the entity first" | Workers follow design docs. Start with /thoughtworks-backend. |
-| "Frontend doesn't need the DDD skill" | Frontend consumes OHS contracts. Use /thoughtworks-frontend. |
-| "I'll do backend and frontend together" | Use /thoughtworks-all for proper sequencing. |
+| "Let me just create the entity first" | Workers follow design docs. Start with /thoughtworks-skills-backend. |
+| "Frontend doesn't need the DDD skill" | Frontend consumes OHS contracts. Use /thoughtworks-skills-frontend. |
+| "I'll do backend and frontend together" | Use /thoughtworks-skills-all for proper sequencing. |
 
 ## Workflow Overview
 
-### Backend Only (`/thoughtworks-backend`)
+### Backend Only (`/thoughtworks-skills-backend`)
 
 ```
-/thoughtworks-backend (Decision-Maker)
+/thoughtworks-skills-backend (Decision-Maker)
   Step 1: Receive requirement
-  Step 2: → /thoughtworks-backend-clarify (Project scan + clarify)
+  Step 2: → /thoughtworks-skills-backend-clarify (Project scan + clarify)
   Step 2.5: → /thoughtworks-branch (Feature branch management)
   Step 3: Layer assessment → assessment.md
   Step 4: Phase loop (for each phase):
-    4.1 → /thoughtworks-backend-thought --layers <phase layers> (Design)
+    4.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
     4.2 User confirms phase design (HARD-GATE)
-    4.3 → /thoughtworks-backend-works --layers <phase layers> (Coding)
+    4.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
   Step 5: Mark .approved
   Step 6: Engineering support tasks
-  Step 7: Final summary
+  Step 7: → /thoughtworks-skills-merge (Squash merge feature branch)
+  Step 8: Final summary
 ```
 
-### Frontend Only (`/thoughtworks-frontend`)
+### Frontend Only (`/thoughtworks-skills-frontend`)
 
 ```
-/thoughtworks-frontend (Decision-Maker)
+/thoughtworks-skills-frontend (Decision-Maker)
   Step 1: Receive idea-name (requires backend OHS design)
-  Step 2: → /thoughtworks-frontend-clarify (Project scan + clarify)
+  Step 2: → /thoughtworks-skills-frontend-clarify (Project scan + clarify)
   Step 2.5: → /thoughtworks-branch (Feature branch management)
   Step 3: Frontend assessment
-  Step 4: → /thoughtworks-frontend-thought (Design)
+  Step 4: → /thoughtworks-skills-frontend-thought (Design)
   Step 5: User confirms design → .frontend-approved
-  Step 6: → /thoughtworks-frontend-works (Coding)
+  Step 6: → /thoughtworks-skills-frontend-works (Coding)
   Step 7: Final summary
+  Step 8: → /thoughtworks-skills-merge (Squash merge feature branch)
 ```
 
-### Fullstack (`/thoughtworks-all`)
+### Fullstack (`/thoughtworks-skills-all`)
 
 ```
-/thoughtworks-all (Orchestrator — directly orchestrates sub-skills)
+/thoughtworks-skills-all (Orchestrator — directly orchestrates sub-skills)
   Step 1: Receive requirement
-  Step 2: → /thoughtworks-backend-clarify (Backend clarify)
-  Step 3: → /thoughtworks-frontend-clarify (Frontend clarify)
+  Step 2: → /thoughtworks-skills-backend-clarify (Backend clarify)
+  Step 3: → /thoughtworks-skills-frontend-clarify (Frontend clarify)
   Step 3.5: → /thoughtworks-branch (Feature branch management)
   Step 4: Backend layer assessment → assessment.md
   Step 5: Backend phase loop (for each phase):
-    5.1 → /thoughtworks-backend-thought --layers <phase layers> (Design)
+    5.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
     5.2 User confirms phase design
-    5.3 → /thoughtworks-backend-works --layers <phase layers> (Coding)
+    5.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
   Step 6: Mark .approved
   Step 7: Frontend assessment → frontend-assessment.md
-  Step 8: → /thoughtworks-frontend-thought (Frontend design)
+  Step 8: → /thoughtworks-skills-frontend-thought (Frontend design)
   Step 9: User confirms frontend design → .frontend-approved
-  Step 10: → /thoughtworks-frontend-works (Frontend coding)
-  Step 11: Fullstack summary
+  Step 10: → /thoughtworks-skills-frontend-works (Frontend coding)
+  Step 11: → /thoughtworks-skills-merge (Squash merge context branch)
+  Step 12: Fullstack summary
 ```

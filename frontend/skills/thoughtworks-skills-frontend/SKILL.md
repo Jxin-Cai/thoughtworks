@@ -42,7 +42,7 @@ agents:
 
 解析 `$ARGUMENTS` 确定 idea-name。
 
-检查 `.thoughtworks/<idea-name>/` 目录是否存在。如不存在，提示用户先运行 `/thoughtworks-backend` 完成后端开发。
+检查 `.thoughtworks/<idea-name>/` 目录是否存在。如不存在，提示用户先运行 `/thoughtworks-skills-backend` 完成后端开发。
 
 检查 `.thoughtworks/<idea-name>/backend-designs/ohs.md` 是否存在。如不存在，提示用户先完成后端 OHS 层设计。
 
@@ -61,7 +61,7 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 
 ### 执行方式
 
-调用 `/thoughtworks-frontend-clarify <idea-name>`。
+调用 `/thoughtworks-skills-frontend-clarify <idea-name>`。
 
 澄清技能内部完成：
 - 项目上下文扫描（前端目录结构、已有页面、OHS 导出契约、最近提交）
@@ -112,7 +112,7 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea
 
 ## Step 4: 编排 thought skill
 
-调用 `/thoughtworks-frontend-thought <idea-name>`。
+调用 `/thoughtworks-skills-frontend-thought <idea-name>`。
 
 等待 thought skill 完成后，进入 Step 5。
 
@@ -141,7 +141,7 @@ touch .thoughtworks/<idea-name>/.frontend-approved
 
 ## Step 6: 编排 works skill
 
-调用 `/thoughtworks-frontend-works <idea-name>`。
+调用 `/thoughtworks-skills-frontend-works <idea-name>`。
 
 等待 works skill 完成后，进入 Step 6.5。
 
@@ -194,6 +194,18 @@ Task(
 1. **实现摘要** — 创建了哪些页面、组件、API 调用
 2. **产出文件列表** — 所有创建的前端代码文件
 3. **验证结果** — 是否通过 verify pattern 检查
+
+---
+
+## Step 8: 合并分支
+
+调用 `/thoughtworks-skills-merge <idea-name>`。
+
+merge 技能将 `feature/<idea-name>` squash merge 回默认分支（main/master），生成一条合并提交消息，并删除本地功能分支。
+
+<HARD-GATE>
+merge 技能完成后才能进入最终结束。
+</HARD-GATE>
 
 ---
 

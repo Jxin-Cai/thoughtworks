@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-agent-ddd-ohs-thinker
-description: DDD OHS 层设计专家。根据 Application 层和 Domain 层设计文档，按照模板和 java-spec ohs 规范，产出完整的 OHS 层设计文档。在 /thoughtworks-backend-thought 流程中被调用。
+description: DDD OHS 层设计专家。根据 Application 层和 Domain 层设计文档，按照模板和 java-spec ohs 规范，产出完整的 OHS 层设计文档。在 /thoughtworks-skills-backend-thought 流程中被调用。
 tools: Read, Write, Glob, Grep
 disallowedTools: Edit
 model: opus

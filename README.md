@@ -60,31 +60,31 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 ### 全栈（推荐）
 
 ```
-/thoughtworks-all 实现一个用户注册功能
+/thoughtworks-skills-all 实现一个用户注册功能
 ```
 
 ### 仅后端
 
 ```
-/thoughtworks-backend 实现一个用户注册功能，支持邮箱注册和手机号注册
+/thoughtworks-skills-backend 实现一个用户注册功能，支持邮箱注册和手机号注册
 ```
 
 ### 仅前端（需先完成后端 OHS 设计）
 
 ```
-/thoughtworks-frontend <idea-name>
+/thoughtworks-skills-frontend <idea-name>
 ```
 
 ### 分步执行
 
 ```bash
-/thoughtworks-backend-clarify <idea-name>        # 后端需求澄清
-/thoughtworks-backend-thought <idea-name>        # 后端设计
-/thoughtworks-backend-works <idea-name>          # 后端编码
+/thoughtworks-skills-backend-clarify <idea-name>        # 后端需求澄清
+/thoughtworks-skills-backend-thought <idea-name>        # 后端设计
+/thoughtworks-skills-backend-works <idea-name>          # 后端编码
 
-/thoughtworks-frontend-clarify <idea-name>   # 前端需求澄清
-/thoughtworks-frontend-thought <idea-name>   # 前端设计
-/thoughtworks-frontend-works <idea-name>     # 前端编码
+/thoughtworks-skills-frontend-clarify <idea-name>   # 前端需求澄清
+/thoughtworks-skills-frontend-thought <idea-name>   # 前端设计
+/thoughtworks-skills-frontend-works <idea-name>     # 前端编码
 ```
 
 ### 加载编码规范

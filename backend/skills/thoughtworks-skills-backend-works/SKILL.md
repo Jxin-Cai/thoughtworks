@@ -19,7 +19,7 @@ agents:
 
 1. **一个设计文件一个 agent** — 每个 backend-designs/*.md 文件启动独立 worker agent 执行其实现清单，禁止合并多个文件到一个 agent
 2. **禁止跳过设计文件** — 每个 pending 的设计文件都必须执行，不能以"太简单"或"已被其他文件覆盖"为由跳过
-3. **禁止修改实现清单** — 实现清单由 `/thoughtworks-backend-thought` 产出，执行阶段不能擅自修改
+3. **禁止修改实现清单** — 实现清单由 `/thoughtworks-skills-backend-thought` 产出，执行阶段不能擅自修改
 4. **禁止未验证就标记 done** — agent 完成后必须验证文件已创建，才能将 frontmatter status 更新为 done
 
 ## 合理化预防
@@ -43,7 +43,7 @@ agents:
 - `idea-name`：idea 名称。如 `$ARGUMENTS` 为空，`ls .thoughtworks/` 列出所有 idea，用 AskUserQuestion 让用户选择
 - `--layers`：可选，逗号分隔的层列表（如 `domain` 或 `infr,application`）。如不提供，执行所有有 pending 设计文件的层
 
-验证 `.thoughtworks/<idea-name>/backend-designs/` 目录存在且包含设计文件。不存在则提示先运行 `/thoughtworks-backend-thought`。
+验证 `.thoughtworks/<idea-name>/backend-designs/` 目录存在且包含设计文件。不存在则提示先运行 `/thoughtworks-skills-backend-thought`。
 
 设置变量：
 - `IDEA_DIR` = `.thoughtworks/<idea-name>`
@@ -213,7 +213,7 @@ Task(
 <问题描述>
 
 **选项：**
-1. 修改设计文档后继续 — 回到 /thoughtworks-backend-thought 修改设计，然后重新运行 /thoughtworks-backend-works 从断点继续
+1. 修改设计文档后继续 — 回到 /thoughtworks-skills-backend-thought 修改设计，然后重新运行 /thoughtworks-skills-backend-works 从断点继续
 2. 跳过此设计文件继续后续
 3. 手动修复后重试此设计文件
 4. 终止执行
@@ -221,7 +221,7 @@ Task(
 
 用 AskUserQuestion 让用户选择。
 
-- 选择 1 → 将 frontmatter status 设为 `pending`，提示用户修改设计后重新运行 `/thoughtworks-backend-works`
+- 选择 1 → 将 frontmatter status 设为 `pending`，提示用户修改设计后重新运行 `/thoughtworks-skills-backend-works`
 - 选择 2 → 将 frontmatter status 设为 `done`（标记跳过），继续下一个设计文件
 - 选择 3 → 等待用户确认修复完成，重试当前设计文件
 - 选择 4 → 将 frontmatter status 设为 `failed`，输出完成汇总后终止
@@ -269,14 +269,14 @@ bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 - infr: xxx (failed)
 - application: xxx (pending)
 
-可以重新运行 `/thoughtworks-backend-works <idea-name>` 从断点继续。
+可以重新运行 `/thoughtworks-skills-backend-works <idea-name>` 从断点继续。
 ```
 
 ---
 
 ## 断点续传
 
-`/thoughtworks-backend-works` 支持断点续传：
+`/thoughtworks-skills-backend-works` 支持断点续传：
 - 每个设计文件完成后立即更新 frontmatter status
 - 下次运行时通过 `backend-status.sh` 获取状态，从第一个 `pending` 设计文件继续
 - 已 `done` 的设计文件不会重复执行

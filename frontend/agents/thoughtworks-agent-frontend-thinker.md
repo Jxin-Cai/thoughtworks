@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-agent-frontend-thinker
-description: 前端设计专家。根据 OHS 层导出契约和需求文档，按照模板和 frontend-spec 规范，产出完整的前端设计文档。在 /thoughtworks-frontend-thought 流程中被调用。
+description: 前端设计专家。根据 OHS 层导出契约和需求文档，按照模板和 frontend-spec 规范，产出完整的前端设计文档。在 /thoughtworks-skills-frontend-thought 流程中被调用。
 tools: Read, Write, Glob, Grep
 disallowedTools: Edit
 model: opus

@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-agent-ddd-worker-domain
-description: DDD Domain 层执行者。根据设计文档和 java-spec domain 规范，实现具体的 Domain 层代码。在 /thoughtworks-backend-works 流程中被调用。
+description: DDD Domain 层执行者。根据设计文档和 java-spec domain 规范，实现具体的 Domain 层代码。在 /thoughtworks-skills-backend-works 流程中被调用。
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
 maxTurns: 15

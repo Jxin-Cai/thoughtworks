@@ -37,10 +37,11 @@ agents:
 
 ```
 本 skill (Decision-Maker: 评估、编排、中断处理)
-  ├── /thoughtworks-backend-clarify  (需求澄清 + 领域拆分: 项目上下文扫描 + 结构化提问 + DDD 战略分析)
+  ├── /thoughtworks-skills-backend-clarify  (需求澄清 + 领域拆分: 项目上下文扫描 + 结构化提问 + DDD 战略分析)
   ├── /thoughtworks-branch           (功能分支管理: 创建 feature/<context-idea-name>)
-  ├── /thoughtworks-backend-thought  (Thinker 编排: 并行启动 + 自协调 + 校验)
-  └── /thoughtworks-backend-works    (Worker 编排: DAG 拓扑序执行 + 验证)
+  ├── /thoughtworks-skills-backend-thought  (Thinker 编排: 并行启动 + 自协调 + 校验)
+  ├── /thoughtworks-skills-backend-works    (Worker 编排: DAG 拓扑序执行 + 验证)
+  └── /thoughtworks-skills-merge            (功能分支合并: squash merge feature/<context-idea-name> → main/master)
 ```
 
 ---
@@ -91,7 +92,7 @@ agents:
 
 ### 执行方式
 
-调用 `/thoughtworks-backend-clarify <需求原文>`。
+调用 `/thoughtworks-skills-backend-clarify <需求原文>`。
 
 澄清技能内部完成：
 - 项目上下文扫描（目录结构、关键文档、最近提交、已有领域模型）
@@ -126,6 +127,7 @@ for context in topological_order:
   3.3 层级评估
   3.4 Phase 循环（设计 + 编码）
   3.5 标记完成 + 展示进度
+  3.6 合并当前上下文分支
 ```
 
 ### 3.1 检查上游就绪
@@ -201,12 +203,12 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-upstream <
 
 #### 3.4.1 设计（Thinker）
 
-调用 `/thoughtworks-backend-thought <context-idea-name> --layers <本 Phase 需要开发的层列表>`
+调用 `/thoughtworks-skills-backend-thought <context-idea-name> --layers <本 Phase 需要开发的层列表>`
 
 例如：
-- Phase 1: `/thoughtworks-backend-thought <context-idea-name> --layers domain`
-- Phase 2: `/thoughtworks-backend-thought <context-idea-name> --layers infr,application`
-- Phase 3: `/thoughtworks-backend-thought <context-idea-name> --layers ohs`
+- Phase 1: `/thoughtworks-skills-backend-thought <context-idea-name> --layers domain`
+- Phase 2: `/thoughtworks-skills-backend-thought <context-idea-name> --layers infr,application`
+- Phase 3: `/thoughtworks-skills-backend-thought <context-idea-name> --layers ohs`
 
 如果本 Phase 中所有层都被评估为"不需要开发"，跳过该 Phase。
 
@@ -228,12 +230,12 @@ thought skill 完成后，展示本 Phase 的设计摘要：
 
 #### 3.4.3 编码（Worker）
 
-调用 `/thoughtworks-backend-works <context-idea-name> --layers <本 Phase 需要开发的层列表>`
+调用 `/thoughtworks-skills-backend-works <context-idea-name> --layers <本 Phase 需要开发的层列表>`
 
 例如：
-- Phase 1: `/thoughtworks-backend-works <context-idea-name> --layers domain`
-- Phase 2: `/thoughtworks-backend-works <context-idea-name> --layers infr,application`
-- Phase 3: `/thoughtworks-backend-works <context-idea-name> --layers ohs`
+- Phase 1: `/thoughtworks-skills-backend-works <context-idea-name> --layers domain`
+- Phase 2: `/thoughtworks-skills-backend-works <context-idea-name> --layers infr,application`
+- Phase 3: `/thoughtworks-skills-backend-works <context-idea-name> --layers ohs`
 
 #### 3.4.4 验证编码产出
 
@@ -254,6 +256,19 @@ touch .thoughtworks/<context-idea-name>/.approved
 | 1 | product-management | ✅ 已完成 | domain, infr, application, ohs |
 | 2 | inventory-management | 🔄 进行中 | domain ✅, infr 🔄 |
 | 3 | order-processing | ⏳ 等待上游 | — |
+
+展示完成后立即推进到 3.6，不要等待用户额外指令。
+
+### 3.6 合并当前上下文分支
+
+调用 `/thoughtworks-skills-merge <context-idea-name>`。
+
+merge 技能将 `feature/<context-idea-name>` squash merge 回默认分支（main/master），生成一条合并提交消息，并删除本地功能分支。
+
+<HARD-GATE>
+merge 技能完成后才能继续下一个上下文。
+子技能完成后立即推进到下一个上下文，不要等待用户额外指令。
+</HARD-GATE>
 
 继续下一个上下文 → 回到 3.1。
 
@@ -364,7 +379,7 @@ Task(
 单独调用 thought skill 重做某一层时，传入修改指令：
 
 ```
-/thoughtworks-backend-thought <context-idea-name> --layers <layer> --modification "<修改说明>"
+/thoughtworks-skills-backend-thought <context-idea-name> --layers <layer> --modification "<修改说明>"
 ```
 
 thought skill 内部只启动指定层的 thinker，不重跑整个流程。

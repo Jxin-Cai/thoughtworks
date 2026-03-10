@@ -26,13 +26,14 @@ argument-hint: "<需求描述或文件路径>"
 
 ```
 本 skill (全栈编排器: 接收需求、调度澄清、评估、编排设计和编码)
-  ├── /thoughtworks-backend-clarify       (后端需求澄清 + 领域拆分)
-  ├── /thoughtworks-frontend-clarify  (前端需求澄清 — per-context)
+  ├── /thoughtworks-skills-backend-clarify       (后端需求澄清 + 领域拆分)
+  ├── /thoughtworks-skills-frontend-clarify  (前端需求澄清 — per-context)
   ├── /thoughtworks-branch            (功能分支管理: 创建 feature/<context-idea-name> — per-context)
-  ├── /thoughtworks-backend-thought       (后端设计编排)
-  ├── /thoughtworks-backend-works         (后端编码编排)
-  ├── /thoughtworks-frontend-thought  (前端设计编排)
-  └── /thoughtworks-frontend-works    (前端编码编排)
+  ├── /thoughtworks-skills-backend-thought       (后端设计编排)
+  ├── /thoughtworks-skills-backend-works         (后端编码编排)
+  ├── /thoughtworks-skills-frontend-thought  (前端设计编排)
+  ├── /thoughtworks-skills-frontend-works    (前端编码编排)
+  └── /thoughtworks-skills-merge             (功能分支合并: squash merge feature/<context-idea-name> → main/master — per-context)
 ```
 
 ---
@@ -81,7 +82,7 @@ argument-hint: "<需求描述或文件路径>"
 
 ## Step 2: 后端需求澄清与领域拆分
 
-调用 `/thoughtworks-backend-clarify <需求原文>`。
+调用 `/thoughtworks-skills-backend-clarify <需求原文>`。
 
 澄清技能内部完成：
 - 项目上下文扫描（目录结构、关键文档、最近提交、已有领域模型）
@@ -99,7 +100,7 @@ argument-hint: "<需求描述或文件路径>"
 - **拓扑序**：`topological_order` 列表，决定执行顺序
 
 <HARD-GATE>
-`/thoughtworks-backend-clarify` 必须完成（各上下文的 requirement.md 已写入）后才能进入 Step 3。
+`/thoughtworks-skills-backend-clarify` 必须完成（各上下文的 requirement.md 已写入）后才能进入 Step 3。
 如果已有上下文目录且 requirement.md 包含元数据，可跳过此步骤（断点续传），从 requirement.md 重建 DAG。
 子技能完成后立即推进到 Step 3，不要等待用户额外指令。
 </HARD-GATE>
@@ -125,6 +126,7 @@ for context in topological_order:
   3.9  前端设计确认（.frontend-approved）
   3.10 前端编码
   3.11 展示上下文完成进度
+  3.12 合并当前上下文分支
 ```
 
 ### 3.1 检查上游就绪
@@ -197,7 +199,7 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-upstream <
 
 #### 3.4.1 设计（Thinker）
 
-调用 `/thoughtworks-backend-thought <context-idea-name> --layers <本 Phase 需要开发的层列表>`
+调用 `/thoughtworks-skills-backend-thought <context-idea-name> --layers <本 Phase 需要开发的层列表>`
 
 如果本 Phase 中所有层都被评估为"不需要开发"，跳过该 Phase。
 
@@ -209,7 +211,7 @@ thought skill 内部已完成设计展示和用户确认（HARD-GATE）。
 
 #### 3.4.3 编码（Worker）
 
-调用 `/thoughtworks-backend-works <context-idea-name> --layers <本 Phase 需要开发的层列表>`
+调用 `/thoughtworks-skills-backend-works <context-idea-name> --layers <本 Phase 需要开发的层列表>`
 
 works 子技能完成后立即推进到下一个 Phase，不要等待用户额外指令。
 
@@ -226,12 +228,12 @@ touch .thoughtworks/<context-idea-name>/.approved
 
 ### 3.6 前端需求澄清
 
-调用 `/thoughtworks-frontend-clarify <context-idea-name>`。
+调用 `/thoughtworks-skills-frontend-clarify <context-idea-name>`。
 
 此时后端 OHS 设计已完成，澄清技能可以基于 OHS 导出契约精确引导前端需求讨论。
 
 <HARD-GATE>
-`/thoughtworks-frontend-clarify` 必须完成（frontend-requirement.md 已写入）后才能进入 3.7。
+`/thoughtworks-skills-frontend-clarify` 必须完成（frontend-requirement.md 已写入）后才能进入 3.7。
 子技能完成后立即推进到 3.7，不要等待用户额外指令。
 </HARD-GATE>
 
@@ -263,13 +265,13 @@ mkdir -p .thoughtworks/<context-idea-name>/frontend-designs
 
 ### 3.8 前端设计编排
 
-调用 `/thoughtworks-frontend-thought <context-idea-name>`。
+调用 `/thoughtworks-skills-frontend-thought <context-idea-name>`。
 
 thought 子技能完成后立即推进到 3.9，不要等待用户额外指令。
 
 ### 3.9 前端设计确认
 
-`/thoughtworks-frontend-thought` 子技能已在内部完成了设计展示和用户确认。
+`/thoughtworks-skills-frontend-thought` 子技能已在内部完成了设计展示和用户确认。
 
 标记前端设计已确认：
 ```bash
@@ -280,7 +282,7 @@ touch .thoughtworks/<context-idea-name>/.frontend-approved
 
 ### 3.10 前端编码编排
 
-调用 `/thoughtworks-frontend-works <context-idea-name>`。
+调用 `/thoughtworks-skills-frontend-works <context-idea-name>`。
 
 works 子技能完成后立即推进到 3.11，不要等待用户额外指令。
 
@@ -293,6 +295,19 @@ works 子技能完成后立即推进到 3.11，不要等待用户额外指令。
 | 1 | product-management | ✅ | ✅ | 已完成 |
 | 2 | inventory-management | ✅ | 🔄 | 前端进行中 |
 | 3 | order-processing | ⏳ | ⏳ | 等待上游 |
+
+展示完成后立即推进到 3.12，不要等待用户额外指令。
+
+### 3.12 合并当前上下文分支
+
+调用 `/thoughtworks-skills-merge <context-idea-name>`。
+
+merge 技能将 `feature/<context-idea-name>` squash merge 回默认分支（main/master），生成一条合并提交消息，并删除本地功能分支。
+
+<HARD-GATE>
+merge 技能完成后才能继续下一个上下文。
+子技能完成后立即推进到下一个上下文，不要等待用户额外指令。
+</HARD-GATE>
 
 继续下一个上下文 → 回到 3.1。
 
@@ -409,7 +424,7 @@ Task(
 
 | 你可能会想 | 现实 |
 |-----------|------|
-| "直接调用 /thoughtworks-backend 更简单" | 全栈编排器需要自主控制流程节奏，中转会导致确认步骤重复 |
+| "直接调用 /thoughtworks-skills-backend 更简单" | 全栈编排器需要自主控制流程节奏，中转会导致确认步骤重复 |
 | "前端澄清可以全局提前做" | 多上下文下前端依赖各上下文独立的 OHS 契约，提前全局澄清无法精确映射 |
 | "评估逻辑和后端 Decision-Maker 重复了" | 编排思路一致是设计意图，各编排器独立闭环，不互相依赖 |
 | "后端编码完再做前端设计太慢" | 前端设计依赖 OHS 导出契约，必须等后端设计完成 |

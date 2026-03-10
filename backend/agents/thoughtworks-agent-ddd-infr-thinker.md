@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-agent-ddd-infr-thinker
-description: DDD Infrastructure 层设计专家。根据 Domain 层设计文档，按照模板和 java-spec infr/repository 规范，产出完整的 Infrastructure 层设计文档。在 /thoughtworks-backend-thought 流程中被调用。
+description: DDD Infrastructure 层设计专家。根据 Domain 层设计文档，按照模板和 java-spec infr/repository 规范，产出完整的 Infrastructure 层设计文档。在 /thoughtworks-skills-backend-thought 流程中被调用。
 tools: Read, Write, Glob, Grep
 disallowedTools: Edit
 model: opus

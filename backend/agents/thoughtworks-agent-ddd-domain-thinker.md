@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-agent-ddd-domain-thinker
-description: DDD Domain 层设计专家。根据需求文档，按照模板和 java-spec domain 规范，产出完整的 Domain 层设计文档。在 /thoughtworks-backend-thought 流程中被调用。
+description: DDD Domain 层设计专家。根据需求文档，按照模板和 java-spec domain 规范，产出完整的 Domain 层设计文档。在 /thoughtworks-skills-backend-thought 流程中被调用。
 tools: Read, Write, Glob, Grep
 disallowedTools: Edit
 model: opus

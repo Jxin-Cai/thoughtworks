@@ -15,7 +15,7 @@ agents:
 
 本 skill 专注于设计编排：接收 Decision-Maker 的指令 → 派发 Thinker subagent → 校验产出。
 
-需求澄清和层级评估由 Decision-Maker（`/thoughtworks-backend`）负责，本 skill 不再处理。
+需求澄清和层级评估由 Decision-Maker（`/thoughtworks-skills-backend`）负责，本 skill 不再处理。
 
 ---
 
@@ -61,7 +61,7 @@ agents:
 1. `.thoughtworks/<idea-name>/requirement.md` 必须存在
 2. `.thoughtworks/<idea-name>/assessment.md` 必须存在
 
-如果不存在，提示用户先运行 `/thoughtworks-backend <需求>` 完成需求澄清和层级评估。
+如果不存在，提示用户先运行 `/thoughtworks-skills-backend <需求>` 完成需求澄清和层级评估。
 
 读取 assessment.md，确定哪些层需要开发。
 
@@ -327,7 +327,7 @@ Task(
 
 <HARD-GATE>
 展示完毕后，使用 AskUserQuestion 询问用户是否确认设计。
-用户确认后才能提示下一步。禁止自动跳到"运行 /thoughtworks-backend-works"。
+用户确认后才能提示下一步。禁止自动跳到"运行 /thoughtworks-skills-backend-works"。
 </HARD-GATE>
 
-5. **下一步** — 用户确认后，提示运行 `/thoughtworks-backend-works <idea-name>` 开始执行
+5. **下一步** — 用户确认后，提示运行 `/thoughtworks-skills-backend-works <idea-name>` 开始执行
