@@ -48,6 +48,28 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 
 ---
 
+## Step 2.5: UI/UX 实现能力准备
+
+检查当前会话环境中是否有 `ui-ux-pro-max` 技能可用。
+
+如果可用：
+1. 从 `frontend-requirement.md` 中提取产品类型和风格关键词（如有 `## UI 风格` 章节则提取风格标识）
+2. 运行 design-system 生成命令获取设计系统：
+   ```bash
+   python3 {UI_UX_SKILL_DIR}/scripts/search.py "{产品类型} {风格关键词}" --design-system -f markdown
+   ```
+3. 检测项目技术栈（从 package.json 读取，如 react/vue/nextjs），运行 stack guidelines 获取实现指引：
+   ```bash
+   python3 {UI_UX_SKILL_DIR}/scripts/search.py "{关键词}" --stack {tech-stack}
+   ```
+4. 将以上输出存储为 `UI_UX_IMPL_GUIDANCE`，在 Step 3 构建 worker prompt 时注入
+
+如果不可用 → 跳过此步骤，Worker 按原有逻辑编码。
+
+注意：`UI_UX_SKILL_DIR` = `~/.claude/skills/ui-ux-pro-max`（ui-ux-pro-max 技能的安装路径）。
+
+---
+
 ## Step 3: 执行
 
 **标记进入编码阶段**：在开始执行第一个设计文件前，运行：
@@ -82,6 +104,29 @@ Task(
 
     ## OHS 层设计（只读参考）
     如需参考 OHS 层设计，使用 Read 工具加载：`{ohs.md 的绝对路径}`
+
+    {如果 UI_UX_IMPL_GUIDANCE 存在：}
+    ## UI/UX 实现指引
+
+    以下是 ui-ux-pro-max 生成的设计系统和实现最佳实践，编码时必须遵循：
+
+    ### 设计系统
+    {design-system 输出}
+
+    ### 技术栈最佳实践
+    {stack guidelines 输出}
+
+    ### 编码完成前检查清单
+    在声称完成之前，按以下清单逐项验证：
+    - [ ] 不使用 emoji 作为 icon（使用 SVG icon 库）
+    - [ ] 所有可点击元素有 cursor-pointer
+    - [ ] hover 状态有视觉反馈（颜色/阴影过渡）
+    - [ ] 颜色对比度满足 4.5:1（WCAG AA）
+    - [ ] 触控目标 >= 44x44px
+    - [ ] 使用 prefers-reduced-motion 尊重用户动效偏好
+    - [ ] 表单输入有 label
+    - [ ] 图片有 alt 文本
+    - [ ] transition 时长 150-300ms
 
     ---
 

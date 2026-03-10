@@ -71,6 +71,25 @@ skills:
 - 集中定义路由配置在 `src/app/router/`
 - 页面组件使用懒加载（`React.lazy` / 动态 `import()`）
 
+## UI/UX 实现规范
+
+如果 prompt 中 CONTEXT 包含 `## UI/UX 实现指引`，你必须：
+
+1. **设计系统优先** — 使用设计系统中推荐的颜色变量、字体组合、间距 token，不自行发明样式值
+2. **组件风格一致** — 按设计系统中的组件风格指引实现 hover、focus、active 状态
+3. **无障碍基线** — 每个交互元素必须有 aria-label 或关联 label，颜色对比度 >= 4.5:1
+4. **动效克制** — transition 时长 150-300ms，使用 transform/opacity 而非 width/height，检查 prefers-reduced-motion
+5. **图标规范** — 使用 SVG icon 库（Heroicons/Lucide），禁止 emoji 作为 UI icon
+
+### 合理化预防
+
+| 你可能会想 | 现实 |
+|-----------|------|
+| "先用默认样式跑通再调" | 设计系统的 token 就是你的默认值，不存在"先默认再调" |
+| "颜色随便选一个差不多的" | 必须使用设计系统推荐的色板，不能自行选色 |
+| "无障碍后面再补" | aria-label、颜色对比度、键盘导航是编码时的基线要求，不是后期优化 |
+| "动效让设计师来定" | 设计系统已给出动效规范，按规范实现即可 |
+
 ## 项目结构探索
 
 先用 Glob 搜索：
@@ -99,6 +118,10 @@ skills:
    - `**/src/features/*/index.ts`
    - `**/src/entities/*/index.ts`
 3. 抽查关键导入语句，确认无穿透导入和逆向依赖。
+4. 如果 prompt 中包含 `## UI/UX 实现指引`：
+   - 检查使用的颜色值是否来自设计系统（非硬编码随机色值）
+   - 抽查可点击元素是否有 cursor-pointer 和 hover 反馈
+   - 抽查表单输入是否有 label 关联
 
 如果任何文件未创建或验证未通过，修复后重新验证。禁止声称完成但未执行验证。
 </HARD-GATE>
