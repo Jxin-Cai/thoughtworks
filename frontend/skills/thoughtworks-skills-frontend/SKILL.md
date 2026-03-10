@@ -133,6 +133,7 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea
 
 用户确认后：
 ```bash
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend confirmed
 touch .thoughtworks/<idea-name>/.frontend-approved
 ```
 </HARD-GATE>

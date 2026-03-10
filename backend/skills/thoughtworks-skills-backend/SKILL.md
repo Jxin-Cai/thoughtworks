@@ -203,7 +203,11 @@ thought skill 完成后，展示本 Phase 的设计摘要：
 - 终止
 
 <HARD-GATE>
-用户确认后才能进入 3.3.3 编码阶段。禁止自动跳到编码。
+用户确认后，对本 Phase 中每个层标记设计已确认：
+```bash
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} confirmed
+```
+然后进入 3.3.3 编码阶段。禁止自动跳到编码。
 </HARD-GATE>
 
 #### 3.3.3 编码（Worker）

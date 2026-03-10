@@ -220,9 +220,9 @@ case "$MODE" in
 
   --set)
     LAYER="${3:?--set 需要指定层名}"
-    STATUS="${4:?--set 需要指定状态 (pending|designing|designed|coding|coded|failed)}"
+    STATUS="${4:?--set 需要指定状态 (pending|designing|designed|confirmed|coding|coded|failed)}"
     case "$STATUS" in
-      pending|designing|designed|coding|coded|failed) ;;
+      pending|designing|designed|confirmed|coding|coded|failed) ;;
       *) echo "{\"error\": \"无效状态: $STATUS\"}" >&2; exit 1 ;;
     esac
     if [ ! -f "$STATE_FILE" ]; then

@@ -8,7 +8,7 @@
 #   backend-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成（含校验）
 #
 # 状态文件: <idea-dir>/workflow-state.json
-# 状态机: pending → designing → designed → coding → coded / failed
+# 状态机: pending → designing → designed → confirmed → coding → coded / failed
 #
 # 重要变更（v2）:
 #   - 移除 --wait-upstream / --wait-all 的阻塞轮询模式（与 Claude Code Bash 120s 超时不兼容）
@@ -18,7 +18,7 @@
 #   - 简化状态机：移除 waiting/blocked 中间态，由主 agent DAG 编排保证顺序
 #
 # 重要变更（v3）:
-#   - 精细化状态：pending → designing → designed → coding → coded / failed
+#   - 精细化状态：pending → designing → designed → confirmed → coding → coded / failed
 #   - 向后兼容：--check-upstream / --check-all 中 done 与 coded 等价
 #   - --set 不再接受 in_progress / done（旧状态值被拒绝）
 
@@ -284,7 +284,7 @@ case "$MODE" in
       case "$st" in
         done|coded)   has_done=true ;;
         designing|coding)  has_in_progress=true; all_done=false; all_pending=false ;;
-        designed)     all_done=false; all_pending=false ;;
+        designed|confirmed)     all_done=false; all_pending=false ;;
         failed)       has_failed=true; all_done=false; all_pending=false ;;
         pending)      has_pending=true; all_done=false ;;
         *)            all_done=false; all_pending=false ;;
@@ -340,11 +340,11 @@ case "$MODE" in
   # ── --set 模式 ──
   --set)
     LAYER="${3:?--set 需要指定层名}"
-    STATUS="${4:?--set 需要指定状态 (pending|designing|designed|coding|coded|failed)}"
+    STATUS="${4:?--set 需要指定状态 (pending|designing|designed|confirmed|coding|coded|failed)}"
 
     case "$STATUS" in
-      pending|designing|designed|coding|coded|failed) ;;
-      *) echo "{\"error\": \"无效状态: ${STATUS}，可选: pending|designing|designed|coding|coded|failed\"}" >&2; exit 1 ;;
+      pending|designing|designed|confirmed|coding|coded|failed) ;;
+      *) echo "{\"error\": \"无效状态: ${STATUS}，可选: pending|designing|designed|confirmed|coding|coded|failed\"}" >&2; exit 1 ;;
     esac
 
     if [ ! -f "$STATE_FILE" ]; then
