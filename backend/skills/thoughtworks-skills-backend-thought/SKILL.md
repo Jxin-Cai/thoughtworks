@@ -335,7 +335,5 @@ Task(
 
 <HARD-GATE>
 展示完毕后，使用 AskUserQuestion 询问用户是否确认设计。
-用户确认后才能提示下一步。禁止自动跳到"运行 /thoughtworks-skills-backend-works"。
+用户确认后，本技能完成并返回调用方。不要提示用户手动运行任何命令。
 </HARD-GATE>
-
-5. **下一步** — 用户确认后，提示运行 `/thoughtworks-skills-backend-works <idea-name>` 开始执行
