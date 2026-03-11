@@ -7,6 +7,7 @@
 - `domain/{子域名}/event/` — Domain Event Publishing Interface（事件发布接口，按聚合划分）
 - `domain/{子域名}/acl/{外部领域名}/` — Anti-Corruption Layer Interface（防腐层接口，按外部领域划分）
 - `domain/{子域名}/service/` — Domain Service
+- `domain/{子域名}/lib/` — 领域内通用工具类（如格式化、校验辅助等纯函数工具）
 
 ## 允许
 
@@ -146,5 +147,5 @@ public interface InventoryAclService {
 
 ## 依赖方向
 
-- 可依赖：Infrastructure 层（仅工具类）
-- 禁止依赖：所有其他层
+- 可依赖：无
+- 禁止依赖：所有其他层（Application、Infrastructure、OHS）

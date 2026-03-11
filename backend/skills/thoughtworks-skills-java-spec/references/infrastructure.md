@@ -3,7 +3,6 @@
 ## 路径结构
 
 - `infr/repository/` — 仓储实现、Mapper、PO 对象
-- `infr/lib/` — 通用工具库
 - `infr/aop/` — 切面（日志、权限、性能监控）
 - `infr/plugin/` — 中间件集成（Redis、MQ、ES 等配置）
 - `infr/client/` — 外部系统集成（HTTP/RPC Client）
@@ -14,7 +13,7 @@
 - 领域对象与 PO 的双向转换
 - 数据库访问（Mapper、JPA）、所有增删改查操作
 - 外部系统集成、中间件配置、缓存管理
-- 切面编程、通用工具类
+- 切面编程
 
 ## 禁止
 

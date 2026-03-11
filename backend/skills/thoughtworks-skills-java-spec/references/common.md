@@ -28,8 +28,8 @@
 
 | 层 | 可依赖 | 禁止依赖 |
 |---|---|---|
-| OHS | Application、Infrastructure（仅工具类） | Domain（不能直接调用） |
-| Application | Domain、Infrastructure | OHS |
+| OHS | Application | Domain、Infrastructure |
+| Application | Domain | OHS、Infrastructure |
 | Domain | 无 | 所有其他层 |
 | Infrastructure | Domain（实现接口） | OHS、Application |
 

@@ -37,5 +37,5 @@
 
 ## 依赖方向
 
-- 可依赖：Application 层、Infrastructure 层（仅工具类）
-- 禁止依赖：Domain 层
+- 可依赖：Application 层
+- 禁止依赖：Domain 层、Infrastructure 层
