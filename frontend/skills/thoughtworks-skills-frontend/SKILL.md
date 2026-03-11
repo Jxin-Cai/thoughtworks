@@ -3,7 +3,9 @@ name: thoughtworks-skills-frontend
 description: Use when user wants to start frontend development consuming DDD API contracts. This is the frontend entry point that orchestrates thought (design) and works (coding) sub-skills.
 argument-hint: "<idea-name>"
 agents:
-  - thoughtworks-agent-frontend-thinker
+  - thoughtworks-agent-frontend-architecture-thinker
+  - thoughtworks-agent-frontend-components-thinker
+  - thoughtworks-agent-frontend-checklist-thinker
   - thoughtworks-agent-frontend-worker
 ---
 
@@ -105,7 +107,7 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 
 初始化前端工作流状态：
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea-name> frontend
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea-name> frontend-architecture frontend-components frontend-checklist
 ```
 
 ---
@@ -133,7 +135,9 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea
 
 用户确认后：
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend confirmed
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-architecture confirmed
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-components confirmed
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist confirmed
 touch .thoughtworks/<idea-name>/.frontend-approved
 ```
 </HARD-GATE>
@@ -219,5 +223,7 @@ merge 技能完成后才能进入最终结束。
 ├── frontend-workflow-state.json  # 前端工作流状态
 ├── .frontend-approved            # 前端设计确认标记
 └── frontend-designs/             # 前端设计文档
-    └── frontend.md
+    ├── frontend-architecture.md  # 架构 + 路由 + 依赖契约
+    ├── frontend-components.md    # 组件设计 + API 调用层
+    └── frontend-checklist.md     # 实现清单
 ```

@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
-# 前端设计文档校验脚本
+# 前端设计文档校验脚本（3 文件拆分版）
 # 用法: frontend-output-validate.sh <idea-dir>
+#
+# 校验规则：
+# S1: frontmatter 必填字段
+# S3: 结论章节存在且非空
+# S4: 实现清单表格存在（仅 frontend-checklist.md）
+# S6: 依赖契约章节存在
+# C6: Frontend 依赖契约 API 端点 ⊆ OHS 导出契约 API 端点（仅 frontend-architecture.md）
+# C7: frontend-components 依赖契约 ⊆ frontend-architecture 导出契约（跨文件一致性）
 
 set -euo pipefail
 
@@ -53,10 +61,18 @@ extract_section_content() {
   ' "$file"
 }
 
+# 从 frontmatter 读取 layer 字段值
+get_layer_from_frontmatter() {
+  local file="$1"
+  extract_frontmatter "$file" | sed -n 's/^layer:[[:space:]]*//p' | head -1
+}
+
 # 校验所有 frontend-designs/*.md
 for filepath in "$FRONTEND_DESIGNS_DIR"/*.md; do
   [ -f "$filepath" ] || continue
   fname=$(basename "$filepath")
+  layer_id=$(get_layer_from_frontmatter "$filepath")
+  [ -z "$layer_id" ] && layer_id="frontend"
 
   # S1: frontmatter 必填字段
   s1_pass=true
@@ -69,9 +85,9 @@ for filepath in "$FRONTEND_DESIGNS_DIR"/*.md; do
     fi
   done
   if [ "$s1_pass" = "true" ]; then
-    add_check "frontend" "$fname" "S1" "true"
+    add_check "$layer_id" "$fname" "S1" "true"
   else
-    add_check "frontend" "$fname" "S1" "false" "$s1_detail"
+    add_check "$layer_id" "$fname" "S1" "false" "$s1_detail"
   fi
 
   # S3: 结论章节存在
@@ -79,70 +95,132 @@ for filepath in "$FRONTEND_DESIGNS_DIR"/*.md; do
     conclusion_content=$(extract_section_content "$filepath" "结论")
     non_empty=$(echo "$conclusion_content" | grep -v '^[[:space:]]*$' | head -1 || true)
     if [ -n "$non_empty" ]; then
-      add_check "frontend" "$fname" "S3" "true"
+      add_check "$layer_id" "$fname" "S3" "true"
     else
-      add_check "frontend" "$fname" "S3" "false" "结论章节下方没有非空内容"
+      add_check "$layer_id" "$fname" "S3" "false" "结论章节下方没有非空内容"
     fi
   else
-    add_check "frontend" "$fname" "S3" "false" "缺少 ## 结论 章节"
+    add_check "$layer_id" "$fname" "S3" "false" "缺少 ## 结论 章节"
   fi
 
-  # S4: 实现清单表格存在
-  if has_section "$filepath" "实现清单"; then
-    impl_rows=$(extract_section_content "$filepath" "实现清单" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
-    if [ "$impl_rows" -gt 0 ]; then
-      add_check "frontend" "$fname" "S4" "true"
+  # S4: 实现清单表格存在（仅 frontend-checklist.md）
+  if [ "$fname" = "frontend-checklist.md" ]; then
+    if has_section "$filepath" "实现清单"; then
+      impl_rows=$(extract_section_content "$filepath" "实现清单" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
+      if [ "$impl_rows" -gt 0 ]; then
+        add_check "$layer_id" "$fname" "S4" "true"
+      else
+        add_check "$layer_id" "$fname" "S4" "false" "实现清单表格数据行数为 0"
+      fi
     else
-      add_check "frontend" "$fname" "S4" "false" "实现清单表格数据行数为 0"
+      add_check "$layer_id" "$fname" "S4" "false" "缺少 ## 实现清单 章节"
     fi
-  else
-    add_check "frontend" "$fname" "S4" "false" "缺少 ## 实现清单 章节"
   fi
 
   # S6: 依赖契约存在
   if has_section "$filepath" "依赖契约"; then
-    add_check "frontend" "$fname" "S6" "true"
+    add_check "$layer_id" "$fname" "S6" "true"
   else
-    add_check "frontend" "$fname" "S6" "false" "缺少 ## 依赖契约 章节"
+    add_check "$layer_id" "$fname" "S6" "false" "缺少 ## 依赖契约 章节"
   fi
 done
 
-# C6: Frontend 依赖契约 > API 端点 ⊆ OHS 设计文档 > API 端点（如果 backend-designs/ohs.md 存在）
+# C6: Frontend 依赖契约 > API 端点 ⊆ OHS 设计文档 > API 端点（仅 frontend-architecture.md）
 BACKEND_OHS="$IDEA_DIR/backend-designs/ohs.md"
-if [ -f "$BACKEND_OHS" ]; then
+ARCH_FILE="$FRONTEND_DESIGNS_DIR/frontend-architecture.md"
+if [ -f "$BACKEND_OHS" ] && [ -f "$ARCH_FILE" ]; then
   ohs_api_sigs=$(awk '
     /^## API 端点/ { found=1; next }
     found && /^## / { exit }
     found && /^### / { sub(/^### /, ""); print }
   ' "$BACKEND_OHS" || true)
 
-  for filepath in "$FRONTEND_DESIGNS_DIR"/*.md; do
-    [ -f "$filepath" ] || continue
-    fname=$(basename "$filepath")
-    frontend_api_sigs=$(awk '
-      /^### API 端点/ { found=1; next }
+  frontend_api_sigs=$(awk '
+    /^### API 端点/ { found=1; next }
+    found && /^### / { exit }
+    found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
+  ' "$ARCH_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 3) { val=$3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); gsub(/`/, "", val); if (val != "") print val } }' || true)
+
+  c6_pass=true
+  c6_detail=""
+  if [ -n "$frontend_api_sigs" ]; then
+    while IFS= read -r sig; do
+      [ -z "$sig" ] && continue
+      if [ -z "$ohs_api_sigs" ] || ! echo "$ohs_api_sigs" | grep -qF "$sig"; then
+        c6_pass=false
+        c6_detail="Frontend 依赖契约中 \`${sig}\` 在 OHS 设计文档中未找到匹配"
+        break
+      fi
+    done <<< "$frontend_api_sigs"
+  fi
+  if [ "$c6_pass" = "true" ]; then
+    add_check "frontend-architecture" "frontend-architecture.md" "C6" "true"
+  else
+    add_check "frontend-architecture" "frontend-architecture.md" "C6" "false" "$c6_detail"
+  fi
+fi
+
+# C7: frontend-components 依赖契约 ⊆ frontend-architecture 导出契约（跨文件一致性）
+COMP_FILE="$FRONTEND_DESIGNS_DIR/frontend-components.md"
+if [ -f "$ARCH_FILE" ] && [ -f "$COMP_FILE" ]; then
+  # 提取 architecture 导出契约中的 Entity 名称
+  arch_entities=$(awk '
+    /^### Entity 列表/ { found=1; next }
+    found && /^### / { exit }
+    found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
+  ' "$ARCH_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
+
+  # 提取 components 依赖契约中的 Entity 名称
+  comp_dep_entities=$(awk '
+    /^### Entity 列表/ { found=1; next }
+    found && /^### / { exit }
+    found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
+  ' "$COMP_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
+
+  c7_pass=true
+  c7_detail=""
+  if [ -n "$comp_dep_entities" ]; then
+    while IFS= read -r entity; do
+      [ -z "$entity" ] && continue
+      if [ -z "$arch_entities" ] || ! echo "$arch_entities" | grep -qF "$entity"; then
+        c7_pass=false
+        c7_detail="Components 依赖契约中 Entity \`${entity}\` 在 Architecture 导出契约中未找到"
+        break
+      fi
+    done <<< "$comp_dep_entities"
+  fi
+
+  # 也检查 Feature 列表一致性
+  if [ "$c7_pass" = "true" ]; then
+    arch_features=$(awk '
+      /^### Feature 列表/ { found=1; next }
       found && /^### / { exit }
       found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
-    ' "$filepath" | tail -n +2 | awk -F'|' '{ if (NF >= 3) { val=$3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); gsub(/`/, "", val); if (val != "") print val } }' || true)
+    ' "$ARCH_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
 
-    c6_pass=true
-    c6_detail=""
-    if [ -n "$frontend_api_sigs" ]; then
-      while IFS= read -r sig; do
-        [ -z "$sig" ] && continue
-        if [ -z "$ohs_api_sigs" ] || ! echo "$ohs_api_sigs" | grep -qF "$sig"; then
-          c6_pass=false
-          c6_detail="Frontend 依赖契约中 \`${sig}\` 在 OHS 设计文档中未找到匹配"
+    comp_dep_features=$(awk '
+      /^### Feature 列表/ { found=1; next }
+      found && /^### / { exit }
+      found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
+    ' "$COMP_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
+
+    if [ -n "$comp_dep_features" ]; then
+      while IFS= read -r feature; do
+        [ -z "$feature" ] && continue
+        if [ -z "$arch_features" ] || ! echo "$arch_features" | grep -qF "$feature"; then
+          c7_pass=false
+          c7_detail="Components 依赖契约中 Feature \`${feature}\` 在 Architecture 导出契约中未找到"
           break
         fi
-      done <<< "$frontend_api_sigs"
+      done <<< "$comp_dep_features"
     fi
-    if [ "$c6_pass" = "true" ]; then
-      add_check "frontend" "$fname" "C6" "true"
-    else
-      add_check "frontend" "$fname" "C6" "false" "$c6_detail"
-    fi
-  done
+  fi
+
+  if [ "$c7_pass" = "true" ]; then
+    add_check "frontend-components" "frontend-components.md" "C7" "true"
+  else
+    add_check "frontend-components" "frontend-components.md" "C7" "false" "$c7_detail"
+  fi
 fi
 
 ALL_PASS=true

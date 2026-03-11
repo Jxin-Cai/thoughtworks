@@ -14,10 +14,9 @@ agents:
 
 ## 铁律
 
-1. **一个设计文件一个 agent** — 每个 frontend-designs/*.md 文件启动独立 worker agent
-2. **禁止跳过设计文件** — 每个 pending 的设计文件都必须执行
-3. **禁止修改实现清单** — 实现清单由 thought skill 产出，执行阶段不能修改
-4. **禁止未验证就标记 done** — agent 完成后必须验证文件已创建
+1. **checklist 驱动编码** — Worker 从 `frontend-checklist.md` 提取实现清单作为主执行清单，`frontend-architecture.md` 和 `frontend-components.md` 作为上下文参考
+2. **禁止修改实现清单** — 实现清单由 thought skill 产出，执行阶段不能修改
+3. **禁止未验证就标记 done** — agent 完成后必须验证文件已创建
 
 ---
 
@@ -36,7 +35,7 @@ agents:
 
 ---
 
-## Step 2: 读取状态
+## Step 2: 读取状态与设计文件
 
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
@@ -45,6 +44,13 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 - `all_done` → 提示已完成
 - `blocked` → 列出 failed 文件
 - 其他 → 继续执行
+
+读取 3 个设计文件：
+- `{DESIGNS_DIR}/frontend-architecture.md` — 架构设计（FSD 层级、路由、依赖契约）
+- `{DESIGNS_DIR}/frontend-components.md` — 组件设计（Props/State/API 映射）
+- `{DESIGNS_DIR}/frontend-checklist.md` — 实现清单（主执行清单）
+
+从 `frontend-checklist.md` 提取实现清单表格作为 Worker 的执行清单。
 
 ---
 
@@ -72,35 +78,39 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 
 ## Step 3: 执行
 
-**标记进入编码阶段**：在开始执行第一个设计文件前，运行：
+**标记进入编码阶段**：在开始执行前，运行：
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend coding
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist coding
 ```
 
-对每个 pending 的设计文件：
+读取 `frontend-checklist.md` 的 frontmatter，将 status 更新为 `in_progress`。
 
-1. 读取设计文件，提取 frontmatter 和实现清单
-2. 将 frontmatter status 更新为 `in_progress`
-3. 启动 worker agent：
+启动 worker agent：
 
 ```
 Task(
   subagent_type: "thoughtworks-frontend:thoughtworks-agent-frontend-worker",
   max_turns: 15,
-  description: "Frontend: {设计文件 description}",
+  description: "Frontend: {frontend-checklist.md 的 description}",
   prompt: "
     # TASK
 
     根据以下实现清单，逐项创建前端代码文件：
 
-    {设计文件末尾的实现清单表格}
+    {frontend-checklist.md 中的实现清单表格}
 
     ---
 
     # CONTEXT
 
-    ## 前端设计
-    {当前设计文件完整内容}
+    ## 前端架构设计
+    {frontend-architecture.md 完整内容}
+
+    ## 前端组件设计
+    {frontend-components.md 完整内容}
+
+    ## 前端实现清单
+    {frontend-checklist.md 完整内容}
 
     ## OHS 层设计（只读参考）
     如需参考 OHS 层设计，使用 Read 工具加载：`{ohs.md 的绝对路径}`
@@ -138,7 +148,7 @@ Task(
 )
 ```
 
-4. 验证产出：用 Glob 搜索确认文件已创建。如果有文件未创建，重新启动 worker agent，在 prompt 开头追加：
+验证产出：用 Glob 搜索确认文件已创建。如果有文件未创建，重新启动 worker agent，在 prompt 开头追加：
 
 ```
 ---
@@ -153,17 +163,18 @@ Task(
 ---
 ```
 
-**每个设计文件最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户
-5. 验证通过后，将 frontmatter status 更新为 `done`
+**最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户。
 
-**标记编码完成**：所有设计文件执行完毕后（全部 done），运行：
+验证通过后，将 `frontend-checklist.md` 的 frontmatter status 更新为 `done`。
+
+**标记编码完成**：Worker 执行完毕后（验证通过），运行：
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend coded
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist coded
 ```
 
-如果有失败的设计文件，运行：
+如果 Worker 失败，运行：
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend failed
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist failed
 ```
 
 ---

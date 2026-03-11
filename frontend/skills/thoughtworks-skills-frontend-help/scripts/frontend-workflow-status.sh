@@ -54,7 +54,7 @@ read_idea() {
 
 get_tracked_layers() {
   if [ ! -f "$STATE_FILE" ]; then return; fi
-  grep -oE '"(frontend)"[[:space:]]*:' "$STATE_FILE" | sed 's/"//g;s/[[:space:]]*://g'
+  grep -oE '"(frontend-architecture|frontend-components|frontend-checklist)"[[:space:]]*:' "$STATE_FILE" | sed 's/"//g;s/[[:space:]]*://g'
 }
 
 get_tracked_status() {
@@ -206,8 +206,8 @@ case "$MODE" in
     layers_json=""
     for layer in $LAYERS; do
       case "$layer" in
-        frontend) ;;
-        *) echo "{\"error\": \"无效层名: $layer，可选: frontend\"}" >&2; exit 1 ;;
+        frontend-architecture|frontend-components|frontend-checklist) ;;
+        *) echo "{\"error\": \"无效层名: $layer，可选: frontend-architecture, frontend-components, frontend-checklist\"}" >&2; exit 1 ;;
       esac
       entry="    \"$layer\": {\n      \"status\": \"pending\",\n      \"files\": []\n    }"
       if [ -z "$layers_json" ]; then layers_json="$entry"; else layers_json="$layers_json,\n$entry"; fi

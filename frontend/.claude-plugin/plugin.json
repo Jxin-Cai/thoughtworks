@@ -1,9 +1,11 @@
 {
   "name": "thoughtworks-frontend",
   "description": "Frontend code generation consuming DDD API contracts",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "agents": [
-    "./agents/thoughtworks-agent-frontend-thinker.md",
+    "./agents/thoughtworks-agent-frontend-architecture-thinker.md",
+    "./agents/thoughtworks-agent-frontend-components-thinker.md",
+    "./agents/thoughtworks-agent-frontend-checklist-thinker.md",
     "./agents/thoughtworks-agent-frontend-worker.md"
   ],
   "skills": ["./skills/"],
