@@ -15,7 +15,7 @@ argument-hint: "<需求描述或文件路径>"
 ## 铁律
 
 1. **后端先于前端** — 必须先完成后端 OHS 层，前端才能开始
-2. **禁止跳过需求澄清** — 后端需求必须通过澄清技能完成（含聚合分析），前端需求在后端完成后独立澄清
+2. **禁止跳过需求澄清** — 无论需求描述多详细、无论用户传入了需求文件，**只要 `.thoughtworks/<idea-name>/requirement.md` 不存在，就必须调用澄清技能**。需求文件（如 `docs/2.md`）≠ 需求澄清完成。澄清技能会扫描项目上下文、与用户结构化提问、执行聚合分析，这些步骤不可替代
 3. **子技能完成后立即推进** — 每个子技能调用完成后，编排器必须立即推进到下一步，不要停下来等待用户额外指令
 4. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
 
@@ -109,6 +109,18 @@ argument-hint: "<需求描述或文件路径>"
 
 ## Step 2: 后端需求澄清与聚合分析
 
+### 前置检查
+
+先执行文件存在性检查：
+```bash
+ls .thoughtworks/*/requirement.md 2>/dev/null
+```
+
+- **文件不存在** → 必须调用澄清技能（即使用户传入了需求文件、即使需求看起来很清楚）
+- **文件已存在** → 跳过此步骤（断点续传），直接进入 Step 3
+
+### 执行方式
+
 调用 `/thoughtworks-skills-backend-clarify <需求原文>`。
 
 澄清技能内部完成：
@@ -124,7 +136,6 @@ argument-hint: "<需求描述或文件路径>"
 
 <HARD-GATE>
 `/thoughtworks-skills-backend-clarify` 必须完成（requirement.md 已写入）后才能进入 Step 3。
-如果已有 requirement.md，可跳过此步骤（断点续传）。
 子技能完成后立即推进到 Step 3，不要等待用户额外指令。
 </HARD-GATE>
 
@@ -242,6 +253,14 @@ touch .thoughtworks/<idea-name>/.approved
 确认完成后立即推进到 3.5，不要等待用户额外指令。
 
 ### 3.5 前端需求澄清
+
+先执行文件存在性检查：
+```bash
+ls .thoughtworks/<idea-name>/frontend-requirement.md 2>/dev/null
+```
+
+- **文件不存在** → 必须调用澄清技能
+- **文件已存在** → 跳过此步骤（断点续传），直接进入 3.6
 
 调用 `/thoughtworks-skills-frontend-clarify <idea-name>`。
 
@@ -405,6 +424,8 @@ Task(
 
 | 你可能会想 | 现实 |
 |-----------|------|
+| "用户已经给了需求文件，不用再澄清" | 需求文件（docs/xxx.md）只是原始输入，不等于澄清完成。澄清技能会扫描项目上下文、与用户提问、做聚合分析，这些步骤不可替代。只有 `.thoughtworks/<idea-name>/requirement.md` 存在才说明澄清已完成 |
+| "需求描述很详细，可以跳过澄清" | 无论需求多详细，聚合分析和用户确认是必须步骤。禁止以需求清晰为由跳过 |
 | "直接调用 /thoughtworks-skills-backend 更简单" | 全栈编排器需要自主控制流程节奏，中转会导致确认步骤重复 |
 | "前端澄清可以提前做" | 前端依赖 OHS 契约，提前澄清无法精确映射 |
 | "评估逻辑和后端 Decision-Maker 重复了" | 编排思路一致是设计意图，各编排器独立闭环，不互相依赖 |
