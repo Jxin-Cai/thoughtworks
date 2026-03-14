@@ -74,13 +74,15 @@ User message received
 /thoughtworks-skills-backend (Decision-Maker)
   Step 1: Receive requirement
   Step 2: → /thoughtworks-skills-backend-clarify (Project scan + clarify)
-  Step 3: Layer assessment → assessment.md
-  Step 4: Phase loop (for each phase):
-    4.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
-    4.2 User confirms phase design (HARD-GATE)
-    4.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
-  Step 5: Mark .approved
-  Step 6: Engineering support tasks
-  Step 7: → /thoughtworks-skills-merge (Squash merge feature branch)
-  Step 8: Final summary
+  Step 3: Linear orchestration
+    3.1 → /thoughtworks-branch (Feature branch management)
+    3.2 Layer assessment → assessment.md
+    3.3 Phase loop (for each phase):
+      3.3.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
+      3.3.2 User confirms phase design (HARD-GATE)
+      3.3.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
+    3.4 Mark .approved
+    3.5 → /thoughtworks-skills-merge (Squash merge feature branch)
+  Step 4: Engineering support tasks
+  Step 5: Final summary
 ```

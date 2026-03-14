@@ -100,16 +100,17 @@ User message received
 /thoughtworks-skills-backend (Decision-Maker)
   Step 1: Receive requirement
   Step 2: → /thoughtworks-skills-backend-clarify (Project scan + clarify)
-  Step 2.5: → /thoughtworks-branch (Feature branch management)
-  Step 3: Layer assessment → assessment.md
-  Step 4: Phase loop (for each phase):
-    4.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
-    4.2 User confirms phase design (HARD-GATE)
-    4.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
-  Step 5: Mark .approved
-  Step 6: Engineering support tasks
-  Step 7: → /thoughtworks-skills-merge (Squash merge feature branch)
-  Step 8: Final summary
+  Step 3: Linear orchestration
+    3.1 → /thoughtworks-branch (Feature branch management)
+    3.2 Layer assessment → assessment.md
+    3.3 Phase loop (for each phase):
+      3.3.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
+      3.3.2 User confirms phase design (HARD-GATE)
+      3.3.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
+    3.4 Mark .approved
+    3.5 → /thoughtworks-skills-merge (Squash merge feature branch)
+  Step 4: Engineering support tasks
+  Step 5: Final summary
 ```
 
 ### Frontend Only (`/thoughtworks-skills-frontend`)
@@ -132,19 +133,25 @@ User message received
 ```
 /thoughtworks-skills-all (Orchestrator — directly orchestrates sub-skills)
   Step 1: Receive requirement
+  Step 1.5: Classify requirement (business code vs engineering support tasks)
   Step 2: → /thoughtworks-skills-backend-clarify (Backend clarify)
-  Step 3: → /thoughtworks-skills-frontend-clarify (Frontend clarify)
-  Step 3.5: → /thoughtworks-branch (Feature branch management)
-  Step 4: Backend layer assessment → assessment.md
-  Step 5: Backend phase loop (for each phase):
-    5.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
-    5.2 User confirms phase design
-    5.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
-  Step 6: Mark .approved
-  Step 7: Frontend assessment → frontend-assessment.md
-  Step 8: → /thoughtworks-skills-frontend-thought (Frontend design)
-  Step 9: User confirms frontend design → .frontend-approved
-  Step 10: → /thoughtworks-skills-frontend-works (Frontend coding)
-  Step 11: → /thoughtworks-skills-merge (Squash merge context branch)
-  Step 12: Fullstack summary
+  Step 3: Fullstack linear orchestration
+    3.1  → /thoughtworks-branch (Feature branch management)
+    --- Backend ---
+    3.2  Backend layer assessment → assessment.md
+    3.3  Backend phase loop (for each phase):
+      3.3.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
+      3.3.2 User confirms phase design
+      3.3.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
+    3.4  Mark .approved
+    --- Frontend ---
+    3.5  → /thoughtworks-skills-frontend-clarify (Frontend clarify, after backend complete)
+    3.6  Frontend assessment → frontend-assessment.md
+    3.7  → /thoughtworks-skills-frontend-thought (Frontend design)
+    3.8  User confirms frontend design → .frontend-approved
+    3.9  → /thoughtworks-skills-frontend-works (Frontend coding)
+    3.10 Show completion status
+    3.11 → /thoughtworks-skills-merge (Squash merge feature branch)
+  Step 4: Engineering support tasks
+  Step 5: Fullstack summary
 ```
