@@ -37,6 +37,34 @@ argument-hint: "<需求描述或文件路径>"
 
 ---
 
+## 状态机
+
+**启动后第一步：检查已有状态，决定从哪个 Step 开始。禁止跳过此检查直接执行 Step 1。**
+
+### 启动时检查
+
+1. 扫描 `.thoughtworks/` 下的目录
+2. **判断 `$ARGUMENTS` 是恢复旧 idea 还是全新需求**：
+   - 如果 `$ARGUMENTS` 完全匹配某个已有 idea 目录名（如用户传入 `user-management`，且 `.thoughtworks/user-management/` 存在）→ 恢复旧 idea
+   - 如果 `$ARGUMENTS` 是一段需求描述文本（而非 idea 目录名）→ 全新需求，走 Step 1 → Step 2
+   - 如果不确定，使用 AskUserQuestion 向用户确认：是要恢复已有 idea，还是开始新的需求
+3. 全新需求始终从 Step 1 → Step 2 开始
+4. 恢复旧 idea 时，按下表决定续传位置
+
+### 状态决策表
+
+| 状态 | 判断方式 | 行为 |
+|------|---------|------|
+| 无 idea | `.thoughtworks/` 下无匹配目录，或 `$ARGUMENTS` 为全新需求 | → Step 1 接收需求 → Step 2 澄清 |
+| 有 idea，无 requirement | `requirement.md` 不存在 | → Step 2 澄清（补完未完成的澄清） |
+| 有 idea，无 assessment | `requirement.md` 存在，`assessment.md` 不存在 | → Step 3.2 后端层级评估 |
+| 有 idea，后端进行中 | `workflow-state.json` 存在，某层未 `coded` | → Step 3.3 从中断的 Phase 继续 |
+| 有 idea，后端完成，无前端 | `.approved` 存在但无 `.frontend-approved` | → Step 3.5 前端需求澄清 |
+| 有 idea，前端设计中 | `frontend-workflow-state.json` 存在 | → 检查前端各层状态，从中断处继续 |
+| 有 idea，全部完成 | `.frontend-approved` 存在 + 前端代码已生成 | → 提示已完成 |
+
+---
+
 ## Step 1: 接收需求
 
 判断 `$ARGUMENTS`：
@@ -370,21 +398,6 @@ Task(
 修改 infr → 无下游级联
 修改 ohs → 无下游级联
 ```
-
----
-
-## 断点续传
-
-全栈编排器支持从中断处恢复：
-
-### 确定续传位置
-
-检查 `.thoughtworks/<idea-name>/` 目录：
-1. `.frontend-approved` 存在 + 前端代码已生成 → 已完成，跳过
-2. `.approved` 存在但无 `.frontend-approved` → 从前端阶段继续（3.5）
-3. `workflow-state.json` 存在 → 检查后端各层状态，从中断处继续
-4. `assessment.md` 存在 → 从后端 Phase 循环继续
-5. `requirement.md` 存在但无 assessment → 从后端层级评估开始
 
 ---
 
