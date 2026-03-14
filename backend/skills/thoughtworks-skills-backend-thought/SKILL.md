@@ -246,7 +246,8 @@ Task(
 
     # OUTPUT
 
-    将设计文档写入：`{产出文件的绝对路径}`
+    将设计文档写入：`.thoughtworks/<idea-name>/backend-designs/<layer>.md`
+    （主 agent 构建 prompt 时，将 `<idea-name>` 和 `<layer>` 替换为实际值的绝对路径）
     使用 Write 工具写入。
 
     完成后执行：
