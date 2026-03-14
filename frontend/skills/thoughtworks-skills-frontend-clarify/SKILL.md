@@ -116,6 +116,10 @@ argument-hint: "<idea-name>"
 - **## UI 风格**（仅 0-1 项目选择了风格时写入） — 记录风格标识（如 `minimalist-luxury`、`tech-futuristic`、`classic-elegant` 或用户自定义描述）
 - **## 架构模式**（仅非 0-1 项目时写入） — 记录 `fsd` 或 `flat`
 
+<IMPORTANT>
+本技能到此完成。你现在必须立即回到调用你的编排器（`/thoughtworks-skills-frontend` 或 `/thoughtworks-skills-all`），继续执行编排器的下一个步骤（前端评估 → 设计 → 编码）。禁止停下来等待用户指令。
+</IMPORTANT>
+
 ---
 
 ## 合理化预防

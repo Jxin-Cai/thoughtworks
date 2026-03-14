@@ -196,12 +196,16 @@ Product → Inventory → Order
 - <标准 2>
 ```
 
-4. **通知调用者** — 向调用者输出确认信息：
+4. **通知调用者并继续流程** — 向调用者输出确认信息：
 
 ```
 需求已写入 .thoughtworks/<idea-name>/requirement.md
 聚合分析：识别了 N 个聚合，建议实现顺序为 A → B → C
 ```
+
+<IMPORTANT>
+本技能到此完成。你现在必须立即回到调用你的编排器（`/thoughtworks-skills-backend` 或 `/thoughtworks-skills-all`），继续执行编排器的下一个步骤（创建功能分支 → 层级评估 → Phase 循环）。禁止停下来等待用户指令。
+</IMPORTANT>
 
 ---
 

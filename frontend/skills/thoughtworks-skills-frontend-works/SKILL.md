@@ -186,3 +186,7 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 ```
 
 输出实现摘要和产出文件列表。
+
+<IMPORTANT>
+本技能到此完成。你现在必须立即回到调用你的编排器，继续执行编排器的下一个步骤（展示完成状态 → 合并分支）。禁止停下来等待用户指令。
+</IMPORTANT>

@@ -254,6 +254,10 @@ bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 实现已全部完成！
 ```
 
+<IMPORTANT>
+本技能到此完成。你现在必须立即回到调用你的编排器，继续执行编排器的下一个步骤（下一个 Phase 的设计，或标记 .approved → 合并分支）。禁止停下来等待用户指令。
+</IMPORTANT>
+
 ### 部分完成（有 failed）
 
 ```

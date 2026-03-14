@@ -117,6 +117,7 @@ ls .thoughtworks/*/requirement.md 2>/dev/null
 
 <HARD-GATE>
 澄清技能完成后才能进入 Step 3。
+澄清技能完成后立即推进到 Step 3，不要等待用户额外指令。
 </HARD-GATE>
 
 ---
