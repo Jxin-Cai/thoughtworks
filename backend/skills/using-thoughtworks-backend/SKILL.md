@@ -9,6 +9,8 @@ If the user's request involves DDD, domain modeling, layered architecture design
 IF A THOUGHTWORKS SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
 
 This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+
+**HOW to invoke: Use the `Skill` tool.** Do NOT try to follow the workflow steps manually. Do NOT explore the codebase, read requirement files, or write any code before invoking the skill. The skill contains all the logic — your only job is to invoke it.
 </EXTREMELY-IMPORTANT>
 
 ## How to Access Skills
@@ -65,24 +67,16 @@ User message received
 | "This is a simple domain model" | Simple models still need contract validation. Use the skill. |
 | "I already know DDD patterns" | The skill enforces specific contract-driven workflows. Use it. |
 | "Let me just create the entity first" | Workers follow design docs. Start with /thoughtworks-skills-backend. |
+| "Let me explore the codebase first" | The skill's clarify step does project scanning. Invoke the skill first. |
+| "I understand the workflow, I can follow the steps myself" | Understanding the flow does NOT replace invoking the Skill tool. The skill enforces HARD-GATEs, contract validation, and state management that you cannot replicate manually. INVOKE THE SKILL. |
+| "I'll just read the requirement file and start coding" | Requirements need clarification with the user first. Invoke the skill. |
 
 ## Workflow Overview
 
-### Backend (`/thoughtworks-skills-backend`)
+This is a **high-level summary for reference only**. Do NOT use it as execution instructions. Always invoke the skill via the `Skill` tool.
 
-```
-/thoughtworks-skills-backend (Decision-Maker)
-  Step 1: Receive requirement
-  Step 2: → /thoughtworks-skills-backend-clarify (Project scan + clarify)
-  Step 3: Linear orchestration
-    3.1 → /thoughtworks-branch (Feature branch management)
-    3.2 Layer assessment → assessment.md
-    3.3 Phase loop (for each phase):
-      3.3.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
-      3.3.2 User confirms phase design (HARD-GATE)
-      3.3.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
-    3.4 Mark .approved
-    3.5 → /thoughtworks-skills-merge (Squash merge feature branch)
-  Step 4: Engineering support tasks
-  Step 5: Final summary
-```
+### Backend
+
+Invoke: `Skill(skill: "thoughtworks-skills-backend", args: "<requirement>")`
+
+Handles: requirement clarification → branch → layer assessment → phase loop (design → confirm → coding) → merge → engineering tasks → summary

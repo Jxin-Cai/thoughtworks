@@ -9,6 +9,8 @@ If the user's request involves DDD, domain modeling, layered architecture design
 IF A THOUGHTWORKS SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
 
 This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+
+**HOW to invoke: Use the `Skill` tool.** Do NOT try to follow the workflow steps manually. Do NOT explore the codebase, read requirement files, or write any code before invoking the skill. The skill contains all the logic — your only job is to invoke it.
 </EXTREMELY-IMPORTANT>
 
 ## How to Access Skills
@@ -91,67 +93,28 @@ User message received
 | "Let me just create the entity first" | Workers follow design docs. Start with /thoughtworks-skills-backend. |
 | "Frontend doesn't need the DDD skill" | Frontend consumes OHS contracts. Use /thoughtworks-skills-frontend. |
 | "I'll do backend and frontend together" | Use /thoughtworks-skills-all for proper sequencing. |
+| "Let me explore the codebase first" | The skill's clarify step does project scanning. Invoke the skill first. |
+| "I understand the workflow, I can follow the steps myself" | Understanding the flow does NOT replace invoking the Skill tool. The skill enforces HARD-GATEs, contract validation, and state management that you cannot replicate manually. INVOKE THE SKILL. |
+| "I'll just read the requirement file and start coding" | Requirements need clarification with the user first. Invoke the skill. |
 
 ## Workflow Overview
 
-### Backend Only (`/thoughtworks-skills-backend`)
+These are **high-level summaries for reference only**. Do NOT use them as execution instructions. Always invoke the skill via the `Skill` tool — the skill handles all internal steps, HARD-GATEs, and state management.
 
-```
-/thoughtworks-skills-backend (Decision-Maker)
-  Step 1: Receive requirement
-  Step 2: → /thoughtworks-skills-backend-clarify (Project scan + clarify)
-  Step 3: Linear orchestration
-    3.1 → /thoughtworks-branch (Feature branch management)
-    3.2 Layer assessment → assessment.md
-    3.3 Phase loop (for each phase):
-      3.3.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
-      3.3.2 User confirms phase design (HARD-GATE)
-      3.3.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
-    3.4 Mark .approved
-    3.5 → /thoughtworks-skills-merge (Squash merge feature branch)
-  Step 4: Engineering support tasks
-  Step 5: Final summary
-```
+### Backend Only
 
-### Frontend Only (`/thoughtworks-skills-frontend`)
+Invoke: `Skill(skill: "thoughtworks-skills-backend", args: "<requirement>")`
 
-```
-/thoughtworks-skills-frontend (Decision-Maker)
-  Step 1: Receive idea-name (requires backend OHS design)
-  Step 2: → /thoughtworks-skills-frontend-clarify (Project scan + clarify)
-  Step 2.5: → /thoughtworks-branch (Feature branch management)
-  Step 3: Frontend assessment
-  Step 4: → /thoughtworks-skills-frontend-thought (Design)
-  Step 5: User confirms design → .frontend-approved
-  Step 6: → /thoughtworks-skills-frontend-works (Coding)
-  Step 7: Final summary
-  Step 8: → /thoughtworks-skills-merge (Squash merge feature branch)
-```
+Handles: requirement clarification → branch → layer assessment → phase loop (design → confirm → coding) → merge → engineering tasks → summary
 
-### Fullstack (`/thoughtworks-skills-all`)
+### Frontend Only
 
-```
-/thoughtworks-skills-all (Orchestrator — directly orchestrates sub-skills)
-  Step 1: Receive requirement
-  Step 1.5: Classify requirement (business code vs engineering support tasks)
-  Step 2: → /thoughtworks-skills-backend-clarify (Backend clarify)
-  Step 3: Fullstack linear orchestration
-    3.1  → /thoughtworks-branch (Feature branch management)
-    --- Backend ---
-    3.2  Backend layer assessment → assessment.md
-    3.3  Backend phase loop (for each phase):
-      3.3.1 → /thoughtworks-skills-backend-thought --layers <phase layers> (Design)
-      3.3.2 User confirms phase design
-      3.3.3 → /thoughtworks-skills-backend-works --layers <phase layers> (Coding)
-    3.4  Mark .approved
-    --- Frontend ---
-    3.5  → /thoughtworks-skills-frontend-clarify (Frontend clarify, after backend complete)
-    3.6  Frontend assessment → frontend-assessment.md
-    3.7  → /thoughtworks-skills-frontend-thought (Frontend design)
-    3.8  User confirms frontend design → .frontend-approved
-    3.9  → /thoughtworks-skills-frontend-works (Frontend coding)
-    3.10 Show completion status
-    3.11 → /thoughtworks-skills-merge (Squash merge feature branch)
-  Step 4: Engineering support tasks
-  Step 5: Fullstack summary
-```
+Invoke: `Skill(skill: "thoughtworks-skills-frontend", args: "<idea-name>")`
+
+Handles: requirement clarification (based on OHS contracts) → branch → assessment → design → confirm → coding → summary → merge
+
+### Fullstack
+
+Invoke: `Skill(skill: "thoughtworks-skills-all", args: "<requirement>")`
+
+Handles: requirement classification → backend clarification → branch → backend (assessment → phase loop → approved) → frontend (clarification → assessment → design → confirm → coding) → merge → engineering tasks → summary

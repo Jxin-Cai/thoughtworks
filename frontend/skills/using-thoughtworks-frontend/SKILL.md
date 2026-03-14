@@ -9,6 +9,8 @@ If the user's request involves frontend development based on DDD API contracts, 
 IF A THOUGHTWORKS SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
 
 This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+
+**HOW to invoke: Use the `Skill` tool.** Do NOT try to follow the workflow steps manually. Do NOT explore the codebase, read requirement files, or write any code before invoking the skill. The skill contains all the logic — your only job is to invoke it.
 </EXTREMELY-IMPORTANT>
 
 ## How to Access Skills
@@ -65,19 +67,15 @@ User message received
 | "This is just a simple component" | Components still need design-first workflow. Use the skill. |
 | "I already know the API shape" | The skill enforces contract validation. Use it. |
 | "Let me just create the page first" | Workers follow design docs. Start with /thoughtworks-skills-frontend. |
+| "Let me explore the codebase first" | The skill's clarify step does project scanning. Invoke the skill first. |
+| "I understand the workflow, I can follow the steps myself" | Understanding the flow does NOT replace invoking the Skill tool. The skill enforces HARD-GATEs, contract validation, and state management that you cannot replicate manually. INVOKE THE SKILL. |
 
 ## Workflow Overview
 
-### Frontend (`/thoughtworks-skills-frontend`)
+This is a **high-level summary for reference only**. Do NOT use it as execution instructions. Always invoke the skill via the `Skill` tool.
 
-```
-/thoughtworks-skills-frontend (Decision-Maker)
-  Step 1: Receive idea-name (requires backend OHS design)
-  Step 2: → /thoughtworks-skills-frontend-clarify (Project scan + clarify)
-  Step 3: Frontend assessment
-  Step 4: → /thoughtworks-skills-frontend-thought (Design)
-  Step 5: User confirms design → .frontend-approved
-  Step 6: → /thoughtworks-skills-frontend-works (Coding)
-  Step 7: Final summary
-  Step 8: → /thoughtworks-skills-merge (Squash merge feature branch)
-```
+### Frontend
+
+Invoke: `Skill(skill: "thoughtworks-skills-frontend", args: "<idea-name>")`
+
+Handles: requirement clarification (based on OHS contracts) → branch → assessment → design → confirm → coding → summary → merge
