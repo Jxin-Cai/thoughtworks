@@ -8,24 +8,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 插件加载
 
-Claude Code 通过 `.claude-plugin/plugin.json` 发现并加载本插件。三个插件完全独立闭环——只装后端就只有后端能力，只装前端就只有前端能力，装 all 才有全栈能力。
+Claude Code 通过 `.claude-plugin/marketplace.json` 发现 marketplace 中的三个插件，通过各自目录下的 `.claude-plugin/plugin.json` 加载插件。三个插件完全独立闭环——只装后端就只有后端能力，只装前端就只有前端能力，装 all 才有全栈能力。
 
-- **根级 `thoughtworks-all`**：`skills` 字段声明 `["./skills/", "./backend/skills/", "./frontend/skills/"]`，`commands` 声明 `["./commands/", "./backend/commands/", "./frontend/commands/"]`，将所有技能和命令拉入 all 命名空间。`agents` 为空数组——agent 只通过各自子插件注册，避免产生冲突的 `thoughtworks-all:*` 注册项。
-- **后端 `thoughtworks-backend`**：独立声明 `agents`（8 个后端 agent）、`skills: ["./skills/"]`、`commands: ["./commands/"]`，独立安装时自包含。
-- **前端 `thoughtworks-frontend`**：独立声明 `agents`（4 个前端 agent）、`skills: ["./skills/"]`、`commands: ["./commands/"]`，独立安装时自包含。
+- **`thoughtworks-all`（`all/` 子目录）**：`skills` 字段声明 `["./skills/", "./backend/skills/", "./frontend/skills/"]`，`commands` 声明 `["./commands/", "./backend/commands/", "./frontend/commands/"]`，通过符号链接（`all/backend -> ../backend`、`all/frontend -> ../frontend`）将所有技能和命令拉入 all 命名空间。`agents` 为空数组——agent 只通过各自子插件注册，避免产生冲突的 `thoughtworks-all:*` 注册项。
+- **后端 `thoughtworks-backend`（`backend/` 子目录）**：独立声明 `agents`（8 个后端 agent）、`skills: ["./skills/"]`、`commands: ["./commands/"]`，独立安装时自包含。
+- **前端 `thoughtworks-frontend`（`frontend/` 子目录）**：独立声明 `agents`（4 个前端 agent）、`skills: ["./skills/"]`、`commands: ["./commands/"]`，独立安装时自包含。
 
 每个插件有各自的 `hooks/session-start` 脚本，在会话启动时注入自身命名空间内的技能触发索引。技能引用不使用跨插件前缀（如 `thoughtworks-backend:`），因为技能始终在当前安装的插件命名空间内查找。
 
 ## 架构：三层子插件
 
 ```
-根级（thoughtworks-all）
-├── skills/using-thoughtworks/     — 入口技能（session-start 注入）
-├── skills/thoughtworks-skills-all/ — 全栈编排器（直接调度子技能，不依赖 Decision-Maker）
-├── skills/thoughtworks-skills-branch/ — 功能分支管理（三层共享，澄清后评估前自动创建 feature/<idea-name>）
-├── skills/thoughtworks-skills-merge/ — 功能分支合并（三层共享，上下文完成后 squash merge 回 main/master）
-├── commands/thoughtworks-skills-all.md   — 全栈命令
-├── hooks/session-start            — 全栈 session-start hook
+根级仓库
+├── .claude-plugin/marketplace.json  — marketplace 定义（注册三个插件）
+├── CLAUDE.md
+│
+├── all/（thoughtworks-all）
+│   ├── .claude-plugin/plugin.json   — 全栈插件定义
+│   ├── backend -> ../backend        — 符号链接
+│   ├── frontend -> ../frontend      — 符号链接
+│   ├── skills/using-thoughtworks/     — 入口技能（session-start 注入）
+│   ├── skills/thoughtworks-skills-all/ — 全栈编排器（直接调度子技能，不依赖 Decision-Maker）
+│   ├── skills/thoughtworks-skills-branch/ — 功能分支管理（三层共享，澄清后评估前自动创建 feature/<idea-name>）
+│   ├── skills/thoughtworks-skills-merge/ — 功能分支合并（三层共享，上下文完成后 squash merge 回 main/master）
+│   ├── commands/thoughtworks-skills-all.md   — 全栈命令
+│   └── hooks/session-start            — 全栈 session-start hook
 │
 ├── backend/（thoughtworks-backend）
 │   ├── agents/                                  — 后端 agent 定义（DDD 四层 thinker + worker）
