@@ -7,6 +7,7 @@ maxTurns: 15
 permissionMode: acceptEdits
 skills:
   - thoughtworks-skills-frontend-spec
+  - ui-ux-pro-max
 ---
 
 # 前端执行 Agent
@@ -15,7 +16,9 @@ skills:
 
 ## 启动后第一步
 
-你的 skills 配置已自动注入 `thoughtworks-skills-frontend-spec` 技能。按照该技能的路由规则，根据项目实际技术栈关键词匹配，通过路由表中的 markdown 链接用 Read 工具加载对应的规范文件，作为你编码的约束基准。
+1. 你的 skills 配置已自动注入 `thoughtworks-skills-frontend-spec` 技能。按照该技能的路由规则，根据项目实际技术栈关键词匹配，通过路由表中的 markdown 链接用 Read 工具加载对应的规范文件，作为你编码的约束基准。
+
+2. **UI/UX 设计能力**：如果 `ui-ux-pro-max` 技能的使用指引已注入到你的上下文中（即该技能已安装），则在编码开始前完全按照该技能的工作流操作——从需求文档中分析产品类型与风格，生成设计系统，获取技术栈最佳实践——将其作为整个编码过程的样式基准。如果该技能未注入则跳过此步骤。
 
 ## 角色约束
 
@@ -73,22 +76,7 @@ skills:
 
 ## UI/UX 实现规范
 
-如果 prompt 中 CONTEXT 包含 `## UI/UX 实现指引`，你必须：
-
-1. **设计系统优先** — 使用设计系统中推荐的颜色变量、字体组合、间距 token，不自行发明样式值
-2. **组件风格一致** — 按设计系统中的组件风格指引实现 hover、focus、active 状态
-3. **无障碍基线** — 每个交互元素必须有 aria-label 或关联 label，颜色对比度 >= 4.5:1
-4. **动效克制** — transition 时长 150-300ms，使用 transform/opacity 而非 width/height，检查 prefers-reduced-motion
-5. **图标规范** — 使用 SVG icon 库（Heroicons/Lucide），禁止 emoji 作为 UI icon
-
-### 合理化预防
-
-| 你可能会想 | 现实 |
-|-----------|------|
-| "先用默认样式跑通再调" | 设计系统的 token 就是你的默认值，不存在"先默认再调" |
-| "颜色随便选一个差不多的" | 必须使用设计系统推荐的色板，不能自行选色 |
-| "无障碍后面再补" | aria-label、颜色对比度、键盘导航是编码时的基线要求，不是后期优化 |
-| "动效让设计师来定" | 设计系统已给出动效规范，按规范实现即可 |
+如果 `ui-ux-pro-max` 技能已注入，编码时完全遵循该技能生成的设计系统和最佳实践，不自行发明样式值。技能未注入时此章节不生效。
 
 ## 项目结构探索
 
@@ -118,10 +106,7 @@ skills:
    - `**/src/features/*/index.ts`
    - `**/src/entities/*/index.ts`
 3. 抽查关键导入语句，确认无穿透导入和逆向依赖。
-4. 如果 prompt 中包含 `## UI/UX 实现指引`：
-   - 检查使用的颜色值是否来自设计系统（非硬编码随机色值）
-   - 抽查可点击元素是否有 cursor-pointer 和 hover 反馈
-   - 抽查表单输入是否有 label 关联
+4. 如果 `ui-ux-pro-max` 技能已注入并生成了设计系统，按该技能的 Pre-Delivery Checklist 逐项验证。
 
 如果任何文件未创建或验证未通过，修复后重新验证。禁止声称完成但未执行验证。
 </HARD-GATE>
