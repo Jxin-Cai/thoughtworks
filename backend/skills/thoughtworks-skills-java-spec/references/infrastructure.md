@@ -15,6 +15,16 @@
 - 外部系统集成、中间件配置、缓存管理
 - 切面编程
 
+## 全局异常处理（AOP）
+
+Infrastructure 层必须实现全局异常处理 AOP，拦截 OHS 层（Controller）抛出的异常做兜底处理：
+
+- 使用 `@RestControllerAdvice` 实现全局异常处理器，放在 `infr/aop/` 目录下
+- 捕获 `BusinessException` 返回业务错误码和消息
+- 捕获 `MethodArgumentNotValidException` 等校验异常，返回参数校验错误信息
+- 捕获 `Exception` 作为兜底，返回统一的系统错误响应，并记录完整堆栈日志
+- **其他层（Application、OHS）禁止用 try-catch 做异常兜底**，异常自然上抛由此 AOP 统一处理
+
 ## 禁止
 
 - 包含任何业务逻辑

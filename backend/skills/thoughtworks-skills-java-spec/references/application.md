@@ -14,6 +14,8 @@
 - 包含复杂计算逻辑
 - 直接操作数据库（必须通过 Repository）
 - 依赖 OHS 层
+- 定义 DTO 类（返回类型使用领域层模型，DTO 封装由 OHS 层负责）
+- 用 try-catch 做异常兜底（异常自然上抛，由 Infrastructure 层全局异常处理 AOP 统一拦截）
 
 ## 核心原则
 

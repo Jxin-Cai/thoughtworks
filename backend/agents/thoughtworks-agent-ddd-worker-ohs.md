@@ -43,7 +43,7 @@ skills:
 
 ### DTO
 - Request：JSR 380 校验注解（`@NotBlank`, `@Size`, `@Email` 等）
-- Response：只包含需要返回的字段
+- Response：从 ApplicationService 返回的领域模型中提取需要的字段，只包含需要返回的字段
 - 命名：`{操作名}Request` / `{操作名}Response`
 
 ### Controller
@@ -55,6 +55,9 @@ skills:
 
 ### DTO → Command 转换
 - 在 Controller 方法内完成，逐字段映射，使用 Command Builder
+
+### 领域模型 → Response DTO 转换
+- 在 Controller 方法内完成，从 ApplicationService 返回的领域模型中提取字段构建 Response DTO
 
 ### 通用
 - 构造器注入，禁止 `@Autowired`
@@ -74,6 +77,7 @@ skills:
 
 - DTO 和 Controller 都已创建，校验注解完整
 - DTO → Command 转换逻辑完整
+- 领域模型 → Response DTO 转换逻辑完整
 - 代码可编译，符合 java-spec ohs 规范
 
 ## 完成前必须执行

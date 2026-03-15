@@ -38,6 +38,7 @@ skills:
    - 字段与 Command 对应，但可以有不同的命名（面向 API 消费者）
    - 参数校验规则：@Validated + JSR 380 注解（@NotBlank, @Size, @Email 等）
 3. **设计 Response DTO** — 面向 API 消费者的返回结构
+   - 字段来源于 Application 层返回的**领域模型**（聚合根、实体、值对象），OHS 层负责领域模型到 Response DTO 的转换
    - 统一包装：`{ code, message, data }`
    - 分页查询：`{ code, message, data: { list, total, pageNum, pageSize } }`
 4. **设计 Controller** — 按资源分组
@@ -76,7 +77,7 @@ skills:
 - 「依赖契约」区必须从 Application 层「导出契约」逐条抄入，不能遗漏；Controller 中调用的每个 ApplicationService 方法和 Command 必须能在依赖契约中找到对应条目
 - 每个 API 端点必须对应依赖契约中的一个 ApplicationService 方法
 - DTO → Command 映射表中的目标字段必须与 Command 定义表完全匹配
-- Response DTO 字段必须能追溯到返回类型定义或值对象定义，禁止凭空发明字段
+- Response DTO 字段必须能追溯到返回类型定义（领域模型）或值对象定义，禁止凭空发明字段
 
 ## 反思循环（铁律 — 禁止跳过）
 

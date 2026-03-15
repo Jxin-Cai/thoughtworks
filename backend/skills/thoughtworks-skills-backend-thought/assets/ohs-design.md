@@ -104,7 +104,16 @@
 
 **调用**：`applicationService.{method}(command)`
 
-**返回**：`Result.success({response})` 或 `Result.success()`
+**领域模型 → Response DTO 转换**：
+```java
+{ReturnType} result = applicationService.{method}(command);
+{Operation}Response response = {Operation}Response.builder()
+    .xxx(result.getXxx())
+    .yyy(result.getYyy())
+    .build();
+```
+
+**返回**：`Result.success(response)` 或 `Result.success()`
 
 ## RPC 端点
 

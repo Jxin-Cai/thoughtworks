@@ -35,10 +35,17 @@
 
 ## Spring Boot 公共规范
 
+### Lombok
+
+- 项目默认使用 Lombok 减少样板代码
+- 常用注解：`@Data`、`@Builder`、`@RequiredArgsConstructor`、`@NoArgsConstructor`、`@AllArgsConstructor`、`@Slf4j`、`@EqualsAndHashCode`、`@Getter`、`@Setter`
+- DTO / PO / Command 等数据类优先使用 `@Data` 或 `@Builder`
+- 领域模型（实体、值对象）使用 `@Getter` + 手写业务方法，禁止 `@Data`（避免暴露 setter 破坏封装性）
+
 ### 依赖注入
 
-- 强制使用构造器注入（@RequiredArgsConstructor），禁止 @Autowired 字段注入
-- 依赖字段声明为 `private final`
+- 强制使用构造器注入（`@RequiredArgsConstructor`），禁止 `@Autowired` 字段注入
+- 依赖字段声明为 `private final @NonNull`（`final` 保证不可变，`@NonNull` 保证非空校验）
 
 ### 异常处理
 

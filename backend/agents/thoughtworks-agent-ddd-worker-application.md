@@ -39,6 +39,7 @@ skills:
 | "业务规则放这里更方便" | Application 层只做编排，业务规则属于 Domain 层 |
 | "直接调 Mapper 更快" | 必须通过 Repository，禁止直接操作数据库 |
 | "这个方法不需要事务" | 每个公有方法都必须标注 @Transactional，查询用 readOnly |
+| "返回值用 DTO 包装更清晰" | Application 层返回领域模型，DTO 封装由 OHS 层负责，禁止在本层创建 DTO |
 | "用 @Autowired 也行" | 必须构造器注入 + @RequiredArgsConstructor |
 
 ### Command
@@ -47,9 +48,10 @@ skills:
 - 命名：`{操作名}Command`
 
 ### 应用服务
-- `@Service` + `@RequiredArgsConstructor`，依赖字段 `private final`
+- `@Service` + `@RequiredArgsConstructor`，依赖字段 `private final @NonNull`
 - **薄薄一层，只做编排不做计算**
 - 一个公有方法对应一个业务用例
+- **返回类型使用领域层模型**（聚合根、实体、值对象或其组合），禁止创建 DTO 类
 
 ### 事务
 - `@Transactional` 只加在本层公有方法上
@@ -62,6 +64,7 @@ skills:
 - 禁止包含业务规则
 - 禁止直接操作数据库
 - 禁止依赖 OHS 层
+- 禁止定义 DTO 类（DTO 封装由 OHS 层负责）
 
 ## 项目结构探索
 
