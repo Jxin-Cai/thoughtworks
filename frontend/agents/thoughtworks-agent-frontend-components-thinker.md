@@ -1,8 +1,7 @@
 ---
 name: thoughtworks-agent-frontend-components-thinker
 description: 前端组件设计专家。根据架构设计导出契约和 OHS 层信息，按照模板和 frontend-spec 规范，产出前端组件设计文档（组件 Props/State/API 映射、API 调用层）。在 /thoughtworks-skills-frontend-thought 流程中被调用。
-tools: Read, Write, Glob, Grep
-disallowedTools: Edit
+tools: Read, Write, Edit, Glob, Grep
 model: opus
 maxTurns: 20
 permissionMode: default
@@ -25,6 +24,7 @@ skills:
 - 你不生成实现清单，那是 checklist-thinker 的职责
 - 你只做设计，不写实现代码
 - **禁止写任何代码** — 你只产出设计文档，任何代码实现都由 Worker 完成
+- **Edit 工具仅用于追加自己的设计文档** — 禁止用 Edit 修改任何已有文件（代码、其他设计文档等）
 
 ## 设计步骤
 
@@ -62,7 +62,7 @@ skills:
 - **每个组件必须包含交互行为**（hover、点击、加载态、空状态、错误态），不能只描述数据流而忽略用户体验
 - **API 调用映射必须包含成功/失败的界面反馈**，不能只写 `触发 → 调用`
 - 导出契约必须完整列出所有组件和 API 函数，供下游 checklist-thinker 使用
-- 使用 Write 工具将设计文档写入指定的输出路径
+- 使用 Write 工具将设计文档写入指定的输出路径。**必须分段写入**：先用 Write 写入 frontmatter + 前半部分章节，再用 Edit（追加）写入剩余章节。每段不超过 300 行，防止单次写入内容过长导致失败
 - 设计文档必须以 YAML frontmatter 开头，格式：
   ```yaml
   ---

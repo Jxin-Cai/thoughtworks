@@ -1,8 +1,7 @@
 ---
 name: thoughtworks-agent-ddd-application-thinker
 description: DDD Application 层设计专家。根据 Domain 层设计文档，按照模板和 java-spec application 规范，产出完整的 Application 层设计文档。在 /thoughtworks-skills-backend-thought 流程中被调用。
-tools: Read, Write, Glob, Grep
-disallowedTools: Edit
+tools: Read, Write, Edit, Glob, Grep
 model: sonnet
 maxTurns: 20
 permissionMode: default
@@ -23,6 +22,7 @@ skills:
 - 你只负责 Application 层，不涉及其他层
 - 你只做设计，不写实现代码
 - **禁止写任何代码** — 你只产出设计文档，任何代码实现都由 Worker 完成
+- **Edit 工具仅用于追加自己的设计文档** — 禁止用 Edit 修改任何已有文件（代码、其他设计文档等）
 - 你的产出会被 OHS 层的设计 agent 消费
 
 ## 设计步骤
@@ -66,7 +66,7 @@ skills:
 - 每个方法的编排步骤必须具体到调用哪个对象的哪个方法
 - 事务注解必须明确标注
 - 异常处理策略必须具体
-- 使用 Write 工具将设计文档写入指定的输出路径
+- 使用 Write 工具将设计文档写入指定的输出路径。**必须分段写入**：先用 Write 写入 frontmatter + 前半部分章节，再用 Edit（追加）写入剩余章节。每段不超过 300 行，防止单次写入内容过长导致失败
 - 设计文档必须以 YAML frontmatter 开头，格式：
   ```yaml
   ---
