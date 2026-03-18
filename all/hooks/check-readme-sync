@@ -6,6 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${PLUGIN_ROOT}/.." && pwd)"
 
 # Structural files that should trigger README update
 STRUCTURAL_PATTERNS=(
@@ -13,10 +14,10 @@ STRUCTURAL_PATTERNS=(
   "commands/*.md"
   "backend/skills/*/SKILL.md"
   "backend/commands/*.md"
-  "backend/agents/*/*.md"
+  "backend/agents/*.md"
   "frontend/skills/*/SKILL.md"
   "frontend/commands/*.md"
-  "frontend/agents/*/*.md"
+  "frontend/agents/*.md"
   ".claude-plugin/plugin.json"
 )
 
@@ -33,16 +34,16 @@ done
 
 if [ "$structural_changed" = true ]; then
   # Check if README.md is also staged
-  if ! git diff --cached --name-only -- README.md | grep -q .; then
+  if ! git diff --cached --name-only -- "$REPO_ROOT/README.md" | grep -q .; then
     echo ""
-    echo "WARNING: Structural files changed but README.md was not updated."
+    echo "WARNING: Structural files changed but root README.md was not updated."
     echo "Changed structural files:"
     for pattern in "${STRUCTURAL_PATTERNS[@]}"; do
       git diff --cached --name-only -- "$pattern" 2>/dev/null
     done
     echo ""
-    echo "Consider updating README.md to reflect these changes."
-    echo "To skip this check: git commit --no-verify"
+    echo "Consider updating root README.md to reflect these changes."
+    echo "Please update root README.md (or intentionally stage root README.md changes) before committing."
     exit 1
   fi
 fi

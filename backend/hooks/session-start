@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-session_context="<EXTREMELY_IMPORTANT>\nYou have the thoughtworks-backend plugin installed.\n\nWhen the user's request involves DDD, domain modeling, layered architecture, or Java code generation, you MUST invoke the relevant skill BEFORE any response.\n\n| User Intent | Skill to Invoke |\n|---|---|\n| Backend DDD end-to-end | thoughtworks-skills-backend |\n| Clarify backend requirements | thoughtworks-skills-backend-clarify |\n| Backend design only | thoughtworks-skills-backend-thought |\n| Backend coding only | thoughtworks-skills-backend-works |\n\nUse the Skill tool to invoke these skills.\n</EXTREMELY_IMPORTANT>"
+session_context="<EXTREMELY_IMPORTANT>\nYou have the thoughtworks-backend plugin installed.\n\nWhen the user's request involves DDD, domain modeling, layered architecture, or Java code generation, prioritize invoking the relevant skill first.\n\nFor requests that are clearly outside backend DDD workflow (e.g., repository audit, documentation explanation, targeted file tweaks), direct response is allowed and skill invocation is optional.\n\n| User Intent | Skill to Invoke |\n|---|---|\n| Backend DDD end-to-end | thoughtworks-skills-backend |\n| Clarify backend requirements | thoughtworks-skills-backend-clarify |\n| Backend design only | thoughtworks-skills-backend-thought |\n| Backend coding only | thoughtworks-skills-backend-works |\n\nUse the Skill tool to invoke these skills when applicable.\n</EXTREMELY_IMPORTANT>"
 
 cat <<EOF
 {

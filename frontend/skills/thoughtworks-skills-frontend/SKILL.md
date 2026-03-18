@@ -159,10 +159,10 @@ touch .thoughtworks/<idea-name>/.frontend-approved
 对每项未完成的任务（仅限前端相关的工程支撑任务，如 Dockerfile-frontend, nginx.conf, .env.example 等）：
 
 1. 用 Glob 扫描当前项目的文件结构，了解实际的技术栈、端口、模块结构
-2. 使用 Task 工具（subagent_type: general-purpose）执行任务：
+2. 使用 Agent 工具（subagent_type: general-purpose）执行任务：
 
 ```
-Task(
+Agent(
   subagent_type: "general-purpose",
   max_turns: 10,
   description: "{任务描述}",

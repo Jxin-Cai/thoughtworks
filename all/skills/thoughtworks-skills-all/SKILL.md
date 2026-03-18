@@ -255,7 +255,7 @@ merge 技能完成后才能进入 Step 4。
 
 读取 `.thoughtworks/<idea-name>/supplementary-tasks.md`。如果文件不存在或为空 → 跳过。
 
-对每项未完成的任务，使用 Task 工具（subagent_type: general-purpose, max_turns: 10）执行，传入项目结构和技术栈信息作为上下文。完成后在 supplementary-tasks.md 中标记为 [x]。
+对每项未完成的任务，使用 Agent 工具（subagent_type: general-purpose, max_turns: 10）执行，传入项目结构和技术栈信息作为上下文。完成后在 supplementary-tasks.md 中标记为 [x]。
 
 <HARD-GATE>
 此步骤不得跳过。即使业务代码已全部完成，也必须检查是否有遗留的工程支撑任务。

@@ -76,7 +76,7 @@ agents:
 
 ## Step 3: 分层设计（subagent 执行）
 
-为每个**需要设计**的层启动独立 Task subagent。
+为每个**需要设计**的层启动独立 Agent subagent。
 
 **层的确定方式**：
 - 如有 `--layers` 参数，只启动指定层的 Thinker（前提是这些层在 assessment.md 中被评估为"需要开发"）
@@ -92,7 +92,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 - **tools**：`Read, Write, Glob, Grep`
 - **model**：`sonnet`
 
-主 agent 在构建 Task 调用时，使用 `thoughtworks-backend:` 前缀 + `workflow.yaml` 中 `thinker-ref` 对应的 agent 文件名（去掉 `.md`）作为 `subagent_type`。这样 agent body 和 skills 会自动加载，动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 等动态内容，无需重复内联 INSTRUCTION 和 CODING-SPEC。
+主 agent 在构建 Agent 调用时，使用 `thoughtworks-backend:` 前缀 + `workflow.yaml` 中 `thinker-ref` 对应的 agent 文件名（去掉 `.md`）作为 `subagent_type`。这样 agent body 和 skills 会自动加载，动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 等动态内容，无需重复内联 INSTRUCTION 和 CODING-SPEC。
 
 ### 执行方式（主 agent DAG 编排）
 
@@ -102,7 +102,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 2. **按 Phase 分组**：将要执行的层按 Phase 分组
 3. **Phase 1**：启动所有 phase=1 的目标层的 thinker subagent（如 domain）
 4. **等待 Phase 1 完成**：所有 Phase 1 的 subagent 返回后，执行 `backend-workflow-status.sh --check-all` 检查状态
-5. **Phase 2**：Phase 1 全部 done 后，**并行启动**所有 phase=2 的目标层（如 infr + application，放在同一条消息的多个 Task 调用中）
+5. **Phase 2**：Phase 1 全部 done 后，**并行启动**所有 phase=2 的目标层（如 infr + application，放在同一条消息的多个 Agent 调用中）
 6. **等待 Phase 2 完成**
 7. **Phase 3**：Phase 2 全部 done 后，启动 phase=3 的目标层（如 ohs）
 8. 所有目标 Phase 完成后，执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
@@ -185,7 +185,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 这些自定义 agent 的 body 已包含设计步骤、反思循环、命名规范等静态指引（即原来的 INSTRUCTION 区块内容），`skills: [thoughtworks-skills-java-spec]` 已配置自动注入编码规范（即原来的 CODING-SPEC 区块内容）。因此动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个动态区块。
 
 ```
-Task(
+Agent(
   subagent_type: "thoughtworks-backend:{thinker-ref 文件名，去掉 .md}",
   max_turns: 20,
   description: "{Layer} 层思考",

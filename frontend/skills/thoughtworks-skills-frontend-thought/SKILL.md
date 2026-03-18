@@ -112,7 +112,7 @@ agents:
 构建 subagent prompt：
 
 ```
-Task(
+Agent(
   subagent_type: "thoughtworks-frontend:thoughtworks-agent-frontend-architecture-thinker",
   max_turns: 20,
   description: "Frontend 架构设计",
@@ -202,7 +202,7 @@ Architecture Thinker 完成后，读取 `{IDEA_DIR}/frontend-designs/frontend-ar
 构建 subagent prompt：
 
 ```
-Task(
+Agent(
   subagent_type: "thoughtworks-frontend:thoughtworks-agent-frontend-components-thinker",
   max_turns: 20,
   description: "Frontend 组件设计",
@@ -272,7 +272,7 @@ Components Thinker 完成后，读取 `{IDEA_DIR}/frontend-designs/frontend-comp
 构建 subagent prompt：
 
 ```
-Task(
+Agent(
   subagent_type: "thoughtworks-frontend:thoughtworks-agent-frontend-checklist-thinker",
   max_turns: 20,
   description: "Frontend 实现清单",

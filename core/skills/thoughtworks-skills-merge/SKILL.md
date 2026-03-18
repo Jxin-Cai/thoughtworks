@@ -49,8 +49,12 @@ git status --porcelain
 ```
 
 如果有输出（存在未提交变更）：
+
+先向用户展示 `git status --porcelain` 结果并确认要纳入本次合并的文件范围。
+
+确认后按文件显式暂存并提交（不要使用 `git add -A`）：
 ```bash
-git add -A
+git add <file1> <file2> ...
 git commit -m "wip: uncommitted changes before merge"
 ```
 
@@ -147,7 +151,12 @@ git commit -m "<确认后的提交消息>"
 
 ## Step 7: 清理
 
-删除本地功能分支：
+删除本地功能分支（优先安全删除）：
+```bash
+git branch -d feature/<idea-name>
+```
+
+如果 `-d` 删除失败（例如仍有未合并提交），先向用户说明原因并询问是否改用强制删除：
 ```bash
 git branch -D feature/<idea-name>
 ```

@@ -16,7 +16,7 @@
       "name": "thoughtworks-frontend",
       "source": "./frontend",
       "description": "Frontend code generation consuming DDD API contracts",
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     {
       "name": "thoughtworks-core",

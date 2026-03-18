@@ -74,7 +74,7 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set fronte
 启动 worker agent：
 
 ```
-Task(
+Agent(
   subagent_type: "thoughtworks-frontend:thoughtworks-agent-frontend-worker",
   max_turns: 15,
   description: "Frontend: {frontend-checklist.md 的 description}",

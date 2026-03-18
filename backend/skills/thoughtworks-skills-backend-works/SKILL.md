@@ -91,7 +91,7 @@ bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
    ```bash
    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} coding
    ```
-3. 同一 phase 内的不同层可以**并行**（同时启动多个 Task 调用放在同一条消息中），每层内部的设计文件**串行**（按 frontmatter order 排序）
+3. 同一 phase 内的不同层可以**并行**（同时启动多个 Agent 调用放在同一条消息中），每层内部的设计文件**串行**（按 frontmatter order 排序）
 4. 当前 phase 所有层的设计文件全部 done 后，**标记层编码完成**：对该 phase 中每个完成的层，运行：
    ```bash
    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} coded
@@ -118,7 +118,7 @@ bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 自定义 agent 的 body 已包含编码要求、合理化预防、完成标准等静态指引，`skills: [thoughtworks-skills-java-spec]` 已配置自动注入编码规范。动态 prompt 只需包含 TASK、CONTEXT、OUTPUT 三个动态区块：
 
 ```
-Task(
+Agent(
   subagent_type: "thoughtworks-backend:{worker-ref 文件名，去掉 .md}",
   max_turns: 15,
   description: "{Layer}: {设计文件 frontmatter description}",
