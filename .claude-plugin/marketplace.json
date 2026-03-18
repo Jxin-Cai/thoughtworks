@@ -19,6 +19,12 @@
       "version": "2.0.0"
     },
     {
+      "name": "thoughtworks-core",
+      "source": "./core",
+      "description": "Shared skills and references for ThoughtWorks plugins",
+      "version": "2.0.0"
+    },
+    {
       "name": "thoughtworks-all",
       "source": "./all",
       "description": "DDD Spec-Driven Development framework: fullstack design and code generation",

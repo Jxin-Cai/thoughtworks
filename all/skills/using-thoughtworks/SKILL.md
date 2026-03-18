@@ -19,13 +19,19 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 ## Available Skills
 
-### Root Level (Fullstack)
+### Core (Shared)
+
+| Skill | Trigger | Description |
+|-------|---------|-------------|
+| `thoughtworks-skills-branch` | Manage feature branch for an idea | Creates feature/<idea-name> from main/master, called by orchestrators |
+| `thoughtworks-skills-merge` | Merge feature branch back to main | Squash merges feature/<idea-name> to main/master, called by orchestrators |
+| `thoughtworks-skills-core-help` | Access shared reference resources | Routes to iron rules, state machine, interrupt handling, assessment dimensions, and rationalization prevention files |
+
+### Fullstack
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
 | `thoughtworks-skills-all` | User wants fullstack end-to-end | Orchestrates backend DDD + frontend in sequence |
-| `thoughtworks-skills-branch` | Manage feature branch for an idea | Creates feature/<idea-name> from main/master, called by orchestrators |
-| `thoughtworks-skills-merge` | Merge feature branch back to main | Squash merges feature/<idea-name> to main/master, called by orchestrators |
 
 ### Backend (DDD)
 

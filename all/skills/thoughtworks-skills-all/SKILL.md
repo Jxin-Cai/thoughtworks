@@ -12,12 +12,23 @@ argument-hint: "<需求描述或文件路径>"
 
 ---
 
+## 路径变量
+
+| 变量 | 路径（从项目根目录） |
+|------|---------------------|
+| `{CORE_HELP}` | `core/skills/thoughtworks-skills-core-help` |
+| `{DDD_HELP}` | `backend/skills/thoughtworks-skills-backend-help` |
+| `{FRONTEND_HELP}` | `frontend/skills/thoughtworks-skills-frontend-help` |
+
+---
+
 ## 铁律
 
+使用 Read 工具读取 `{CORE_HELP}/references/iron-rules-backend.md`，严格遵守其中所有条目。
+
+**全栈附加铁律：**
+
 1. **后端先于前端** — 必须先完成后端 OHS 层，前端才能开始
-2. **禁止跳过需求澄清** — 无论需求描述多详细、无论用户传入了需求文件，**只要 `.thoughtworks/<idea-name>/requirement.md` 不存在，就必须调用澄清技能**。需求文件（如 `docs/2.md`）≠ 需求澄清完成。澄清技能会扫描项目上下文、与用户结构化提问、执行聚合分析，这些步骤不可替代
-3. **子技能完成后立即推进** — 每个子技能调用完成后，编排器必须立即推进到下一步，不要停下来等待用户额外指令
-4. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
 
 ---
 
@@ -39,26 +50,12 @@ argument-hint: "<需求描述或文件路径>"
 
 ## 状态机
 
-**启动后第一步：检查已有状态，决定从哪个 Step 开始。禁止跳过此检查直接执行 Step 1。**
+使用 Read 工具读取 `{CORE_HELP}/references/state-machine-backend.md`，按其中的启动检查流程和状态决策表执行。
 
-### 启动时检查
-
-1. 扫描 `.thoughtworks/` 下的目录
-2. **判断 `$ARGUMENTS` 是恢复旧 idea 还是全新需求**：
-   - 如果 `$ARGUMENTS` 完全匹配某个已有 idea 目录名（如用户传入 `user-management`，且 `.thoughtworks/user-management/` 存在）→ 恢复旧 idea
-   - 如果 `$ARGUMENTS` 是一段需求描述文本（而非 idea 目录名）→ 全新需求，走 Step 1 → Step 2
-   - 如果不确定，使用 AskUserQuestion 向用户确认：是要恢复已有 idea，还是开始新的需求
-3. 全新需求始终从 Step 1 → Step 2 开始
-4. 恢复旧 idea 时，按下表决定续传位置
-
-### 状态决策表
+**全栈扩展状态行：**
 
 | 状态 | 判断方式 | 行为 |
 |------|---------|------|
-| 无 idea | `.thoughtworks/` 下无匹配目录，或 `$ARGUMENTS` 为全新需求 | → Step 1 接收需求 → Step 2 澄清 |
-| 有 idea，无 requirement | `requirement.md` 不存在 | → Step 2 澄清（补完未完成的澄清） |
-| 有 idea，无 assessment | `requirement.md` 存在，`assessment.md` 不存在 | → Step 3.2 后端层级评估 |
-| 有 idea，后端进行中 | `workflow-state.json` 存在，某层未 `coded` | → Step 3.3 从中断的 Phase 继续 |
 | 有 idea，后端完成，无前端 | `.approved` 存在但无 `.frontend-approved` | → Step 3.5 前端需求澄清 |
 | 有 idea，前端设计中 | `frontend-workflow-state.json` 存在 | → 检查前端各层状态，从中断处继续 |
 | 有 idea，全部完成 | `.frontend-approved` 存在 + 前端代码已生成 | → 提示已完成 |
@@ -77,6 +74,8 @@ argument-hint: "<需求描述或文件路径>"
 
 保存原始需求文本，供 Step 2 传递给澄清技能。
 
+**注意：读取需求文件只是 Step 1 的"接收"动作。不能基于读取到的内容跳过 Step 2 的澄清。**
+
 ---
 
 ## Step 1.5: 需求分类
@@ -85,25 +84,11 @@ argument-hint: "<需求描述或文件路径>"
 
 **业务代码任务** — 涉及领域模型、API、页面组件等，进入 DDD/前端 流水线处理。
 
-**工程支撑任务** — 包括但不限于：
-- 项目 README / 文档生成
-- Docker / docker-compose 构建文件
-- 部署脚本（startup.sh, Makefile, 一键启动脚本）
-- CI/CD 配置（GitHub Actions, Jenkinsfile）
-- 环境配置（.env.example, nginx.conf）
-- 数据库初始化脚本（schema.sql, migration）
-- 其他不属于 DDD 四层或前端的工程任务
+**工程支撑任务** — 项目 README、Docker、部署脚本、CI/CD、环境配置、数据库初始化脚本等不属于 DDD 四层或前端的工程任务。
 
-如果识别到工程支撑任务，将任务列表写入 `.thoughtworks/<idea-name>/supplementary-tasks.md`：
+如果识别到工程支撑任务，写入 `.thoughtworks/<idea-name>/supplementary-tasks.md`（checklist 格式）。
 
-```md
-# 工程支撑任务
-
-- [ ] {任务描述 1}
-- [ ] {任务描述 2}
-```
-
-如果没有工程支撑任务，不创建该文件。
+分类完成后 → 进入 Step 2。**禁止从 Step 1.5 直接跳到 Step 3。**
 
 ---
 
@@ -111,28 +96,16 @@ argument-hint: "<需求描述或文件路径>"
 
 ### 前置检查
 
-先执行文件存在性检查：
 ```bash
 ls .thoughtworks/*/requirement.md 2>/dev/null
 ```
 
-- **文件不存在** → 必须调用澄清技能（即使用户传入了需求文件、即使需求看起来很清楚）
+- **文件不存在** → 必须调用澄清技能
 - **文件已存在** → 跳过此步骤（断点续传），直接进入 Step 3
 
-### 执行方式
+### 执行
 
 调用 `/thoughtworks-skills-backend-clarify <需求原文>`。
-
-澄清技能内部完成：
-- 项目上下文扫描（目录结构、关键文档、最近提交、已有领域模型）
-- 基于上下文的结构化提问（目标、约束、成功标准、边界）
-- DDD 战略分析和聚合识别
-- 需求确认和聚合方案确认
-- 创建 `.thoughtworks/<idea-name>/` 目录并写入 `requirement.md`（含聚合分析章节）
-
-### 解析澄清输出
-
-确认 `.thoughtworks/<idea-name>/requirement.md` 已写入。
 
 <HARD-GATE>
 `/thoughtworks-skills-backend-clarify` 必须完成（requirement.md 已写入）后才能进入 Step 3。
@@ -142,8 +115,6 @@ ls .thoughtworks/*/requirement.md 2>/dev/null
 ---
 
 ## Step 3: 全栈线性编排（核心编排）
-
-单 idea 的完整后端 + 前端循环。
 
 ```
 3.1  创建功能分支
@@ -165,28 +136,18 @@ ls .thoughtworks/*/requirement.md 2>/dev/null
 
 调用 `/thoughtworks-branch <idea-name>`。
 
-分支技能会自动检查当前 git 环境，创建 `feature/<idea-name>` 分支。
-
 <HARD-GATE>
-分支技能完成后才能进入 3.2。
-子技能完成后立即推进到 3.2，不要等待用户额外指令。
+分支技能完成后才能进入 3.2。子技能完成后立即推进。
 </HARD-GATE>
 
 ### 3.2 后端层级评估
 
 **全栈编排器亲自执行评估**，不启动 subagent。
 
-#### 评估维度
-
-使用 Read 工具读取 `../assets/assessment-dimensions.md`，获取各层的评估维度和 assessment.md 输出格式。根据需求逐层判断是否需要开发。
-
-#### 执行
-
-1. 读取 `backend/skills/thoughtworks-skills-backend-help/workflow.yaml`，解析出所有层的定义
-2. 读取 `../assets/assessment-dimensions.md`，获取评估维度和输出格式
+1. 读取 `{DDD_HELP}/workflow.yaml`，解析出所有层的定义
+2. 读取 `{CORE_HELP}/references/assessment-dimensions.md`，获取评估维度和输出格式
 3. 逐层评估，将结果按模板格式写入 `.thoughtworks/<idea-name>/assessment.md`
-
-4. 评估完成后，初始化工作流状态文件。**只注册评估为"需要开发"的层**：
+4. 初始化工作流状态（**只注册评估为"需要开发"的层**）：
 
 ```bash
 bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init <idea-name> <layer1> [layer2...]
@@ -198,7 +159,7 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init <idea-name>
 
 ### 3.3 后端 Phase 循环
 
-读取 `backend/skills/thoughtworks-skills-backend-help/workflow.yaml`，解析出所有层的 Phase 定义。结合 assessment.md 中评估为"需要开发"的层，按 Phase 顺序循环编排：
+读取 `{DDD_HELP}/workflow.yaml`，按 Phase 顺序循环编排：
 
 ```
 Phase 1: domain
@@ -206,94 +167,54 @@ Phase 2: infr, application（并行）
 Phase 3: ohs
 ```
 
-对每个 Phase 执行以下步骤：
+对每个 Phase：
 
-#### 3.3.0 检查上游就绪（Phase 2+）
-
-从 Phase 2 开始，在启动 Thinker 之前，先检查本 Phase 各层的上游是否已编码完成：
+**3.3.0 检查上游就绪（Phase 2+）：**
 
 ```bash
 bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-upstream <layer>
 ```
 
-只有 `upstream_ready: true` 时才能启动该 Phase 的 Thinker。
+**3.3.1 设计：** 调用 `/thoughtworks-skills-backend-thought <idea-name> --layers <层列表>`
 
-#### 3.3.1 设计（Thinker）
+**3.3.2 用户确认：** thought skill 内部已完成。确认后标记：
 
-调用 `/thoughtworks-skills-backend-thought <idea-name> --layers <本 Phase 需要开发的层列表>`
-
-如果本 Phase 中所有层都被评估为"不需要开发"，跳过该 Phase。
-
-thought 子技能完成后立即推进到 3.3.2，不要等待用户额外指令。
-
-#### 3.3.2 用户确认
-
-thought skill 内部已完成设计展示和用户确认（HARD-GATE）。
-
-用户确认后，对本 Phase 中每个层标记设计已确认：
 ```bash
 bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} confirmed
 ```
 
-#### 3.3.3 编码（Worker）
-
-调用 `/thoughtworks-skills-backend-works <idea-name> --layers <本 Phase 需要开发的层列表>`
-
-works 子技能完成后立即推进到下一个 Phase，不要等待用户额外指令。
+**3.3.3 编码：** 调用 `/thoughtworks-skills-backend-works <idea-name> --layers <层列表>`
 
 所有 Phase 完成后 → 3.4。
 
 ### 3.4 标记后端完成
 
-标记后端设计与编码已全部完成：
 ```bash
 touch .thoughtworks/<idea-name>/.approved
 ```
 
-确认完成后立即推进到 3.5，不要等待用户额外指令。
+确认完成后立即推进到 3.5。
 
 ### 3.5 前端需求澄清
 
-先执行文件存在性检查：
 ```bash
 ls .thoughtworks/<idea-name>/frontend-requirement.md 2>/dev/null
 ```
 
-- **文件不存在** → 必须调用澄清技能
-- **文件已存在** → 跳过此步骤（断点续传），直接进入 3.6
-
-调用 `/thoughtworks-skills-frontend-clarify <idea-name>`。
-
-此时后端 OHS 设计已完成，澄清技能可以基于 OHS 导出契约精确引导前端需求讨论。
+- **文件不存在** → 调用 `/thoughtworks-skills-frontend-clarify <idea-name>`
+- **文件已存在** → 跳过，进入 3.6
 
 <HARD-GATE>
-`/thoughtworks-skills-frontend-clarify` 必须完成（frontend-requirement.md 已写入）后才能进入 3.6。
-子技能完成后立即推进到 3.6，不要等待用户额外指令。
+frontend-requirement.md 已写入后才能进入 3.6。子技能完成后立即推进。
 </HARD-GATE>
 
 ### 3.6 前端评估
 
-读取 `backend-designs/ohs.md` 的导出契约，评估前端需要做什么。
-
-将评估结果写入 `.thoughtworks/<idea-name>/frontend-assessment.md`：
-
-```markdown
-# 前端评估
-
-## API 契约概要
-（列出 OHS 层提供的所有 API 端点）
-
-## 前端工作概要
-（需要哪些页面、组件、API 调用）
-```
+读取 `backend-designs/ohs.md` 的导出契约，评估前端工作。写入 `.thoughtworks/<idea-name>/frontend-assessment.md`。
 
 初始化前端工作流状态：
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea-name> frontend-architecture frontend-components frontend-checklist
-```
-
-创建前端设计目录：
-```bash
 mkdir -p .thoughtworks/<idea-name>/frontend-designs
 ```
 
@@ -301,13 +222,10 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 
 调用 `/thoughtworks-skills-frontend-thought <idea-name>`。
 
-thought 子技能完成后立即推进到 3.8，不要等待用户额外指令。
-
 ### 3.8 前端设计确认
 
-`/thoughtworks-skills-frontend-thought` 子技能已在内部完成了设计展示和用户确认。
+子技能已在内部完成设计展示和用户确认。标记：
 
-标记前端设计已确认：
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-architecture confirmed
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-components confirmed
@@ -315,30 +233,17 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set fronte
 touch .thoughtworks/<idea-name>/.frontend-approved
 ```
 
-确认完成后立即推进到 3.9，不要等待用户额外指令。
-
 ### 3.9 前端编码编排
 
 调用 `/thoughtworks-skills-frontend-works <idea-name>`。
 
-works 子技能完成后立即推进到 3.10，不要等待用户额外指令。
-
 ### 3.10 展示完成状态
 
-展示完成摘要：
-
-| 阶段 | 层级 | 状态 |
-|------|------|------|
-| 后端 | domain, infr, application, ohs | ✅ |
-| 前端 | frontend-architecture, frontend-components, frontend-checklist | ✅ |
-
-展示完成后立即推进到 3.11，不要等待用户额外指令。
+展示后端 + 前端各层完成状态。
 
 ### 3.11 合并分支
 
 调用 `/thoughtworks-skills-merge <idea-name>`。
-
-merge 技能将 `feature/<idea-name>` squash merge 回默认分支（main/master），生成一条合并提交消息，并删除本地功能分支。
 
 <HARD-GATE>
 merge 技能完成后才能进入 Step 4。
@@ -348,39 +253,9 @@ merge 技能完成后才能进入 Step 4。
 
 ## Step 4: 执行工程支撑任务
 
-读取 `.thoughtworks/<idea-name>/supplementary-tasks.md`。如果文件不存在或为空 → 跳过此步骤。
+读取 `.thoughtworks/<idea-name>/supplementary-tasks.md`。如果文件不存在或为空 → 跳过。
 
-对每项未完成的任务：
-
-1. 用 Glob 扫描当前项目的文件结构，了解实际的技术栈、端口、模块结构
-2. 读取已有的 backend-designs/ohs.md（如存在）获取 API 端口和路由信息
-3. 使用 Task 工具（subagent_type: general-purpose）执行任务：
-
-```
-Task(
-  subagent_type: "general-purpose",
-  max_turns: 10,
-  description: "{任务描述}",
-  prompt: "
-    # TASK
-    {具体任务描述}
-
-    # CONTEXT
-    ## 项目结构
-    {Glob 扫描结果}
-
-    ## 技术栈信息
-    {从已有代码推断的技术栈：后端框架、前端框架、数据库、端口等}
-
-    # OUTPUT
-    在项目根目录创建对应文件。
-    如果是 shell 脚本，确保以 #!/usr/bin/env bash 开头。
-  "
-)
-```
-
-4. 验证文件已创建
-5. 在 `supplementary-tasks.md` 中将该任务标记为 [x]
+对每项未完成的任务，使用 Task 工具（subagent_type: general-purpose, max_turns: 10）执行，传入项目结构和技术栈信息作为上下文。完成后在 supplementary-tasks.md 中标记为 [x]。
 
 <HARD-GATE>
 此步骤不得跳过。即使业务代码已全部完成，也必须检查是否有遗留的工程支撑任务。
@@ -390,46 +265,21 @@ Task(
 
 ## Step 5: 全栈完成汇总
 
-向用户展示：
-
-1. **实现摘要** — 后端 + 前端各一段话
-2. **各层完成状态** — 后端各层 + 前端状态
-3. **全栈验证** — 前端 API 调用是否与后端 OHS 端点对齐
-4. **工程支撑产出** — 部署脚本、Docker 配置等（如有）
+向用户展示：实现摘要、各层完成状态、全栈验证（前端 API 与后端 OHS 对齐）、工程支撑产出。
 
 ---
 
 ## 中断处理
 
-设计确认在子技能内部完成（thought 子技能的 HARD-GATE）。如果用户在子技能内部选择了"修改设计"或"终止"，子技能会自行处理。
-
-| 用户输入 | 编排器决策 |
-|---------|-----------|
-| 确认/继续 | 按当前流程推进 |
-| "重新澄清需求" | 回到 Step 2 |
-| "终止" | 保存当前状态后退出 |
-
-### 后端级联影响处理
-
-```
-修改 domain → 级联重做 infr + application → 级联重做 ohs
-修改 application → 级联重做 ohs
-修改 infr → 无下游级联
-修改 ohs → 无下游级联
-```
+使用 Read 工具读取 `{CORE_HELP}/references/interrupt-cascade.md`，按其中的选项表和级联规则处理。
 
 ---
 
 ## 合理化预防
 
-| 你可能会想 | 现实 |
-|-----------|------|
-| "用户已经给了需求文件，不用再澄清" | 需求文件（docs/xxx.md）只是原始输入，不等于澄清完成。澄清技能会扫描项目上下文、与用户提问、做聚合分析，这些步骤不可替代。只有 `.thoughtworks/<idea-name>/requirement.md` 存在才说明澄清已完成 |
-| "需求描述很详细，可以跳过澄清" | 无论需求多详细，聚合分析和用户确认是必须步骤。禁止以需求清晰为由跳过 |
-| "直接调用 /thoughtworks-skills-backend 更简单" | 全栈编排器需要自主控制流程节奏，中转会导致确认步骤重复 |
-| "前端澄清可以提前做" | 前端依赖 OHS 契约，提前澄清无法精确映射 |
-| "评估逻辑和后端 Decision-Maker 重复了" | 编排思路一致是设计意图，各编排器独立闭环，不互相依赖 |
-| "后端编码完再做前端设计太慢" | 前端设计依赖 OHS 导出契约，必须等后端设计完成 |
+使用 Read 工具读取以下两个文件，严格遵守：
+- `{CORE_HELP}/references/rationalization-backend.md`
+- `{CORE_HELP}/references/rationalization-fullstack.md`
 
 ---
 

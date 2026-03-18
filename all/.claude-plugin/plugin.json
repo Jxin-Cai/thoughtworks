@@ -11,6 +11,6 @@
   "license": "MIT",
   "keywords": ["ddd", "domain-driven-design", "java", "layered-architecture", "code-generation", "frontend", "fullstack"],
   "agents": [],
-  "skills": ["./skills/", "./backend/skills/", "./frontend/skills/"],
-  "commands": ["./commands/", "./backend/commands/", "./frontend/commands/"]
+  "skills": ["./skills/", "./core/skills/", "./backend/skills/", "./frontend/skills/"],
+  "commands": ["./commands/", "./core/commands/", "./backend/commands/", "./frontend/commands/"]
 }

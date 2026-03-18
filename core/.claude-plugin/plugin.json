@@ -1,0 +1,8 @@
+{
+  "name": "thoughtworks-core",
+  "description": "Shared skills and references for ThoughtWorks plugins",
+  "version": "2.0.0",
+  "agents": [],
+  "skills": ["./skills/"],
+  "commands": ["./commands/"]
+}
