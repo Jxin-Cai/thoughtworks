@@ -87,6 +87,17 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 /thoughtworks-skills-frontend-works <idea-name>     # 前端编码
 ```
 
+### 会话行为说明
+
+- 安装对应插件后，SessionStart 会**优先**引导使用匹配的编排技能（backend / frontend / all）。
+- 对明显不属于编排流程的请求（如代码审查、文档解释、小范围修复），允许直接响应，不强制进入编排技能。
+- 当需求属于标准 DDD 编排流程时，建议直接调用对应 skill，而不是手工拆解内部步骤。
+
+### 分支合并行为
+
+- `/thoughtworks-skills-merge <idea-name>` 在合并前会检查未提交变更，并提示确认要纳入合并的文件范围。
+- 清理功能分支时默认采用安全删除（`git branch -d`）；若存在未合并提交，再由用户确认是否强制删除。
+
 ### 加载编码规范
 
 ```bash
