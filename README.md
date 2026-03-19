@@ -13,6 +13,9 @@
 按需安装：
 
 ```bash
+# 仅共享能力层（branch / merge / 共享引用资源）
+/plugin install thoughtworks-core@thoughtworks
+
 # 全栈（后端 + 前端）
 /plugin install thoughtworks-all@thoughtworks
 
@@ -54,6 +57,38 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 - 仅安装后端插件时，即使需求描述涉及前端，也只生成后端代码
 - 仅安装前端插件时，即使需求描述涉及后端，也只生成前端代码
 - 安装全栈插件后，才会自动编排前后端联动（后端先行，前端消费 OHS 导出契约）
+
+## 设计思路
+
+### 1) 四层子插件架构
+
+项目拆分为 `core/`、`backend/`、`frontend/`、`all/` 四个子插件：
+
+- `thoughtworks-core`：共享能力层，提供 branch/merge 技能和共享引用资源。
+- `thoughtworks-backend`：后端 DDD 闭环（澄清 → 设计 → 编码）。
+- `thoughtworks-frontend`：前端闭环（消费后端 OHS 契约进行设计与编码）。
+- `thoughtworks-all`：全栈编排入口，统一调度前后端能力。
+
+这种拆分确保“按需安装、能力边界清晰、复用集中在 core”。
+
+### 2) 设计与实现分离
+
+流程按角色分为 Thinker 与 Worker：
+
+- Thinker 负责产出设计文档，不直接改业务代码。
+- Worker 只按设计文档落地实现，不反向篡改设计。
+
+这样可以把“需求理解偏差”和“代码实现偏差”拆开治理，提升可审查性与可恢复性。
+
+### 3) 契约驱动的跨层一致性
+
+每层设计文档维护导出契约与依赖契约。下游层只按需引用上游契约，并通过校验脚本进行签名匹配，保证跨层接口一致。
+
+### 4) 编排策略
+
+- 标准路径：`clarify → thought → works → merge`
+- 同 phase 可并行，不同 phase 串行推进
+- 中断后可根据状态文件恢复，避免整链重跑
 
 ## 使用
 
