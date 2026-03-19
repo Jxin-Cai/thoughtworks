@@ -96,9 +96,13 @@ argument-hint: "<需求描述或文件路径>"
 
 ### 前置检查
 
+检查当前 idea 的需求文档是否已存在：
+
 ```bash
-ls .thoughtworks/*/requirement.md 2>/dev/null
+ls .thoughtworks/<idea-name>/requirement.md 2>/dev/null
 ```
+
+其中 `<idea-name>` 从 Step 1 的用户输入中推断（取需求关键词的 kebab-case 形式），或从已有的 `.thoughtworks/` 子目录中匹配。
 
 - **文件不存在** → 必须调用澄清技能
 - **文件已存在** → 跳过此步骤（断点续传），直接进入 Step 3

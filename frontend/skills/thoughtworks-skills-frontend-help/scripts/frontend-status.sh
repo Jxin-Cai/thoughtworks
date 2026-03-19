@@ -101,7 +101,7 @@ for design_file in $design_files; do
 done
 
 unique_layers=""
-for l in frontend; do
+for l in frontend-architecture frontend-components frontend-checklist; do
   for i in $(seq 0 $((layer_count - 1))); do
     if [ "${all_layers[$i]}" = "$l" ]; then
       if ! echo "$unique_layers" | grep -qw "$l"; then
@@ -165,7 +165,7 @@ fi
 # 构建 workflow_phases JSON（从 frontend-workflow-state.json）
 workflow_phases_json=""
 if [ -f "$STATE_FILE" ]; then
-  for layer_id in frontend; do
+  for layer_id in frontend-architecture frontend-components frontend-checklist; do
     wf_st=$(get_workflow_status "$layer_id")
     [ -z "$wf_st" ] && continue
     entry="\"$layer_id\":\"$wf_st\""

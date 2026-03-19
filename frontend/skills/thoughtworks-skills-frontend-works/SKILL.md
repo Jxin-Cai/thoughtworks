@@ -89,14 +89,13 @@ Agent(
 
     # CONTEXT
 
-    ## 前端架构设计
-    {frontend-architecture.md 完整内容}
-
-    ## 前端组件设计
-    {frontend-components.md 完整内容}
-
     ## 前端实现清单
     {frontend-checklist.md 完整内容}
+
+    ## 上游设计（只读参考）
+    如需参考架构设计和组件设计，使用 Read 工具按需加载：
+    - 前端架构设计：`{frontend-architecture.md 的绝对路径}`
+    - 前端组件设计：`{frontend-components.md 的绝对路径}`
 
     ## OHS 层设计（只读参考）
     如需参考 OHS 层设计，使用 Read 工具加载：`{ohs.md 的绝对路径}`

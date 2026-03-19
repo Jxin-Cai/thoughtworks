@@ -3,10 +3,10 @@ name: thoughtworks-skills-backend-works
 description: Use when user wants to start coding, execute implementation checklists from design docs, or resume previously interrupted development work.
 argument-hint: "<idea-name>"
 agents:
-  - workers/thoughtworks-agent-ddd-worker-domain
-  - workers/thoughtworks-agent-ddd-worker-infr
-  - workers/thoughtworks-agent-ddd-worker-application
-  - workers/thoughtworks-agent-ddd-worker-ohs
+  - thoughtworks-agent-ddd-worker-domain
+  - thoughtworks-agent-ddd-worker-infr
+  - thoughtworks-agent-ddd-worker-application
+  - thoughtworks-agent-ddd-worker-ohs
 ---
 
 # DDD Spec-Driven Development — 执行流程
@@ -49,6 +49,9 @@ agents:
 - `IDEA_DIR` = `.thoughtworks/<idea-name>`
 - `DDD_HELP` = 本 SKILL.md 所在目录的兄弟目录 `thoughtworks-skills-backend-help/`（即 `../thoughtworks-skills-backend-help/`）
 - `DESIGNS_DIR` = `{IDEA_DIR}/backend-designs`
+- `BACKEND_LANG` = 从 `{IDEA_DIR}/requirement.md` 的 `## 技术选型` 章节读取后端语言（java/python/go），未找到则默认 `java`
+- `FILE_EXT` = 根据 `BACKEND_LANG` 映射（java→`.java`，python→`.py`，go→`.go`）
+- `VERIFY_PATTERNS` = 从 `workflow.yaml` 中读取当前层 `verify.{BACKEND_LANG}` 下的 glob 模式列表，作为实现完成后的统一验收基准
 
 ---
 
@@ -115,7 +118,7 @@ bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 - application → `thoughtworks-backend:thoughtworks-agent-ddd-worker-application`
 - ohs → `thoughtworks-backend:thoughtworks-agent-ddd-worker-ohs`
 
-自定义 agent 的 body 已包含编码要求、合理化预防、完成标准等静态指引，`skills: [thoughtworks-skills-java-spec]` 已配置自动注入编码规范。动态 prompt 只需包含 TASK、CONTEXT、OUTPUT 三个动态区块：
+自定义 agent 的 body 已包含编码要求、合理化预防、完成标准等静态指引，`skills: [thoughtworks-skills-backend-spec]` 已配置自动注入编码规范。动态 prompt 只需包含 TASK、CONTEXT、OUTPUT 三个动态区块：
 
 ```
 Agent(
@@ -132,6 +135,9 @@ Agent(
     ---
 
     # CONTEXT（设计文档 — 读取作为上下文）
+
+    ## 后端语言
+    backend_language: {BACKEND_LANG}
 
     ## 本层设计
     {当前设计文件的完整内容}
@@ -154,18 +160,20 @@ Agent(
 ```
 
 5. agent 完成后，**验证产出**：
-   - 读取实现清单中的类名列表，对每个类用 Glob 搜索 `**/{ClassName}.java` 确认文件已创建
-   - 如果有文件未创建，重新启动该设计文件的 worker agent，在 prompt 开头追加：
+   - 从 `workflow.yaml` 读取当前层 `verify.{BACKEND_LANG}` 下的 glob 模式列表
+   - 对每个 verify pattern 用 Glob 执行检查，确认本层关键产物已经创建
+   - 如设计文件的实现清单已提供明确文件路径，可额外按文件路径做补充校验，但**统一以 workflow.yaml 的 verify patterns 为主验收基准**
+   - 如果 verify patterns 对应的关键产物未创建，重新启动该设计文件的 worker agent，在 prompt 开头追加：
 
 ```
 ---
 
 # PREVIOUS ATTEMPT FAILURE
 
-上次实现验证发现以下文件未创建：
-{未创建的文件路径列表}
+上次实现验证发现以下关键产物未通过 verify patterns 检查：
+{未通过的 verify pattern 或缺失产物列表}
 
-请确保本次执行后这些文件存在。
+请确保本次执行后这些关键产物存在。
 
 ---
 ```

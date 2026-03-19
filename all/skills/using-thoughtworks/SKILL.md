@@ -4,7 +4,7 @@ description: Use when starting any conversation - establishes how to find and us
 ---
 
 <EXTREMELY-IMPORTANT>
-If the user's request involves DDD, domain modeling, layered architecture design, Java code generation for a DDD project, or frontend development based on DDD API contracts, you ABSOLUTELY MUST invoke the relevant thoughtworks skill.
+If the user's request involves DDD, domain modeling, layered architecture design, Java/Python/Go backend code generation for a DDD project, or frontend development based on DDD API contracts, you ABSOLUTELY MUST invoke the relevant thoughtworks skill.
 
 IF A THOUGHTWORKS SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
 
@@ -40,8 +40,8 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 | `thoughtworks-skills-backend` | User wants backend DDD feature | Main entry: requirements → design → implementation |
 | `thoughtworks-skills-backend-clarify` | User wants to clarify backend requirements | Project context scan + structured requirement clarification |
 | `thoughtworks-skills-backend-thought` | User wants backend design only | Orchestrates thinker subagents for layered design docs |
-| `thoughtworks-skills-backend-works` | User wants to code from backend design | Orchestrates worker subagents for Java implementation |
-| `thoughtworks-skills-java-spec` | Need Java DDD coding spec | Routes to layer-specific coding constraints |
+| `thoughtworks-skills-backend-works` | User wants to code from backend design | Orchestrates worker subagents for Java/Python/Go implementation |
+| `thoughtworks-skills-backend-spec` | Need backend DDD coding spec | Routes to language-specific and layer-specific coding constraints |
 
 ### Frontend
 
@@ -73,7 +73,7 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 | User Intent | Skill to Invoke |
 |-------------|----------------|
-| DDD, domain modeling, layered architecture, Java backend | Backend skills (`/thoughtworks-skills-backend`) |
+| DDD, domain modeling, layered architecture, Java/Python/Go backend | Backend skills (`/thoughtworks-skills-backend`) |
 | Frontend pages, components, UI consuming API | Frontend skills (`/thoughtworks-skills-frontend`) |
 | Fullstack, end-to-end, both backend and frontend | Fullstack skill (`/thoughtworks-skills-all`) |
 

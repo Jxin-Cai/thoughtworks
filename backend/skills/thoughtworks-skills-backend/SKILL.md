@@ -3,14 +3,14 @@ name: thoughtworks-skills-backend
 description: Use when user wants to start a DDD feature end-to-end, from requirements clarification through design to implementation. This is the main entry point that orchestrates thought (design) and works (coding) sub-skills.
 argument-hint: "<需求描述或文件路径>"
 agents:
-  - thinkers/thoughtworks-agent-ddd-domain-thinker
-  - thinkers/thoughtworks-agent-ddd-infr-thinker
-  - thinkers/thoughtworks-agent-ddd-application-thinker
-  - thinkers/thoughtworks-agent-ddd-ohs-thinker
-  - workers/thoughtworks-agent-ddd-worker-domain
-  - workers/thoughtworks-agent-ddd-worker-infr
-  - workers/thoughtworks-agent-ddd-worker-application
-  - workers/thoughtworks-agent-ddd-worker-ohs
+  - thoughtworks-agent-ddd-domain-thinker
+  - thoughtworks-agent-ddd-infr-thinker
+  - thoughtworks-agent-ddd-application-thinker
+  - thoughtworks-agent-ddd-ohs-thinker
+  - thoughtworks-agent-ddd-worker-domain
+  - thoughtworks-agent-ddd-worker-infr
+  - thoughtworks-agent-ddd-worker-application
+  - thoughtworks-agent-ddd-worker-ohs
 ---
 
 # DDD Spec-Driven Development — Decision-Maker
@@ -79,9 +79,13 @@ agents:
 
 ### 前置检查
 
+检查当前 idea 的需求文档是否已存在：
+
 ```bash
-ls .thoughtworks/*/requirement.md 2>/dev/null
+ls .thoughtworks/<idea-name>/requirement.md 2>/dev/null
 ```
+
+其中 `<idea-name>` 从 Step 1 的用户输入中推断（取需求关键词的 kebab-case 形式），或从已有的 `.thoughtworks/` 子目录中匹配。
 
 - **文件不存在** → 必须调用澄清技能
 - **文件已存在** → 跳过此步骤（断点续传），直接进入 Step 3
@@ -169,7 +173,7 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} conf
 
 **3.3.3 编码（Worker）：** 调用 `/thoughtworks-skills-backend-works <idea-name> --layers <层列表>`
 
-**3.3.4 验证编码产出：** works skill 返回后，验证本 Phase 的编码产出是否通过 verify pattern 检查。
+**3.3.4 验证编码产出：** works skill 返回后，从 requirement.md 的 `## 技术选型` 章节读取后端语言（默认 java），然后从 workflow.yaml 中选择对应语言的 verify patterns，验证本 Phase 的编码产出是否通过检查。
 
 ### 3.4 标记完成
 

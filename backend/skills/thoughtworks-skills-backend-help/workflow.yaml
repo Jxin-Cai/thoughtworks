@@ -2,8 +2,8 @@
 # thoughtworks-backend-thought / thoughtworks-backend-works 读取此文件决定执行顺序
 
 name: ddd-layered
-version: 2
-description: DDD 四层架构工作流
+version: 3
+description: DDD 四层架构工作流（支持 Java/Python/Go）
 
 layers:
   - id: domain
@@ -13,10 +13,21 @@ layers:
     worker-ref: ../../agents/thoughtworks-agent-ddd-worker-domain.md
     requires: []
     verify:
-      - pattern: "**/domain/**/model/*.java"
-        description: 验证领域模型类已创建
-      - pattern: "**/domain/**/repository/*.java"
-        description: 验证仓储接口已创建
+      java:
+        - pattern: "**/domain/**/model/*.java"
+          description: 验证领域模型类已创建
+        - pattern: "**/domain/**/repository/*.java"
+          description: 验证仓储接口已创建
+      python:
+        - pattern: "**/domain/**/model/*.py"
+          description: 验证领域模型类已创建
+        - pattern: "**/domain/**/repository/*.py"
+          description: 验证仓储接口已创建
+      go:
+        - pattern: "**/domain/**/model/*.go"
+          description: 验证领域模型类已创建
+        - pattern: "**/domain/**/repository/*.go"
+          description: 验证仓储接口已创建
 
   - id: infr
     phase: 2
@@ -25,12 +36,23 @@ layers:
     worker-ref: ../../agents/thoughtworks-agent-ddd-worker-infr.md
     requires: [domain]
     verify:
-      - pattern: "**/infr/repository/**/*RepositoryImpl.java"
-        description: 验证仓储实现已创建
-      - pattern: "**/infr/repository/**/*Mapper.java"
-        description: 验证 Mapper 已创建
-      - pattern: "**/infr/repository/**/*PO.java"
-        description: 验证 PO 已创建
+      java:
+        - pattern: "**/infr/repository/**/*RepositoryImpl.java"
+          description: 验证仓储实现已创建
+        - pattern: "**/infr/repository/**/*Mapper.java"
+          description: 验证 Mapper 已创建
+        - pattern: "**/infr/repository/**/*PO.java"
+          description: 验证 PO 已创建
+      python:
+        - pattern: "**/infr/repository/**/*_repository_impl.py"
+          description: 验证仓储实现已创建
+        - pattern: "**/infr/repository/**/*_model.py"
+          description: 验证 ORM Model 已创建
+      go:
+        - pattern: "**/infr/repository/**/*_repository_impl.go"
+          description: 验证仓储实现已创建
+        - pattern: "**/infr/repository/**/*_model.go"
+          description: 验证 GORM Model 已创建
 
   - id: application
     phase: 2
@@ -39,10 +61,21 @@ layers:
     worker-ref: ../../agents/thoughtworks-agent-ddd-worker-application.md
     requires: [domain]
     verify:
-      - pattern: "**/application/**/*ApplicationService.java"
-        description: 验证应用服务已创建
-      - pattern: "**/application/**/*Command.java"
-        description: 验证 Command 已创建
+      java:
+        - pattern: "**/application/**/*ApplicationService.java"
+          description: 验证应用服务已创建
+        - pattern: "**/application/**/*Command.java"
+          description: 验证 Command 已创建
+      python:
+        - pattern: "**/application/**/*_application_service.py"
+          description: 验证应用服务已创建
+        - pattern: "**/application/**/*_command.py"
+          description: 验证 Command 已创建
+      go:
+        - pattern: "**/application/**/*_application_service.go"
+          description: 验证应用服务已创建
+        - pattern: "**/application/**/*_command.go"
+          description: 验证 Command 已创建
 
   - id: ohs
     phase: 3
@@ -51,7 +84,18 @@ layers:
     worker-ref: ../../agents/thoughtworks-agent-ddd-worker-ohs.md
     requires: [application, domain]
     verify:
-      - pattern: "**/ohs/**/*Controller.java"
-        description: 验证 Controller 已创建
-      - pattern: "**/ohs/**/*Request.java"
-        description: 验证 Request DTO 已创建
+      java:
+        - pattern: "**/ohs/**/*Controller.java"
+          description: 验证 Controller 已创建
+        - pattern: "**/ohs/**/*Request.java"
+          description: 验证 Request DTO 已创建
+      python:
+        - pattern: "**/ohs/**/*_router.py"
+          description: 验证 Router 已创建
+        - pattern: "**/ohs/**/*_request.py"
+          description: 验证 Request DTO 已创建
+      go:
+        - pattern: "**/ohs/**/*_handler.go"
+          description: 验证 Handler 已创建
+        - pattern: "**/ohs/**/*_request.go"
+          description: 验证 Request DTO 已创建

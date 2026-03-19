@@ -3,10 +3,10 @@ name: thoughtworks-skills-backend-thought
 description: Use when called by Decision-Maker or directly to execute DDD design phase. Orchestrates thinker subagents for layered design.
 argument-hint: "<idea-name>"
 agents:
-  - thinkers/thoughtworks-agent-ddd-domain-thinker
-  - thinkers/thoughtworks-agent-ddd-infr-thinker
-  - thinkers/thoughtworks-agent-ddd-application-thinker
-  - thinkers/thoughtworks-agent-ddd-ohs-thinker
+  - thoughtworks-agent-ddd-domain-thinker
+  - thoughtworks-agent-ddd-infr-thinker
+  - thoughtworks-agent-ddd-application-thinker
+  - thoughtworks-agent-ddd-ohs-thinker
 ---
 
 # DDD Spec-Driven Development — 思考流程
@@ -64,6 +64,13 @@ agents:
 
 读取 assessment.md，确定哪些层需要开发。
 
+读取 requirement.md，从 `## 技术选型` 章节提取后端语言（`BACKEND_LANG`）。如果未找到技术选型章节，默认 `BACKEND_LANG = java`。
+
+根据 `BACKEND_LANG` 确定文件扩展名映射：
+- `java` → `.java`
+- `python` → `.py`
+- `go` → `.go`
+
 ---
 
 ## Step 2: 读取工作流定义
@@ -88,7 +95,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 每个层都有对应的自定义 agent 定义文件（如 `thoughtworks-agent-ddd-domain-thinker`），其 frontmatter 配置了：
 - **system prompt**（agent body）：包含设计步骤、反思循环、命名规范等静态指引
-- **skills**：`[thoughtworks-skills-java-spec]`，自动注入编码规范路由规则到 subagent 上下文
+- **skills**：`[thoughtworks-skills-backend-spec]`，自动注入编码规范路由规则到 subagent 上下文
 - **tools**：`Read, Write, Glob, Grep`
 - **model**：`sonnet`
 
@@ -128,14 +135,14 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 {upstream-layer} 层的代码已经实现，你需要通过扫描已有代码来获取你需要依赖的接口列表。
 
 ### 扫描指引
-- 建议扫描的包路径模式（按需选用）：
-  - 聚合根/实体：`**/domain/**/model/*.java`
-  - 仓储接口：`**/domain/**/repository/*.java`
-  - 领域事件：`**/domain/**/event/*.java`
-  - 防腐层接口：`**/domain/**/acl/*.java`
-  - 领域服务：`**/domain/**/service/*.java`
-  - 应用服务：`**/application/**/*ApplicationService.java`
-  - Command：`**/application/**/*Command.java`
+- 建议扫描的包路径模式（按需选用，扩展名根据 BACKEND_LANG：Java→`.java`，Python→`.py`，Go→`.go`）：
+  - 聚合根/实体：`**/domain/**/model/*.{ext}`
+  - 仓储接口：`**/domain/**/repository/*.{ext}`
+  - 领域事件：`**/domain/**/event/*.{ext}`
+  - 防腐层接口：`**/domain/**/acl/*.{ext}`
+  - 领域服务：`**/domain/**/service/*.{ext}`
+  - 应用服务：`**/application/**/*ApplicationService.{ext}`（Python/Go 中可能命名不同，按包名搜索）
+  - Command：`**/application/**/*Command.{ext}`（Python/Go 中可能命名不同，按包名搜索）
 
 ### 扫描原则
 1. **需求驱动** — 只扫描 MISSION 工作目标中涉及的类和方法，不做全量扫描
@@ -155,14 +162,14 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 ### 扫描指引
 - assessment.md 中关于该层的说明："{从 assessment.md 提取该层的说明}"
-- 建议扫描的包路径模式（按需选用）：
-  - 聚合根/实体：`**/domain/**/model/*.java`
-  - 仓储接口：`**/domain/**/repository/*.java`
-  - 领域事件：`**/domain/**/event/*.java`
-  - 防腐层接口：`**/domain/**/acl/*.java`
-  - 领域服务：`**/domain/**/service/*.java`
-  - 应用服务：`**/application/**/*ApplicationService.java`
-  - Command：`**/application/**/*Command.java`
+- 建议扫描的包路径模式（按需选用，扩展名根据 BACKEND_LANG：Java→`.java`，Python→`.py`，Go→`.go`）：
+  - 聚合根/实体：`**/domain/**/model/*.{ext}`
+  - 仓储接口：`**/domain/**/repository/*.{ext}`
+  - 领域事件：`**/domain/**/event/*.{ext}`
+  - 防腐层接口：`**/domain/**/acl/*.{ext}`
+  - 领域服务：`**/domain/**/service/*.{ext}`
+  - 应用服务：`**/application/**/*ApplicationService.{ext}`
+  - Command：`**/application/**/*Command.{ext}`
 
 ### 扫描原则
 1. **需求驱动** — 只扫描 MISSION 工作目标中涉及的类和方法，不做全量扫描
@@ -182,7 +189,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 - application → `thoughtworks-backend:thoughtworks-agent-ddd-application-thinker`
 - ohs → `thoughtworks-backend:thoughtworks-agent-ddd-ohs-thinker`
 
-这些自定义 agent 的 body 已包含设计步骤、反思循环、命名规范等静态指引（即原来的 INSTRUCTION 区块内容），`skills: [thoughtworks-skills-java-spec]` 已配置自动注入编码规范（即原来的 CODING-SPEC 区块内容）。因此动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个动态区块。
+这些自定义 agent 的 body 已包含设计步骤、反思循环、命名规范等静态指引（即原来的 INSTRUCTION 区块内容），`skills: [thoughtworks-skills-backend-spec]` 已配置自动注入编码规范（即原来的 CODING-SPEC 区块内容）。因此动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个动态区块。
 
 ```
 Agent(
@@ -227,6 +234,9 @@ Agent(
 
     # CONTEXT（输入文档 — 读取作为上下文）
 
+    ## 后端语言
+    backend_language: {BACKEND_LANG}
+
     {对每个上游层，按 CONTEXT 区块构建规则的情况 A 或 B 生成对应子区块：}
 
     {情况 A — 上游层代码已实现时：}
@@ -255,37 +265,6 @@ Agent(
     bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} designed
     ```
 
-    ## frontmatter 要求
-
-    设计文档必须以 YAML frontmatter 开头，包含以下字段：
-    - spec_id: 设计文件标识，格式为 `Spec_{Layer}`（如 `Spec_Domain`、`Spec_Application`）
-    - layer: 层标识（domain / infr / application / ohs）
-    - order: 文件序号（单文件时为 1）
-    - status: pending
-    - depends_on: 同层内依赖的文件名列表（无依赖时为 []）
-    - description: 一句话描述本文件的设计内容
-
-    ## 实现清单要求
-
-    设计文档末尾必须包含实现清单表格，列出本文件涉及的所有待实现项，格式：
-
-    | # | output_id | 实现项 | 类型 | 说明 |
-    |---|-----------|--------|------|------|
-    | 1 | Output_{Layer}_{IdeaName}_01 | XxxClass | 新增 | ... |
-
-    output_id 格式为 `Output_{Layer}_{IdeaName}_{两位序号}`，其中：
-    - Layer: 当前层标识（Domain / Infr / Application / OHS）
-    - IdeaName: idea-name 的 PascalCase 形式（如 user-registration → UserRegistration）
-    - 序号: 从 01 开始的两位递增序号，在同一设计文件内递增
-
-    ## 拆分规则
-
-    - **domain 层始终单文件** `domain.md`，内部按聚合分章节（`## 聚合: {Name}`），不拆分为多个 domain-N-xxx.md 文件
-    - 其他层（infr / application / ohs）默认产出单文件 `{layer}.md`，order 为 1
-    - 当其他层预估内容超过约 3000 字时，按功能独立性拆分为 `{layer}-{order}-{topic}.md`
-    - 有关联的内容不拆，保持在同一文件中
-    - 拆分后的文件通过 depends_on 声明同层内依赖
-
     重要：TEMPLATE 是你的产出结构，MISSION / CONTEXT 是你的参考约束，不要将它们复制到产出文件中。
   "
 )
@@ -299,7 +278,7 @@ Agent(
 2. **具体工作项** — 从评估结论中提炼出 numbered list，每项是一个可验证的工作目标（如"设计 Order 聚合根，包含创建、修改状态、计算总价三个核心业务方法"）
 3. **验证锚点** — 这些工作项将成为 thinker 反思循环中逐条验证的基准
 
-注意：自定义 agent 的 `skills: [thoughtworks-skills-java-spec]` 字段会自动将编码规范注入到 subagent 上下文中，无需主 agent 手动内联。
+注意：自定义 agent 的 `skills: [thoughtworks-skills-backend-spec]` 字段会自动将编码规范注入到 subagent 上下文中，无需主 agent 手动内联。
 
 ### 产出验证
 

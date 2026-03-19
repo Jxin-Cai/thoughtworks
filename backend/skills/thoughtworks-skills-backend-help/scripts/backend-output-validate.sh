@@ -31,25 +31,66 @@ fi
 # ── 解析 workflow-state.json 中的 tracked_layers ──
 # 格式: {"idea":"xxx","tracked_layers":{"domain":{"status":"done","files":["domain.md"]},...}}
 
-# 提取所有 tracked layer 名称（status 为 done 的层）
+# 提取所有 tracked layer 名称（status 为 done 或 coded 的层）
+# 兼容多行格式化 JSON（locked_write 生成的格式）
 parse_tracked_layers() {
-  local content
-  content=$(cat "$STATE_FILE")
-  # 提取 tracked_layers 对象内的 key
-  echo "$content" | sed -n 's/.*"tracked_layers"[[:space:]]*:[[:space:]]*{//p' | sed 's/}[^}]*$//' | \
-    grep -oE '"[a-z]+"\s*:\s*\{[^}]*"status"\s*:\s*"done"' | \
-    grep -oE '^"[a-z]+"' | tr -d '"'
+  if [ ! -f "$STATE_FILE" ]; then return; fi
+  awk '
+    BEGIN { in_tracked=0; cur_layer=""; cur_status="" }
+    /"tracked_layers"/ { in_tracked=1; next }
+    in_tracked && /"(domain|infr|application|ohs)"[[:space:]]*:/ {
+      line=$0
+      sub(/^[^"]*"/, "", line)
+      sub(/".*/, "", line)
+      cur_layer=line
+      cur_status=""
+      next
+    }
+    in_tracked && cur_layer != "" && /"status"/ {
+      line=$0
+      gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "", line)
+      gsub(/".*/, "", line)
+      cur_status=line
+      if (cur_status == "done" || cur_status == "coded") { print cur_layer }
+      cur_layer=""
+      next
+    }
+  ' "$STATE_FILE"
 }
 
 # 提取某层的文件列表
+# 兼容多行格式化 JSON
 parse_layer_files() {
   local layer="$1"
-  local content
-  content=$(cat "$STATE_FILE")
-  # 提取该层的 files 数组内容
-  echo "$content" | grep -oE "\"${layer}\"[[:space:]]*:[[:space:]]*\{[^}]*\}" | \
-    grep -oE '"files"[[:space:]]*:[[:space:]]*\[[^]]*\]' | \
-    grep -oE '"[^"]*\.md"' | tr -d '"'
+  if [ ! -f "$STATE_FILE" ]; then return; fi
+  awk -v layer="$layer" '
+    BEGIN { in_tracked=0; in_layer=0; in_files=0 }
+    /"tracked_layers"/ { in_tracked=1; next }
+    in_tracked && !in_layer {
+      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
+    }
+    in_tracked && in_layer {
+      if ($0 ~ /"files"/) {
+        in_files=1
+        line=$0
+        gsub(/.*"files"[[:space:]]*:[[:space:]]*\[/, "", line)
+        gsub(/\].*/, "", line)
+        gsub(/"/, "", line)
+        gsub(/[[:space:]]/, "", line)
+        if (line != "") print line
+        if ($0 ~ /\]/) { in_files=0 }
+        next
+      }
+      if (in_files) {
+        if ($0 ~ /\]/) { in_files=0; next }
+        line=$0
+        gsub(/"/, "", line)
+        gsub(/[[:space:]]/, "", line)
+        gsub(/,/, "", line)
+        if (line != "") print line
+      }
+    }
+  ' "$STATE_FILE"
 }
 
 TRACKED_LAYERS=$(parse_tracked_layers)

@@ -136,7 +136,7 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 ### 加载编码规范
 
 ```bash
-/thoughtworks-skills-java-spec domain|application|infr|ohs
+/thoughtworks-skills-backend-spec java|python|go <domain|application|infr|ohs>
 /thoughtworks-skills-frontend-spec react-ts
 ```
 
