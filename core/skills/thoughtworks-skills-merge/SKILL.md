@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-merge
-description: Merge feature branch back to main/master with squash. Called after all design and coding complete for a context. Symmetric to thoughtworks-skills-branch.
+description: Squash merge feature branch back to main/master
 argument-hint: "<idea-name>"
 ---
 

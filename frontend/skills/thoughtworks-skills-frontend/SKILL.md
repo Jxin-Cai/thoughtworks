@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-frontend
-description: Use when user wants to start frontend development consuming DDD API contracts. This is the frontend entry point that orchestrates thought (design) and works (coding) sub-skills.
+description: Frontend end-to-end workflow consuming DDD API contracts: design and implementation
 argument-hint: "<idea-name>"
 agents:
   - thoughtworks-agent-frontend-architecture-thinker
@@ -13,7 +13,7 @@ agents:
 
 你是前端 Decision-Maker，负责编排前端开发流程：需求澄清、前端评估、设计编排到编码执行。
 
-前端依赖后端 OHS 层的导出契约（`backend-designs/ohs.md`）作为 API 接口定义。
+前端依赖后端 OHS 层的导出契约（`.thoughtworks/<idea-name>/backend-designs/ohs.md`）作为 API 接口定义。
 
 用户传入的参数：`$ARGUMENTS`
 
@@ -91,7 +91,7 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 
 ## Step 3: 前端评估
 
-读取 `backend-designs/ohs.md` 的导出契约，评估前端需要做什么：
+读取 `.thoughtworks/<idea-name>/backend-designs/ohs.md` 的导出契约，评估前端需要做什么：
 
 将评估结果写入 `.thoughtworks/<idea-name>/frontend-assessment.md`：
 
@@ -130,8 +130,14 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea
 <HARD-GATE>
 使用 AskUserQuestion 询问用户是否确认前端设计：
 - 确认设计，开始编码
-- 修改设计
+- 修改设计（指定要修改的层和修改说明）
+- 重新澄清需求
 - 终止
+
+**确认** → 执行工作流标记后进入 Step 6。
+**修改设计** → 进入中断处理流程。
+**重新澄清需求** → 回到 Step 2。
+**终止** → 保存当前状态后退出。
 
 用户确认后：
 ```bash
@@ -141,6 +147,24 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set fronte
 touch .thoughtworks/<idea-name>/.frontend-approved
 ```
 </HARD-GATE>
+
+---
+
+## 中断处理
+
+使用 Read 工具读取 `core/skills/thoughtworks-skills-core-help/references/interrupt-cascade.md`，按其中的选项表和前端级联规则处理。
+
+---
+
+## 断点续传
+
+Decision-Maker 支持从中断处恢复。检查 `.thoughtworks/<idea-name>/` 目录：
+
+1. `.frontend-approved` 存在 → 从 Step 6 编码继续
+2. `frontend-workflow-state.json` 存在 → 检查各层状态，从 Step 4 设计继续
+3. `frontend-assessment.md` 存在 → 从 Step 4 编排 thought 开始
+4. `frontend-requirement.md` 存在但无 assessment → 从 Step 3 评估开始
+5. `frontend-requirement.md` 不存在 → 从 Step 2 澄清开始
 
 ---
 

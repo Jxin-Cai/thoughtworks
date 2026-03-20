@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-backend-thought
-description: Use when called by Decision-Maker or directly to execute DDD design phase. Orchestrates thinker subagents for layered design.
+description: Backend DDD design phase: orchestrates thinker subagents for layered design docs
 argument-hint: "<idea-name>"
 agents:
   - thoughtworks-agent-ddd-domain-thinker
@@ -62,9 +62,9 @@ agents:
 
 如果不存在，提示用户先运行 `/thoughtworks-skills-backend <需求>` 完成需求澄清和层级评估。
 
-读取 assessment.md，确定哪些层需要开发。
+读取 `.thoughtworks/<idea-name>/assessment.md`，确定哪些层需要开发。
 
-读取 requirement.md，从 `## 技术选型` 章节提取后端语言（`BACKEND_LANG`）。如果未找到技术选型章节，默认 `BACKEND_LANG = java`。
+读取 `.thoughtworks/<idea-name>/requirement.md`，从 `## 技术选型` 章节提取后端语言（`BACKEND_LANG`）。如果未找到技术选型章节，默认 `BACKEND_LANG = java`。
 
 根据 `BACKEND_LANG` 确定文件扩展名映射：
 - `java` → `.java`
@@ -96,8 +96,8 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 每个层都有对应的自定义 agent 定义文件（如 `thoughtworks-agent-ddd-domain-thinker`），其 frontmatter 配置了：
 - **system prompt**（agent body）：包含设计步骤、反思循环、命名规范等静态指引
 - **skills**：`[thoughtworks-skills-backend-spec]`，自动注入编码规范路由规则到 subagent 上下文
-- **tools**：`Read, Write, Glob, Grep`
-- **model**：`sonnet`
+- **tools**：`Read, Write, Edit, Glob, Grep`
+- **model**：`opus`（application thinker 使用 `sonnet`）
 
 主 agent 在构建 Agent 调用时，使用 `thoughtworks-backend:` 前缀 + `workflow.yaml` 中 `thinker-ref` 对应的 agent 文件名（去掉 `.md`）作为 `subagent_type`。这样 agent body 和 skills 会自动加载，动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 等动态内容，无需重复内联 INSTRUCTION 和 CODING-SPEC。
 
@@ -250,7 +250,7 @@ Agent(
     {无上游依赖时（如 domain 层）：省略上游相关子区块}
 
     ## 需求
-    {requirement.md 的完整内容}
+    使用 Read 工具加载需求文档：`{IDEA_DIR}/requirement.md`
 
     ---
 

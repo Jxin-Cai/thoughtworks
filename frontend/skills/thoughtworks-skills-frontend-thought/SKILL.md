@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-frontend-thought
-description: Use when called by frontend Decision-Maker or directly to execute frontend design phase. Orchestrates 3 frontend thinker subagents in sequence (architecture → components → checklist).
+description: Frontend design phase: orchestrates architecture, components, and checklist thinkers
 argument-hint: "<idea-name>"
 agents:
   - thoughtworks-agent-frontend-architecture-thinker
@@ -18,7 +18,7 @@ agents:
 
 ## 铁律
 
-1. **上游契约必须内联** — 构建 thinker prompt 时，OHS 层导出契约必须完整内联；OHS 设计文档全文改为提供路径让 Agent 自行 Read 加载
+1. **上游依赖通过扫描已有代码获取** — 构建 thinker prompt 时，OHS 层依赖接口通过指引 Thinker 扫描已有 OHS 代码获取，不从设计文档内联导出契约；Phase 2/3 的上游设计文档（architecture/components）通过提供路径让 Agent 自行 Read 加载，避免链式内联导致 prompt 膨胀
 2. **Phase 串行** — Phase 1 (architecture) 完成后才能启动 Phase 2 (components)，Phase 2 完成后才能启动 Phase 3 (checklist)
 3. **禁止跳过用户确认** — 所有 3 个 Phase 完成后（Step 3），必须等用户确认
 
@@ -44,9 +44,9 @@ agents:
 
 检查前置条件：
 1. `.thoughtworks/<idea-name>/frontend-requirement.md` 必须存在
-2. `.thoughtworks/<idea-name>/backend-designs/ohs.md` 存在，或者项目中已有 OHS 层代码（此时 Thinker 将从已有代码扫描 API 端点）
+2. 项目中已有 OHS 层代码（Thinker 将从已有代码扫描 API 端点）
 
-读取 frontend-assessment.md（如存在），确定前端工作范围。
+读取 `{IDEA_DIR}/frontend-assessment.md`（如存在），确定前端工作范围。
 
 设置变量：
 - `IDEA_DIR` = `.thoughtworks/<idea-name>`
@@ -82,7 +82,7 @@ agents:
 
 ### UI 风格模板注入
 
-读取 `frontend-requirement.md`，检查是否包含 `## UI 风格` 章节：
+读取 `{IDEA_DIR}/frontend-requirement.md`，检查是否包含 `## UI 风格` 章节：
 
 - **如果包含** → 提取风格标识（如 `minimalist-luxury`、`tech-futuristic`、`classic-elegant`），构建 `UI_STYLE_GUIDANCE` 变量：
 
@@ -141,22 +141,15 @@ Agent(
 
     # CONTEXT
 
-    {如果 backend-designs/ohs.md 存在：}
-    ## OHS 层导出契约
-    {从 backend-designs/ohs.md 提取的 ## 导出契约 区原文，如无则提取 ## API 端点 区}
+    ## OHS 层已有代码
 
-    ## OHS 层设计文档
-    如需参考 OHS 层完整设计，使用 Read 工具加载：`{ohs.md 的绝对路径}`
-
-    {如果 backend-designs/ohs.md 不存在：}
-    ## OHS 层已有代码（无当前设计文档）
-
-    OHS 层在本次需求中不需要新开发，已有 API 端点存在于代码库中。
     你需要根据 MISSION 中的工作目标，使用 Glob 和 Grep 工具从已有代码中按需扫描所需的 API 端点。
 
     ### 扫描指引
-    - 建议扫描的包路径模式：`**/ohs/**/*Controller.java`
-    - 关注 @RequestMapping、@GetMapping、@PostMapping 等注解提取 URL 和方法签名
+    - 根据后端语言（从 `{IDEA_DIR}/requirement.md` 的 `## 技术选型` 确认）扫描对应路径：
+      - Java: `**/ohs/**/*Controller.java`（@RequestMapping/@GetMapping/@PostMapping 注解）
+      - Python: `**/ohs/**/*_router.py`（FastAPI router 装饰器 @router.get/@router.post）
+      - Go: `**/ohs/**/*_handler.go`（gin handler 函数和路由注册）
     - 关注 Request/Response DTO 类的字段定义
 
     ### 扫描原则
@@ -171,7 +164,7 @@ Agent(
     {UI_UX_GUIDANCE}
 
     ## 前端需求
-    {frontend-requirement.md 完整内容}
+    使用 Read 工具加载：`{IDEA_DIR}/frontend-requirement.md`
 
     ---
 
@@ -195,7 +188,7 @@ Agent(
 )
 ```
 
-Architecture Thinker 完成后，读取 `{IDEA_DIR}/frontend-designs/frontend-architecture.md`，提取 `## 导出契约` 区内容，存储为 `ARCHITECTURE_EXPORTS`。
+Architecture Thinker 完成后，继续 Phase 2。**不再提取导出契约内联，下游 Thinker 通过 Read 工具按需加载。**
 
 ### Phase 2: Components Thinker
 
@@ -231,17 +224,15 @@ Agent(
 
     # CONTEXT
 
-    ## 上游导出契约（来自 frontend-architecture.md）
-    {ARCHITECTURE_EXPORTS 完整内容}
+    ## 上游架构设计（必读 — 按需提取导出契约和架构决策）
+    使用 Read 工具加载：`{IDEA_DIR}/frontend-designs/frontend-architecture.md`
+    重点关注 `## 导出契约` 区（页面路由、FSD 层级、共享类型定义）和架构决策，作为本层设计的上游依据。
 
     ## OHS 层设计文档
     如需参考 OHS 层完整设计（API 端点、DTO 字段），使用 Read 工具加载：`{ohs.md 的绝对路径}`
 
-    ## 前端架构设计（完整参考）
-    如需参考完整的架构设计，使用 Read 工具加载：`{IDEA_DIR}/frontend-designs/frontend-architecture.md`
-
     ## 前端需求
-    {frontend-requirement.md 完整内容}
+    使用 Read 工具加载：`{IDEA_DIR}/frontend-requirement.md`
 
     ---
 
@@ -265,7 +256,7 @@ Agent(
 )
 ```
 
-Components Thinker 完成后，读取 `{IDEA_DIR}/frontend-designs/frontend-components.md`，提取 `## 导出契约` 区内容，存储为 `COMPONENTS_EXPORTS`。
+Components Thinker 完成后，继续 Phase 3。
 
 ### Phase 3: Checklist Thinker
 
@@ -301,17 +292,15 @@ Agent(
 
     # CONTEXT
 
-    ## 上游导出契约（来自 frontend-components.md）
-    {COMPONENTS_EXPORTS 完整内容}
+    ## 上游组件设计（必读 — 按需提取导出契约和组件列表）
+    使用 Read 工具加载：`{IDEA_DIR}/frontend-designs/frontend-components.md`
+    重点关注 `## 导出契约` 区（组件列表、Props 接口、API 调用映射），作为本层清单编制的依据。
 
     ## 前端架构设计
     如需参考架构设计（路由、FSD 层级），使用 Read 工具加载：`{IDEA_DIR}/frontend-designs/frontend-architecture.md`
 
-    ## 前端组件设计
-    如需参考组件详细设计（Props/State），使用 Read 工具加载：`{IDEA_DIR}/frontend-designs/frontend-components.md`
-
     ## 前端需求
-    {frontend-requirement.md 完整内容}
+    使用 Read 工具加载：`{IDEA_DIR}/frontend-requirement.md`
 
     ---
 

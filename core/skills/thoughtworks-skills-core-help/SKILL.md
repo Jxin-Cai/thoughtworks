@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-core-help
-description: Shared reference resources for ThoughtWorks orchestrators. Routes to iron rules, state machine, interrupt handling, and rationalization prevention files.
+description: Shared reference resources for orchestrators: iron rules, state machine, assessment dimensions
 ---
 
 # Core 共享引用资源

@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-frontend-works
-description: Use when user wants to start frontend coding, execute implementation checklists from frontend design docs.
+description: Frontend coding phase: orchestrates worker from frontend design docs
 argument-hint: "<idea-name>"
 agents:
   - thoughtworks-agent-frontend-worker
@@ -69,7 +69,7 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist coding
 ```
 
-读取 `frontend-checklist.md` 的 frontmatter，将 status 更新为 `in_progress`。
+读取 `{DESIGNS_DIR}/frontend-checklist.md` 的 frontmatter，将 status 更新为 `in_progress`。
 
 启动 worker agent：
 
@@ -90,7 +90,8 @@ Agent(
     # CONTEXT
 
     ## 前端实现清单
-    {frontend-checklist.md 完整内容}
+    使用 Read 工具加载完整的实现清单文档：`{frontend-checklist.md 的绝对路径}`
+    重点关注实现清单表格中每个文件的创建路径、关键实现点和对应组件设计。
 
     ## 上游设计（只读参考）
     如需参考架构设计和组件设计，使用 Read 工具按需加载：

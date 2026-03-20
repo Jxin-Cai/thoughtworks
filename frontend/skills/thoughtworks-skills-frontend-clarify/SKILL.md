@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-frontend-clarify
-description: Use when frontend requirements need clarification. Scans project context first, then clarifies frontend requirements with user through structured questions.
+description: Frontend requirements clarification based on OHS API contracts
 argument-hint: "<idea-name>"
 ---
 

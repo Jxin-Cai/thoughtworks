@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-backend-works
-description: Use when user wants to start coding, execute implementation checklists from design docs, or resume previously interrupted development work.
+description: Backend DDD coding phase: orchestrates worker subagents from design docs
 argument-hint: "<idea-name>"
 agents:
   - thoughtworks-agent-ddd-worker-domain
@@ -140,7 +140,8 @@ Agent(
     backend_language: {BACKEND_LANG}
 
     ## 本层设计
-    {当前设计文件的完整内容}
+    使用 Read 工具加载本层设计文档：`{当前设计文件的绝对路径}`
+    重点关注实现清单表格中每个实现项对应的设计章节、字段定义、方法签名和业务规则。
 
     ## 上游设计（只读参考）
     如需参考上游设计文档，使用 Read 工具按需加载：

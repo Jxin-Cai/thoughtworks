@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-frontend-spec
-description: Use when working on frontend projects consuming DDD API contracts. Loads tech-stack-specific coding constraints. Invoke with /thoughtworks-skills-frontend-spec [stack] [ui-style] to get targeted rules.
+description: Frontend coding spec: tech-stack-specific constraints
 argument-hint: "<stack> e.g. react-ts, all | [ui-style] e.g. minimalist-luxury"
 disable-model-invocation: true
 ---

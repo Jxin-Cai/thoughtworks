@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-backend
-description: Use when user wants to start a DDD feature end-to-end, from requirements clarification through design to implementation. This is the main entry point that orchestrates thought (design) and works (coding) sub-skills.
+description: Backend DDD end-to-end workflow: requirements clarification, design, and implementation
 argument-hint: "<需求描述或文件路径>"
 agents:
   - thoughtworks-agent-ddd-domain-thinker

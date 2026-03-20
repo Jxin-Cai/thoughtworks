@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-backend-clarify
-description: Use when backend DDD requirements need clarification. Scans project context first, then clarifies requirements with user through structured questions, and performs aggregate analysis.
+description: Backend DDD requirements clarification with project context scanning and aggregate analysis
 argument-hint: "<需求描述文本>"
 ---
 

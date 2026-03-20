@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-branch
-description: Manage git feature branch for a development idea. Creates feature/<idea-name> from main/master if needed. Called after requirements clarification, before assessment.
+description: Git feature branch management for development ideas
 argument-hint: "<idea-name>"
 ---
 

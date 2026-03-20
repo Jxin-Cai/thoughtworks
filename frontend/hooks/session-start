@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-session_context="<EXTREMELY_IMPORTANT>\nYou have the thoughtworks-frontend plugin installed.\n\nWhen the user's request involves frontend development based on DDD API contracts, prioritize invoking the relevant skill first.\n\nFor requests that are clearly outside frontend workflow (e.g., code audit, architecture explanation, targeted fixes), direct response is allowed and skill invocation is optional.\n\n| User Intent | Skill to Invoke |\n|---|---|\n| Frontend end-to-end | thoughtworks-skills-frontend |\n| Clarify frontend requirements | thoughtworks-skills-frontend-clarify |\n| Frontend design only | thoughtworks-skills-frontend-thought |\n| Frontend coding only | thoughtworks-skills-frontend-works |\n\nUse the Skill tool to invoke these skills when applicable.\n</EXTREMELY_IMPORTANT>"
+session_context="You have the thoughtworks-frontend plugin installed.\n\nAvailable slash commands:\n- /thoughtworks-skills-frontend — Frontend end-to-end workflow consuming DDD API contracts\n- /thoughtworks-skills-frontend-clarify — Frontend requirements clarification\n- /thoughtworks-skills-frontend-thought — Frontend design phase\n- /thoughtworks-skills-frontend-works — Frontend coding phase\n- /thoughtworks-branch — Git feature branch management\n- /thoughtworks-skills-merge — Squash merge feature branch back to main/master\n\nThese skills are ONLY activated when the user explicitly invokes them via slash command.\nDo NOT auto-invoke these skills based on user intent or keywords. Only use them when the user types the slash command."
 
 cat <<EOF
 {
