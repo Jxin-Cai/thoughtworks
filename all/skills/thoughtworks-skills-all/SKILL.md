@@ -2,6 +2,11 @@
 name: thoughtworks-skills-all
 description: Fullstack DDD workflow: orchestrates backend and frontend in sequence
 argument-hint: "<需求描述或文件路径>"
+agents:
+  - thoughtworks-agent-ddd-thinker
+  - thoughtworks-agent-ddd-worker
+  - thoughtworks-agent-frontend-thinker
+  - thoughtworks-agent-frontend-worker
 ---
 
 # Fullstack Spec-Driven Development — 全栈编排器
@@ -56,7 +61,9 @@ argument-hint: "<需求描述或文件路径>"
 
 | 状态 | 判断方式 | 行为 |
 |------|---------|------|
-| 有 idea，后端完成，无前端 | `.approved` 存在但无 `.frontend-approved` | → Step 3.5 前端需求澄清 |
+| 有 idea，后端澄清完成，无前端澄清 | `requirement.md` 存在但无 `frontend-requirement.md` | → Step 2.2 前端需求澄清 |
+| 有 idea，双端澄清完成，无后端设计 | 两个 requirement 都存在但无 `assessment.md` | → Step 3 编排 |
+| 有 idea，后端完成，无前端设计 | `.approved` 存在但无 `.frontend-approved` | → Step 3.5 前端评估 |
 | 有 idea，前端设计中 | `frontend-workflow-state.json` 存在 | → 检查前端各层状态，从中断处继续 |
 | 有 idea，全部完成 | `.frontend-approved` 存在 + 前端代码已生成 | → 提示已完成 |
 
@@ -92,29 +99,43 @@ argument-hint: "<需求描述或文件路径>"
 
 ---
 
-## Step 2: 后端需求澄清与聚合分析
+## Step 2: 全栈需求澄清（HARD-GATE）
 
-### 前置检查
-
-检查当前 idea 的需求文档是否已存在：
-
-```bash
-ls .thoughtworks/<idea-name>/requirement.md 2>/dev/null
-```
+<HARD-GATE>
+**所有需求澄清必须在任何设计/编码工作之前完成。** 后端澄清和前端澄清都是前置条件，两者都完成后才能进入 Step 3。禁止以任何理由跳过或延后澄清。
+</HARD-GATE>
 
 其中 `<idea-name>` 从 Step 1 的用户输入中推断（取需求关键词的 kebab-case 形式），或从已有的 `.thoughtworks/` 子目录中匹配。
 
-- **文件不存在** → 必须调用澄清技能
-- **文件已存在** → 跳过此步骤（断点续传），直接进入 Step 3
+### 2.1 后端需求澄清
 
-### 执行
-
-调用 `/thoughtworks-skills-backend-clarify <需求原文>`。
+检查 `.thoughtworks/<idea-name>/requirement.md` 是否已存在：
+- **文件不存在** → 调用 `/thoughtworks-skills-backend-clarify <需求原文>`
+- **文件已存在** → 跳过（断点续传）
 
 <HARD-GATE>
-`/thoughtworks-skills-backend-clarify` 必须完成（requirement.md 已写入）后才能进入 Step 3。
-子技能完成后立即推进到 Step 3，不要等待用户额外指令。
+requirement.md 必须已写入后才能进入 2.2。子技能完成后立即推进。
 </HARD-GATE>
+
+### 2.2 前端需求澄清
+
+检查 `.thoughtworks/<idea-name>/frontend-requirement.md` 是否已存在：
+- **文件不存在** → 调用 `/thoughtworks-skills-frontend-clarify <idea-name>`
+- **文件已存在** → 跳过（断点续传）
+
+<HARD-GATE>
+frontend-requirement.md 必须已写入后才能进入 Step 3。子技能完成后立即推进。
+</HARD-GATE>
+
+### 2.3 澄清完成校验
+
+两个文件都已存在后，自检通过才能进入 Step 3：
+
+```bash
+ls .thoughtworks/<idea-name>/requirement.md .thoughtworks/<idea-name>/frontend-requirement.md
+```
+
+两个文件都存在 → 进入 Step 3。任一缺失 → 回到对应的澄清步骤。
 
 ---
 
@@ -127,13 +148,12 @@ ls .thoughtworks/<idea-name>/requirement.md 2>/dev/null
 3.3  后端 Phase 循环
 3.4  标记后端完成（.approved）
 --- 前端 ---
-3.5  前端需求澄清
-3.6  前端评估
-3.7  前端设计
-3.8  前端设计确认（.frontend-approved）
-3.9  前端编码
-3.10 展示完成状态
-3.11 合并分支
+3.5  前端评估
+3.6  前端设计
+3.7  前端设计确认（.frontend-approved）
+3.8  前端编码
+3.9  展示完成状态
+3.10 合并分支
 ```
 
 ### 3.1 创建功能分支
@@ -205,20 +225,7 @@ touch .thoughtworks/<idea-name>/.approved
 
 确认完成后立即推进到 3.5。
 
-### 3.5 前端需求澄清
-
-```bash
-ls .thoughtworks/<idea-name>/frontend-requirement.md 2>/dev/null
-```
-
-- **文件不存在** → 调用 `/thoughtworks-skills-frontend-clarify <idea-name>`
-- **文件已存在** → 跳过，进入 3.6
-
-<HARD-GATE>
-frontend-requirement.md 已写入后才能进入 3.6。子技能完成后立即推进。
-</HARD-GATE>
-
-### 3.6 前端评估
+### 3.5 前端评估
 
 读取 `.thoughtworks/<idea-name>/backend-designs/ohs.md` 的导出契约，评估前端工作。写入 `.thoughtworks/<idea-name>/frontend-assessment.md`。
 
@@ -228,11 +235,11 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea
 mkdir -p .thoughtworks/<idea-name>/frontend-designs
 ```
 
-### 3.7 前端设计编排
+### 3.6 前端设计编排
 
 调用 `/thoughtworks-skills-frontend-thought <idea-name>`。
 
-### 3.8 前端设计确认
+### 3.7 前端设计确认
 
 向用户展示前端设计摘要（页面列表、API 调用映射、产出文件）。
 
@@ -252,15 +259,15 @@ touch .thoughtworks/<idea-name>/.frontend-approved
 禁止自动跳到编码。
 </HARD-GATE>
 
-### 3.9 前端编码编排
+### 3.8 前端编码编排
 
 调用 `/thoughtworks-skills-frontend-works <idea-name>`。
 
-### 3.10 展示完成状态
+### 3.9 展示完成状态
 
 展示后端 + 前端各层完成状态。
 
-### 3.11 合并分支
+### 3.10 合并分支
 
 调用 `/thoughtworks-skills-merge <idea-name>`。
 

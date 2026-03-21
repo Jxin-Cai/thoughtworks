@@ -87,16 +87,20 @@ bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 ### 执行逻辑
 
 1. 从 `current_phase` 开始，找到该 phase 中所有有 pending 设计文件的层
-2. **标记层进入编码阶段**：对该 phase 中每个将要执行的层，在开始执行其第一个设计文件前，运行：
+2. **subagent 启动前准备**：对该 phase 中每个将要执行的层，在开始执行其第一个设计文件前，运行：
    ```bash
    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} coding
    ```
-3. 同一 phase 内的不同层可以**并行**（同时启动多个 Agent 调用放在同一条消息中），每层内部的设计文件**串行**（按 frontmatter order 排序）
-4. 当前 phase 所有层的设计文件全部 done 后，**标记层编码完成**：对该 phase 中每个完成的层，运行：
+   然后写入任务文件（供 SubagentStop hook 收敛状态）：
    ```bash
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} coded
+   cat > {IDEA_DIR}/.current-task-{layer}.json << 'TASK_EOF'
+   {"role":"worker","layer":"{layer}","idea_dir":"{IDEA_DIR}","stack":"backend"}
+   TASK_EOF
    ```
-   如果某层执行失败（有 failed 设计文件），则运行：
+3. 同一 phase 内的不同层可以**并行**（同时启动多个 Agent 调用放在同一条消息中），每层内部的设计文件**串行**（按 frontmatter order 排序）
+4. 当前 phase 所有层的设计文件全部 done 后，检查结果：
+   - SubagentStop hook 已自动将成功的层从 `coding` → `coded`
+   - 如果某层执行失败（有 failed 设计文件），编排器需要覆盖设置为 `failed`：
    ```bash
    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} failed
    ```

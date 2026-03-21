@@ -53,10 +53,14 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 
 ---
 
-## Step 2: 前端需求澄清
+## Step 2: 前端需求澄清（HARD-GATE）
+
+<HARD-GATE>
+**需求澄清是绝对前置条件。** 在 frontend-requirement.md 写入之前，禁止执行 Step 2.5 及之后的任何步骤（创建分支、评估、设计、编码）。禁止以任何理由跳过或延后澄清。
+</HARD-GATE>
 
 检查 `.thoughtworks/<idea-name>/frontend-requirement.md` 是否存在：
-- 存在 → 跳过澄清，直接进入 Step 3
+- 存在 → 跳过澄清，直接进入 Step 2.5
 - 不存在 → 调用澄清技能
 
 ### 执行方式

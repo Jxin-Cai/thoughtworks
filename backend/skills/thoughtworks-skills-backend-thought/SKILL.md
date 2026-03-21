@@ -103,13 +103,31 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 1. **确定要执行的层**：根据 `--layers` 参数（如有）过滤出本次要执行的层
 2. **按 Phase 分组**：将要执行的层按 Phase 分组
-3. **Phase 1**：启动所有 phase=1 的目标层的 thinker subagent（如 domain）
+3. **Phase 1**：对每个目标层，先执行启动前准备（见下方），再启动 thinker subagent（如 domain）
 4. **等待 Phase 1 完成**：所有 Phase 1 的 subagent 返回后，执行 `backend-workflow-status.sh --check-all` 检查状态
-5. **Phase 2**：Phase 1 全部 done 后，**并行启动**所有 phase=2 的目标层（如 infr + application，放在同一条消息的多个 Agent 调用中）
+5. **Phase 2**：Phase 1 全部 done 后，对每个目标层执行启动前准备，再**并行启动**所有 phase=2 的目标层（如 infr + application，放在同一条消息的多个 Agent 调用中）
 6. **等待 Phase 2 完成**
-7. **Phase 3**：Phase 2 全部 done 后，启动 phase=3 的目标层（如 ohs）
+7. **Phase 3**：Phase 2 全部 done 后，对目标层执行启动前准备，再启动 phase=3 的目标层（如 ohs）
 8. 所有目标 Phase 完成后，执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
 9. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
+
+### subagent 启动前准备（每个层都执行）
+
+在启动 thinker subagent **之前**，编排器必须执行以下两步：
+
+1. **标记状态为 designing**：
+```bash
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} designing
+```
+
+2. **写入任务文件**（供 SubagentStop hook 收敛状态）：
+```bash
+cat > {IDEA_DIR}/.current-task-{layer}.json << 'TASK_EOF'
+{"role":"thinker","layer":"{layer}","idea_dir":"{IDEA_DIR}","stack":"backend"}
+TASK_EOF
+```
+
+> SubagentStop hook 会在 subagent 结束后自动将 `designing` → `designed`。编排器无需手动设置 `designed` 状态。
 
 如果某个 Phase 中没有目标层（因为 `--layers` 过滤或评估为不需要），直接跳过该 Phase。
 
@@ -187,15 +205,6 @@ Agent(
   max_turns: 20,
   description: "{Layer} 层思考",
   prompt: "
-    # 启动后第一步
-
-    执行以下命令标记本层开始设计：
-    ```bash
-    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} designing
-    ```
-
-    ---
-
     # MISSION（工作目标 — 结论先行，先理解你要做什么）
 
     {主 agent 根据 assessment.md 中该层的评估结论，用 2-4 句话总结该层的核心工作目标}
@@ -252,11 +261,6 @@ Agent(
     将设计文档写入：`.thoughtworks/<idea-name>/backend-designs/<layer>.md`
     （主 agent 构建 prompt 时，将 `<idea-name>` 和 `<layer>` 替换为实际值的绝对路径）
     使用 Write 工具写入。
-
-    完成后执行：
-    ```bash
-    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} designed
-    ```
 
     重要：TEMPLATE 是你的产出结构，MISSION / CONTEXT 是你的参考约束，不要将它们复制到产出文件中。
   "

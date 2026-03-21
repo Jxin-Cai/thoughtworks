@@ -64,9 +64,12 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 
 ## Step 3: 执行
 
-**标记进入编码阶段**：在开始执行前，运行：
+**subagent 启动前准备**：在开始执行前，运行：
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist coding
+cat > {IDEA_DIR}/.current-task-frontend-checklist.json << 'TASK_EOF'
+{"role":"worker","layer":"frontend-checklist","idea_dir":"{IDEA_DIR}","stack":"frontend"}
+TASK_EOF
 ```
 
 读取 `{DESIGNS_DIR}/frontend-checklist.md` 的 frontmatter，将 status 更新为 `in_progress`。
@@ -134,12 +137,9 @@ Agent(
 
 验证通过后，将 `frontend-checklist.md` 的 frontmatter status 更新为 `done`。
 
-**标记编码完成**：Worker 执行完毕后（验证通过），运行：
-```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist coded
-```
+> SubagentStop hook 已自动将 `coding` → `coded`。编排器无需手动设置 `coded` 状态。
 
-如果 Worker 失败，运行：
+如果 Worker 失败，编排器需要覆盖设置为 `failed`：
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist failed
 ```
