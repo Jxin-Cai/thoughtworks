@@ -8,6 +8,15 @@ IDEA_DIR="${1:?用法: frontend-status.sh <idea-dir> [--pretty]}"
 PRETTY="${2:-}"
 FRONTEND_DESIGNS_DIR="$IDEA_DIR/frontend-designs"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
+STATE_FILE="$IDEA_DIR/frontend-workflow-state.json"
+
+# source 共享库
+LAYER_PATTERN="frontend-architecture|frontend-components|frontend-checklist"
+CORE_LIB="$SCRIPT_DIR/../../../../core/scripts/workflow-lib.sh"
+source "$CORE_LIB"
+
 if [ ! -d "$FRONTEND_DESIGNS_DIR" ]; then
   IDEA_NAME=$(basename "$IDEA_DIR")
   json="{\"idea\":\"$IDEA_NAME\",\"layers\":[],\"overall\":{\"total\":0,\"done\":0,\"pending\":0,\"in_progress\":0,\"failed\":0},\"state\":\"not_started\"}"
@@ -29,53 +38,6 @@ for f in "$FRONTEND_DESIGNS_DIR"/*.md; do
 done
 
 IDEA_NAME=$(basename "$IDEA_DIR")
-
-extract_field() {
-  local file="$1" field="$2"
-  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/"
-}
-
-extract_depends() {
-  local file="$1"
-  local deps
-  deps=$(sed -n '/^---$/,/^---$/p' "$file" | grep "^depends_on:" | head -1 | sed 's/^depends_on:[[:space:]]*//')
-  echo "$deps" | sed 's/\[//;s/\]//;s/,/ /g' | tr -s ' '
-}
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
-STATE_FILE="$IDEA_DIR/frontend-workflow-state.json"
-
-get_layer_phase() {
-  local layer_id="$1"
-  awk -v lid="$layer_id" '
-    BEGIN { found=0 }
-    $0 ~ "^  - id: " lid "$" { found=1; next }
-    found && /^  - id:/ { exit }
-    found && /phase:/ { gsub(/.*phase:[[:space:]]*/, ""); print; exit }
-  ' "$WORKFLOW"
-}
-
-# 从 frontend-workflow-state.json 读取某层的工作流状态
-get_workflow_status() {
-  local layer="$1"
-  if [ ! -f "$STATE_FILE" ]; then echo ""; return; fi
-  awk -v layer="$layer" '
-    BEGIN { in_tracked=0; in_layer=0 }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && !in_layer {
-      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
-    }
-    in_tracked && in_layer {
-      if ($0 ~ /"status"/) {
-        gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "")
-        gsub(/".*/, "")
-        print
-        exit
-      }
-    }
-  ' "$STATE_FILE"
-}
 
 layer_count=0
 declare -a all_layers all_files all_orders all_statuses all_depends all_descriptions

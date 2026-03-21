@@ -9,6 +9,15 @@ IDEA_DIR="${1:?用法: backend-status.sh <idea-dir> [--pretty]}"
 PRETTY="${2:-}"
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
+STATE_FILE="$IDEA_DIR/workflow-state.json"
+
+# source 共享库
+LAYER_PATTERN="domain|infr|application|ohs"
+CORE_LIB="$SCRIPT_DIR/../../../../core/scripts/workflow-lib.sh"
+source "$CORE_LIB"
+
 # 检查目录存在 — 不存在时返回 not_started 状态而非报错
 if [ ! -d "$BACKEND_DESIGNS_DIR" ]; then
   IDEA_NAME=$(basename "$IDEA_DIR")
@@ -33,36 +42,7 @@ done
 
 IDEA_NAME=$(basename "$IDEA_DIR")
 
-# 从 YAML frontmatter 提取字段值
-extract_field() {
-  local file="$1"
-  local field="$2"
-  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/"
-}
-
-# 从 frontmatter 提取 depends_on 数组
-extract_depends() {
-  local file="$1"
-  local deps
-  deps=$(sed -n '/^---$/,/^---$/p' "$file" | grep "^depends_on:" | head -1 | sed 's/^depends_on:[[:space:]]*//')
-  echo "$deps" | sed 's/\[//;s/\]//;s/,/ /g' | tr -s ' '
-}
-
-# 读取 workflow.yaml 获取层的 phase 和 requires
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
-STATE_FILE="$IDEA_DIR/workflow-state.json"
-
-get_layer_phase() {
-  local layer_id="$1"
-  awk -v lid="$layer_id" '
-    BEGIN { found=0 }
-    $0 ~ "^  - id: " lid "$" { found=1; next }
-    found && /^  - id:/ { exit }
-    found && /phase:/ { gsub(/.*phase:[[:space:]]*/, ""); print; exit }
-  ' "$WORKFLOW"
-}
-
+# 后端独有函数
 get_layer_requires() {
   local layer_id="$1"
   awk -v lid="$layer_id" '
@@ -73,28 +53,6 @@ get_layer_requires() {
   ' "$WORKFLOW"
 }
 
-# 从 workflow-state.json 读取某层的工作流状态
-get_workflow_status() {
-  local layer="$1"
-  if [ ! -f "$STATE_FILE" ]; then echo ""; return; fi
-  awk -v layer="$layer" '
-    BEGIN { in_tracked=0; in_layer=0 }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && !in_layer {
-      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
-    }
-    in_tracked && in_layer {
-      if ($0 ~ /"status"/) {
-        gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "")
-        gsub(/".*/, "")
-        print
-        exit
-      }
-    }
-  ' "$STATE_FILE"
-}
-
-# 检查某层的工作流状态是否为 coded 或 done（上游就绪条件）
 is_layer_wf_coded() {
   local check_layer="$1"
   local wf_st
@@ -105,6 +63,26 @@ is_layer_wf_coded() {
   esac
 }
 
+is_layer_done() {
+  local check_layer="$1"
+  for i in $(seq 0 $((layer_count - 1))); do
+    if [ "${all_layers[$i]}" = "$check_layer" ] && [ "${all_statuses[$i]}" != "done" ]; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+is_file_done() {
+  local check_file="$1"
+  for i in $(seq 0 $((layer_count - 1))); do
+    if [ "${all_files[$i]}" = "$check_file" ] && [ "${all_statuses[$i]}" = "done" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # 收集所有 thought 文件信息
 layer_count=0
 declare -a all_layers all_files all_orders all_statuses all_depends all_descriptions
@@ -112,17 +90,14 @@ declare -a all_layers all_files all_orders all_statuses all_depends all_descript
 for design_file in $design_files; do
   [ -f "$design_file" ] || continue
   filename=$(basename "$design_file")
-
   layer=$(extract_field "$design_file" "layer")
   order=$(extract_field "$design_file" "order")
   status=$(extract_field "$design_file" "status")
   description=$(extract_field "$design_file" "description")
   depends=$(extract_depends "$design_file")
-
   [ -z "$layer" ] && continue
   [ -z "$order" ] && order=1
   [ -z "$status" ] && status="pending"
-
   all_layers[$layer_count]="$layer"
   all_files[$layer_count]="$filename"
   all_orders[$layer_count]="$order"
@@ -145,28 +120,6 @@ for l in domain infr application ohs; do
   done
 done
 
-# 辅助函数：检查某层是否全部 done
-is_layer_done() {
-  local check_layer="$1"
-  for i in $(seq 0 $((layer_count - 1))); do
-    if [ "${all_layers[$i]}" = "$check_layer" ] && [ "${all_statuses[$i]}" != "done" ]; then
-      return 1
-    fi
-  done
-  return 0
-}
-
-# 辅助函数：检查某文件是否 done
-is_file_done() {
-  local check_file="$1"
-  for i in $(seq 0 $((layer_count - 1))); do
-    if [ "${all_files[$i]}" = "$check_file" ] && [ "${all_statuses[$i]}" = "done" ]; then
-      return 0
-    fi
-  done
-  return 1
-}
-
 # 构建 JSON
 layers_json=""
 overall_total=0 overall_done=0 overall_pending=0 overall_in_progress=0 overall_failed=0
@@ -174,13 +127,11 @@ overall_total=0 overall_done=0 overall_pending=0 overall_in_progress=0 overall_f
 for layer_id in $unique_layers; do
   phase=$(get_layer_phase "$layer_id")
   [ -z "$phase" ] && phase=0
-
   thoughts_json=""
   l_total=0 l_done=0 l_pending=0 l_in_progress=0 l_failed=0
 
   for i in $(seq 0 $((layer_count - 1))); do
     [ "${all_layers[$i]}" != "$layer_id" ] && continue
-
     l_total=$((l_total + 1))
     case "${all_statuses[$i]}" in
       done) l_done=$((l_done + 1)) ;;
@@ -189,7 +140,6 @@ for layer_id in $unique_layers; do
       failed) l_failed=$((l_failed + 1)) ;;
     esac
 
-    # 构建 depends_on JSON 数组
     deps_json="[]"
     if [ -n "${all_depends[$i]}" ]; then
       deps_arr=""
@@ -255,14 +205,12 @@ for i in $(seq 0 $((layer_count - 1))); do
   for req in $requires; do
     req=$(echo "$req" | tr -d ' ')
     [ -z "$req" ] && continue
-    # 先检查 workflow-state.json 中上游是否 coded|done
     if [ -f "$STATE_FILE" ]; then
       if ! is_layer_wf_coded "$req"; then
         cross_ok=0
         break
       fi
     else
-      # 无 workflow-state.json 时回退到 frontmatter 检查
       if ! is_layer_done "$req"; then
         cross_ok=0
         break

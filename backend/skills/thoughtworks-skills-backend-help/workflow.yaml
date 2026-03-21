@@ -9,8 +9,8 @@ layers:
   - id: domain
     phase: 1
     design-template: ../thoughtworks-skills-backend-thought/assets/domain-design.md
-    thinker-ref: ../../agents/thoughtworks-agent-ddd-domain-thinker.md
-    worker-ref: ../../agents/thoughtworks-agent-ddd-worker-domain.md
+    thinker-ref: ../../agents/thoughtworks-agent-ddd-thinker.md
+    worker-ref: ../../agents/thoughtworks-agent-ddd-worker.md
     requires: []
     verify:
       java:
@@ -32,8 +32,8 @@ layers:
   - id: infr
     phase: 2
     design-template: ../thoughtworks-skills-backend-thought/assets/infr-design.md
-    thinker-ref: ../../agents/thoughtworks-agent-ddd-infr-thinker.md
-    worker-ref: ../../agents/thoughtworks-agent-ddd-worker-infr.md
+    thinker-ref: ../../agents/thoughtworks-agent-ddd-thinker.md
+    worker-ref: ../../agents/thoughtworks-agent-ddd-worker.md
     requires: [domain]
     verify:
       java:
@@ -57,8 +57,8 @@ layers:
   - id: application
     phase: 2
     design-template: ../thoughtworks-skills-backend-thought/assets/application-design.md
-    thinker-ref: ../../agents/thoughtworks-agent-ddd-application-thinker.md
-    worker-ref: ../../agents/thoughtworks-agent-ddd-worker-application.md
+    thinker-ref: ../../agents/thoughtworks-agent-ddd-thinker.md
+    worker-ref: ../../agents/thoughtworks-agent-ddd-worker.md
     requires: [domain]
     verify:
       java:
@@ -80,8 +80,8 @@ layers:
   - id: ohs
     phase: 3
     design-template: ../thoughtworks-skills-backend-thought/assets/ohs-design.md
-    thinker-ref: ../../agents/thoughtworks-agent-ddd-ohs-thinker.md
-    worker-ref: ../../agents/thoughtworks-agent-ddd-worker-ohs.md
+    thinker-ref: ../../agents/thoughtworks-agent-ddd-thinker.md
+    worker-ref: ../../agents/thoughtworks-agent-ddd-worker.md
     requires: [application, domain]
     verify:
       java:
@@ -89,13 +89,19 @@ layers:
           description: 验证 Controller 已创建
         - pattern: "**/ohs/**/*Request.java"
           description: 验证 Request DTO 已创建
+        - pattern: "**/ohs/**/*Response.java"
+          description: 验证 Response DTO 已创建
       python:
         - pattern: "**/ohs/**/*_router.py"
           description: 验证 Router 已创建
         - pattern: "**/ohs/**/*_request.py"
           description: 验证 Request DTO 已创建
+        - pattern: "**/ohs/**/*_response.py"
+          description: 验证 Response DTO 已创建
       go:
         - pattern: "**/ohs/**/*_handler.go"
           description: 验证 Handler 已创建
         - pattern: "**/ohs/**/*_request.go"
           description: 验证 Request DTO 已创建
+        - pattern: "**/ohs/**/*_response.go"
+          description: 验证 Response DTO 已创建

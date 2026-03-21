@@ -2,15 +2,17 @@
   "name": "thoughtworks-backend",
   "description": "DDD backend: design and code generation for Java/Python/Go layered architecture",
   "version": "2.0.0",
+  "author": {
+    "name": "jxin",
+    "email": "jxin@thoughtworks.com"
+  },
+  "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+  "repository": "https://github.com/Jxin-Cai/thoughtworks",
+  "license": "MIT",
+  "keywords": ["ddd", "domain-driven-design", "java", "python", "go", "layered-architecture", "code-generation"],
   "agents": [
-    "./agents/thoughtworks-agent-ddd-application-thinker.md",
-    "./agents/thoughtworks-agent-ddd-domain-thinker.md",
-    "./agents/thoughtworks-agent-ddd-infr-thinker.md",
-    "./agents/thoughtworks-agent-ddd-ohs-thinker.md",
-    "./agents/thoughtworks-agent-ddd-worker-application.md",
-    "./agents/thoughtworks-agent-ddd-worker-domain.md",
-    "./agents/thoughtworks-agent-ddd-worker-infr.md",
-    "./agents/thoughtworks-agent-ddd-worker-ohs.md"
+    "./agents/thoughtworks-agent-ddd-thinker.md",
+    "./agents/thoughtworks-agent-ddd-worker.md"
   ],
   "skills": ["./skills/"],
   "commands": ["./commands/"]

@@ -9,20 +9,38 @@
     {
       "name": "thoughtworks-backend",
       "source": "./backend",
-      "description": "DDD backend: design and code generation for Java layered architecture",
-      "version": "2.0.0"
+      "description": "DDD backend: design and code generation for Java/Python/Go layered architecture",
+      "version": "2.0.0",
+      "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+      "repository": "https://github.com/Jxin-Cai/thoughtworks",
+      "author": {
+        "name": "jxin",
+        "email": "jxin@thoughtworks.com"
+      }
     },
     {
       "name": "thoughtworks-frontend",
       "source": "./frontend",
       "description": "Frontend code generation consuming DDD API contracts",
-      "version": "2.1.0"
+      "version": "2.1.0",
+      "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+      "repository": "https://github.com/Jxin-Cai/thoughtworks",
+      "author": {
+        "name": "jxin",
+        "email": "jxin@thoughtworks.com"
+      }
     },
     {
       "name": "thoughtworks-core",
       "source": "./core",
       "description": "Shared skills and references for ThoughtWorks plugins",
-      "version": "2.0.0"
+      "version": "2.0.0",
+      "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+      "repository": "https://github.com/Jxin-Cai/thoughtworks",
+      "author": {
+        "name": "jxin",
+        "email": "jxin@thoughtworks.com"
+      }
     },
     {
       "name": "thoughtworks-all",

@@ -3,10 +3,7 @@ name: thoughtworks-skills-backend-thought
 description: Backend DDD design phase: orchestrates thinker subagents for layered design docs
 argument-hint: "<idea-name>"
 agents:
-  - thoughtworks-agent-ddd-domain-thinker
-  - thoughtworks-agent-ddd-infr-thinker
-  - thoughtworks-agent-ddd-application-thinker
-  - thoughtworks-agent-ddd-ohs-thinker
+  - thoughtworks-agent-ddd-thinker
 ---
 
 # DDD Spec-Driven Development — 思考流程
@@ -93,13 +90,12 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 **重要：使用自定义 agent 类型（而非 general-purpose）**
 
-每个层都有对应的自定义 agent 定义文件（如 `thoughtworks-agent-ddd-domain-thinker`），其 frontmatter 配置了：
-- **system prompt**（agent body）：包含设计步骤、反思循环、命名规范等静态指引
-- **skills**：`[thoughtworks-skills-backend-spec]`，自动注入编码规范路由规则到 subagent 上下文
+所有层共用同一个通用 thinker agent（`thoughtworks-agent-ddd-thinker`），其 frontmatter 配置了：
+- **skills**：`[thoughtworks-skills-backend-spec, thoughtworks-skills-backend-guide]`，自动注入编码规范和层级设计指令
 - **tools**：`Read, Write, Edit, Glob, Grep`
-- **model**：`opus`（application thinker 使用 `sonnet`）
+- **model**：`opus`
 
-主 agent 在构建 Agent 调用时，使用 `thoughtworks-backend:` 前缀 + `workflow.yaml` 中 `thinker-ref` 对应的 agent 文件名（去掉 `.md`）作为 `subagent_type`。这样 agent body 和 skills 会自动加载，动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 等动态内容，无需重复内联 INSTRUCTION 和 CODING-SPEC。
+主 agent 统一使用 `thoughtworks-backend:thoughtworks-agent-ddd-thinker` 作为 `subagent_type`。层级差异通过 CONTEXT 中的 `target_layer` 字段传递，agent 启动后通过 `backend-guide` skill 路由加载对应层级的设计指令。动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个动态区块。
 
 ### 执行方式（主 agent DAG 编排）
 
@@ -183,17 +179,11 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 对每个需要的层，从 `workflow.yaml` 中读取该层的 `thinker-ref`（获取 agent name）和 `design-template`（指向 `assets/{layer}-design.md`）路径，然后按以下结构组装 prompt：
 
-**agent name 映射：** 从 `thinker-ref` 路径提取文件名（去掉 `.md`），加上 `thoughtworks-backend:` 前缀作为 `subagent_type`：
-- domain → `thoughtworks-backend:thoughtworks-agent-ddd-domain-thinker`
-- infr → `thoughtworks-backend:thoughtworks-agent-ddd-infr-thinker`
-- application → `thoughtworks-backend:thoughtworks-agent-ddd-application-thinker`
-- ohs → `thoughtworks-backend:thoughtworks-agent-ddd-ohs-thinker`
-
-这些自定义 agent 的 body 已包含设计步骤、反思循环、命名规范等静态指引（即原来的 INSTRUCTION 区块内容），`skills: [thoughtworks-skills-backend-spec]` 已配置自动注入编码规范（即原来的 CODING-SPEC 区块内容）。因此动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个动态区块。
+**所有层统一使用同一个 agent：**
 
 ```
 Agent(
-  subagent_type: "thoughtworks-backend:{thinker-ref 文件名，去掉 .md}",
+  subagent_type: "thoughtworks-backend:thoughtworks-agent-ddd-thinker",
   max_turns: 20,
   description: "{Layer} 层思考",
   prompt: "
@@ -233,6 +223,9 @@ Agent(
     ---
 
     # CONTEXT（输入文档 — 读取作为上下文）
+
+    ## 目标层级
+    target_layer: {layer}
 
     ## 后端语言
     backend_language: {BACKEND_LANG}

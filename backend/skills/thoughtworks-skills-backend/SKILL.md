@@ -3,14 +3,8 @@ name: thoughtworks-skills-backend
 description: Backend DDD end-to-end workflow: requirements clarification, design, and implementation
 argument-hint: "<需求描述或文件路径>"
 agents:
-  - thoughtworks-agent-ddd-domain-thinker
-  - thoughtworks-agent-ddd-infr-thinker
-  - thoughtworks-agent-ddd-application-thinker
-  - thoughtworks-agent-ddd-ohs-thinker
-  - thoughtworks-agent-ddd-worker-domain
-  - thoughtworks-agent-ddd-worker-infr
-  - thoughtworks-agent-ddd-worker-application
-  - thoughtworks-agent-ddd-worker-ohs
+  - thoughtworks-agent-ddd-thinker
+  - thoughtworks-agent-ddd-worker
 ---
 
 # DDD Spec-Driven Development — Decision-Maker

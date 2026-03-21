@@ -22,12 +22,28 @@
 修改 ohs → 无下游级联
 ```
 
+## 前端级联影响规则
+
+前端 3 层为线性依赖链，修改上游必然级联所有下游：
+
+```
+修改 frontend-architecture → 级联重做 frontend-components → 级联重做 frontend-checklist
+修改 frontend-components → 级联重做 frontend-checklist
+修改 frontend-checklist → 无下游级联
+```
+
 ## 中断修改时的 thought skill 调用
 
 单独调用 thought skill 重做某一层时，传入修改指令：
 
+**后端：**
 ```
 /thoughtworks-skills-backend-thought <idea-name> --layers <layer> --modification "<修改说明>"
+```
+
+**前端：**
+```
+/thoughtworks-skills-frontend-thought <idea-name> --layers <layer> --modification "<修改说明>"
 ```
 
 thought skill 内部只启动指定层的 thinker，不重跑整个流程。

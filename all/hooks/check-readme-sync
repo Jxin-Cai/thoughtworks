@@ -12,13 +12,18 @@ REPO_ROOT="$(cd "${PLUGIN_ROOT}/.." && pwd)"
 STRUCTURAL_PATTERNS=(
   "skills/*/SKILL.md"
   "commands/*.md"
+  "core/skills/*/SKILL.md"
+  "core/commands/*.md"
   "backend/skills/*/SKILL.md"
   "backend/commands/*.md"
   "backend/agents/*.md"
+  "backend/skills/thoughtworks-skills-backend-help/workflow.yaml"
   "frontend/skills/*/SKILL.md"
   "frontend/commands/*.md"
   "frontend/agents/*.md"
+  "frontend/skills/thoughtworks-skills-frontend-help/workflow.yaml"
   ".claude-plugin/plugin.json"
+  ".claude-plugin/marketplace.json"
 )
 
 cd "$PLUGIN_ROOT"

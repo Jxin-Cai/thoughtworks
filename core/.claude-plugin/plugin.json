@@ -2,6 +2,14 @@
   "name": "thoughtworks-core",
   "description": "Shared skills and references for ThoughtWorks plugins",
   "version": "2.0.0",
+  "author": {
+    "name": "jxin",
+    "email": "jxin@thoughtworks.com"
+  },
+  "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+  "repository": "https://github.com/Jxin-Cai/thoughtworks",
+  "license": "MIT",
+  "keywords": ["shared", "core", "branch-management", "references"],
   "agents": [],
   "skills": ["./skills/"],
   "commands": ["./commands/"]

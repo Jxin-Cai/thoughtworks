@@ -3,10 +3,7 @@ name: thoughtworks-skills-backend-works
 description: Backend DDD coding phase: orchestrates worker subagents from design docs
 argument-hint: "<idea-name>"
 agents:
-  - thoughtworks-agent-ddd-worker-domain
-  - thoughtworks-agent-ddd-worker-infr
-  - thoughtworks-agent-ddd-worker-application
-  - thoughtworks-agent-ddd-worker-ohs
+  - thoughtworks-agent-ddd-worker
 ---
 
 # DDD Spec-Driven Development — 执行流程
@@ -109,20 +106,16 @@ bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 
 1. 读取设计文件内容，提取 frontmatter 和实现清单
 2. 将 frontmatter status 更新为 `in_progress`（用 Edit 工具修改设计文件的 frontmatter `status:` 字段）
-3. 读取 `workflow.yaml` 中该层的 `worker-ref` 路径，获取编码指引
-4. 启动 worker agent，使用自定义 agent 类型（从 `workflow.yaml` 的 `worker-ref` 提取 agent name）：
+3. 读取 `workflow.yaml` 中该层的 `worker-ref` 路径（所有层统一指向 `thoughtworks-agent-ddd-worker`）
+4. 启动 worker agent，统一使用 `thoughtworks-backend:thoughtworks-agent-ddd-worker` 作为 `subagent_type`：
 
-**agent name 映射：** 从 `worker-ref` 路径提取文件名（去掉 `.md`），加上 `thoughtworks-backend:` 前缀作为 `subagent_type`：
-- domain → `thoughtworks-backend:thoughtworks-agent-ddd-worker-domain`
-- infr → `thoughtworks-backend:thoughtworks-agent-ddd-worker-infr`
-- application → `thoughtworks-backend:thoughtworks-agent-ddd-worker-application`
-- ohs → `thoughtworks-backend:thoughtworks-agent-ddd-worker-ohs`
+**agent name 映射：** 所有层统一使用同一个 worker agent：`thoughtworks-backend:thoughtworks-agent-ddd-worker`。层级差异通过 CONTEXT 中的 `target_layer` 字段传递，agent 启动后通过 `backend-guide` skill 路由加载对应层级的编码指令。
 
-自定义 agent 的 body 已包含编码要求、合理化预防、完成标准等静态指引，`skills: [thoughtworks-skills-backend-spec]` 已配置自动注入编码规范。动态 prompt 只需包含 TASK、CONTEXT、OUTPUT 三个动态区块：
+自定义 agent 的 body 已包含通用编码要求，`skills: [thoughtworks-skills-backend-spec, thoughtworks-skills-backend-guide]` 已配置自动注入编码规范和层级编码指令。动态 prompt 只需包含 TASK、CONTEXT、OUTPUT 三个动态区块：
 
 ```
 Agent(
-  subagent_type: "thoughtworks-backend:{worker-ref 文件名，去掉 .md}",
+  subagent_type: "thoughtworks-backend:thoughtworks-agent-ddd-worker",
   max_turns: 15,
   description: "{Layer}: {设计文件 frontmatter description}",
   prompt: "
@@ -135,6 +128,9 @@ Agent(
     ---
 
     # CONTEXT（设计文档 — 读取作为上下文）
+
+    ## 目标层级
+    target_layer: {layer}
 
     ## 后端语言
     backend_language: {BACKEND_LANG}

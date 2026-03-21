@@ -9,18 +9,6 @@
 #
 # 状态文件: <idea-dir>/workflow-state.json
 # 状态机: pending → designing → designed → confirmed → coding → coded / failed
-#
-# 重要变更（v2）:
-#   - 移除 --wait-upstream / --wait-all 的阻塞轮询模式（与 Claude Code Bash 120s 超时不兼容）
-#   - 新增 --init 模式创建初始状态文件
-#   - 新增 --check-upstream / --check-all 非阻塞检查模式
-#   - 新增 flock 文件锁防止并发写入竞态
-#   - 简化状态机：移除 waiting/blocked 中间态，由主 agent DAG 编排保证顺序
-#
-# 重要变更（v3）:
-#   - 精细化状态：pending → designing → designed → confirmed → coding → coded / failed
-#   - 向后兼容：--check-upstream / --check-all 中 done 与 coded 等价
-#   - --set 不再接受 in_progress / done（旧状态值被拒绝）
 
 set -euo pipefail
 
@@ -29,122 +17,17 @@ MODE="${2:-status}"
 
 STATE_FILE="$IDEA_DIR/workflow-state.json"
 DESIGNS_DIR="$IDEA_DIR/designs"
+LAYER_PATTERN="domain|infr|application|ohs"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
 VALIDATE_SCRIPT="$SCRIPT_DIR/backend-output-validate.sh"
-LOCK_FILE="${STATE_FILE}.lock"
 
-# ── 文件锁（防止并发写入竞态）──
+# source 共享库
+CORE_LIB="$SCRIPT_DIR/../../../../core/scripts/workflow-lib.sh"
+source "$CORE_LIB"
 
-locked_write() {
-  local content="$1"
-  local tmp_file="${STATE_FILE}.tmp.$$"
-  mkdir -p "$(dirname "$STATE_FILE")"
-  printf '%s\n' "$content" > "$tmp_file"
-  # 使用 flock 保证原子性（macOS 需要 brew install flock，降级为 mkdir 原子锁）
-  if command -v flock >/dev/null 2>&1; then
-    (
-      flock -x 200
-      mv "$tmp_file" "$STATE_FILE"
-    ) 200>"$LOCK_FILE"
-  else
-    # macOS fallback: mkdir 原子锁
-    local lock_dir="${STATE_FILE}.lockdir"
-    local max_wait=30
-    local waited=0
-    while ! mkdir "$lock_dir" 2>/dev/null; do
-      sleep 0.1
-      waited=$((waited + 1))
-      if [ "$waited" -ge "$max_wait" ]; then
-        # 超时强制获取锁（清理遗留锁）
-        rm -rf "$lock_dir"
-        mkdir "$lock_dir" 2>/dev/null || true
-        break
-      fi
-    done
-    mv "$tmp_file" "$STATE_FILE"
-    rmdir "$lock_dir" 2>/dev/null || true
-  fi
-}
-
-# ── JSON 辅助函数（纯 bash + awk，不依赖 jq/python）──
-
-read_idea() {
-  if [ ! -f "$STATE_FILE" ]; then
-    echo ""
-    return
-  fi
-  sed -n 's/.*"idea"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$STATE_FILE" | head -1
-}
-
-get_tracked_layers() {
-  if [ ! -f "$STATE_FILE" ]; then
-    return
-  fi
-  grep -oE '"(domain|infr|application|ohs)"[[:space:]]*:' "$STATE_FILE" | sed 's/"//g;s/[[:space:]]*://g'
-}
-
-get_tracked_status() {
-  local layer="$1"
-  if [ ! -f "$STATE_FILE" ]; then
-    echo ""
-    return
-  fi
-  awk -v layer="$layer" '
-    BEGIN { in_tracked=0; in_layer=0 }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && !in_layer {
-      if ($0 ~ "\"" layer "\"[[:space:]]*:") {
-        in_layer=1
-      }
-    }
-    in_tracked && in_layer {
-      if ($0 ~ /"status"/) {
-        gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "")
-        gsub(/".*/, "")
-        print
-        exit
-      }
-    }
-  ' "$STATE_FILE"
-}
-
-get_tracked_files() {
-  local layer="$1"
-  if [ ! -f "$STATE_FILE" ]; then
-    echo ""
-    return
-  fi
-  awk -v layer="$layer" '
-    BEGIN { in_tracked=0; in_layer=0; in_files=0 }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && !in_layer {
-      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
-    }
-    in_tracked && in_layer {
-      if ($0 ~ /"files"/) {
-        in_files=1
-        line=$0
-        gsub(/.*"files"[[:space:]]*:[[:space:]]*\[/, "", line)
-        gsub(/\].*/, "", line)
-        gsub(/"/, "", line)
-        gsub(/[[:space:]]/, "", line)
-        if (line != "") print line
-        if ($0 ~ /\]/) { in_files=0 }
-        next
-      }
-      if (in_files) {
-        if ($0 ~ /\]/) { in_files=0; next }
-        line=$0
-        gsub(/"/, "", line)
-        gsub(/[[:space:]]/, "", line)
-        gsub(/,/, "", line)
-        if (line != "") print line
-      }
-    }
-  ' "$STATE_FILE" | paste -sd',' -
-}
+# ── 后端独有函数 ──
 
 get_requires() {
   local layer_id="$1"
@@ -154,66 +37,6 @@ get_requires() {
     found && /^  - id:/ { exit }
     found && /requires:/ { gsub(/.*requires:[[:space:]]*/, ""); gsub(/\[/, ""); gsub(/\]/, ""); gsub(/,/, " "); print; exit }
   ' "$WORKFLOW" | tr -s ' '
-}
-
-is_tracked() {
-  local layer="$1"
-  local tracked
-  tracked=$(get_tracked_layers)
-  for t in $tracked; do
-    if [ "$t" = "$layer" ]; then
-      return 0
-    fi
-  done
-  return 1
-}
-
-update_layer_status() {
-  local target_layer="$1"
-  local new_status="$2"
-
-  local idea
-  idea=$(read_idea)
-  local tracked_layers
-  tracked_layers=$(get_tracked_layers)
-
-  local layers_json=""
-  for layer in $tracked_layers; do
-    local st files_csv
-    if [ "$layer" = "$target_layer" ]; then
-      st="$new_status"
-    else
-      st=$(get_tracked_status "$layer")
-    fi
-    files_csv=$(get_tracked_files "$layer")
-
-    local files_arr="[]"
-    if [ -n "$files_csv" ]; then
-      local items=""
-      IFS=',' read -ra parts <<< "$files_csv"
-      for p in "${parts[@]}"; do
-        p=$(echo "$p" | tr -d ' ')
-        [ -z "$p" ] && continue
-        if [ -z "$items" ]; then
-          items="\"$p\""
-        else
-          items="$items, \"$p\""
-        fi
-      done
-      [ -n "$items" ] && files_arr="[$items]"
-    fi
-
-    local entry="    \"$layer\": {\n      \"status\": \"$st\",\n      \"files\": $files_arr\n    }"
-    if [ -z "$layers_json" ]; then
-      layers_json="$entry"
-    else
-      layers_json="$layers_json,\n$entry"
-    fi
-  done
-
-  local content
-  content=$(printf "{\n  \"idea\": \"$idea\",\n  \"tracked_layers\": {\n$layers_json\n  }\n}")
-  locked_write "$content"
 }
 
 build_layers_snapshot() {

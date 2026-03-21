@@ -3,9 +3,7 @@ name: thoughtworks-skills-frontend
 description: Frontend end-to-end workflow consuming DDD API contracts: design and implementation
 argument-hint: "<idea-name>"
 agents:
-  - thoughtworks-agent-frontend-architecture-thinker
-  - thoughtworks-agent-frontend-components-thinker
-  - thoughtworks-agent-frontend-checklist-thinker
+  - thoughtworks-agent-frontend-thinker
   - thoughtworks-agent-frontend-worker
 ---
 
