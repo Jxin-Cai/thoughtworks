@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 插件加载
 
-Claude Code 通过 `.claude-plugin/marketplace.json` 发现四个插件，通过各自 `.claude-plugin/plugin.json` 加载。core 是共享基础层，backend/frontend/all 各自独立闭环。
+Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件（backend/frontend/all），通过各自 `.claude-plugin/plugin.json` 加载。core 是内部共享层，不对外暴露为可安装插件，由 backend/frontend/all 通过符号链接引用。
 
-- **`thoughtworks-core`（`core/`）**：branch/merge 技能（唯一真本）、共享引用资源、hook 配置、shell 脚本库。`agents` 为空数组。
+- **`core/`（内部共享层，不在 marketplace 中暴露）**：branch/merge/clarify 技能（唯一真本）、共享引用资源、hook 配置、shell 脚本库。`agents` 为空数组。backend/frontend/all 通过 symlink 引用 core 的技能和资源。
 - **`thoughtworks-all`（`all/`）**：通过符号链接（`core/backend/frontend -> ../`）将所有技能拉入 all 命名空间。`agents` 为空数组。
 - **`thoughtworks-backend`（`backend/`）**：2 个 agent（1 通用 thinker + 1 通用 worker）、DDD 四层设计/编码技能、编码规范、层级设计指令。
 - **`thoughtworks-frontend`（`frontend/`）**：2 个 agent（1 通用 thinker + 1 通用 worker）、前端三层设计/编码技能、编码规范、层级设计指令。
@@ -25,7 +25,7 @@ Claude Code 通过 `.claude-plugin/marketplace.json` 发现四个插件，通过
 
 **契约驱动的跨层一致性。** 下游层依赖契约通过扫描上游已实现代码获取（按需引用，非全量）。`backend-output-validate.sh` 验证 C1–C5，`frontend-output-validate.sh` 验证 C6–C7。
 
-**需求澄清独立为技能。** `*-clarify` 技能先扫描项目上下文再向用户提问。后端澄清还执行 DDD 战略分析（聚合识别）。
+**需求澄清为 core 通用技能。** `thoughtworks-skills-clarify` 在 core 中定义，通过首参数 `backend`/`frontend` 路由加载对应场景的澄清知识（`clarify-common.md` + `clarify-backend.md` 或 `clarify-frontend.md`）。后端澄清还执行 DDD 战略分析（聚合识别）。backend/frontend 通过 symlink 引用此技能。
 
 **功能分支管理。** `/thoughtworks-branch` 创建 `feature/<idea-name>`，`/thoughtworks-skills-merge` 完成后 squash merge 回默认分支。
 

@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-session_context="You have the thoughtworks-backend plugin installed.\n\nAvailable slash commands:\n- /thoughtworks-skills-backend — Backend DDD end-to-end workflow\n- /thoughtworks-skills-backend-clarify — Backend DDD requirements clarification\n- /thoughtworks-skills-backend-thought — Backend DDD design phase\n- /thoughtworks-skills-backend-works — Backend DDD coding phase\n- /thoughtworks-branch — Git feature branch management\n- /thoughtworks-skills-merge — Squash merge feature branch back to main/master\n\nThese skills are ONLY activated when the user explicitly invokes them via slash command.\nDo NOT auto-invoke these skills based on user intent or keywords. Only use them when the user types the slash command."
+session_context="You have the thoughtworks-backend plugin installed.\n\nAvailable slash commands:\n- /thoughtworks-skills-backend — Backend DDD end-to-end workflow\n- /thoughtworks-skills-clarify — Requirements clarification (use with 'backend' scenario)\n- /thoughtworks-skills-backend-thought — Backend DDD design phase\n- /thoughtworks-skills-backend-works — Backend DDD coding phase\n- /thoughtworks-branch — Git feature branch management\n- /thoughtworks-skills-merge — Squash merge feature branch back to main/master\n\nThese skills are ONLY activated when the user explicitly invokes them via slash command.\nDo NOT auto-invoke these skills based on user intent or keywords. Only use them when the user types the slash command."
 
 cat <<EOF
 {

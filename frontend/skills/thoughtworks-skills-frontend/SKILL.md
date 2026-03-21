@@ -66,7 +66,7 @@ mkdir -p .thoughtworks/<idea-name>/frontend-designs
 
 ### 执行方式
 
-调用 `/thoughtworks-skills-frontend-clarify <idea-name>`。
+调用 `/thoughtworks-skills-clarify frontend <idea-name>`。
 
 澄清技能内部完成：
 - 项目上下文扫描（前端目录结构、已有页面、OHS 导出契约、最近提交）

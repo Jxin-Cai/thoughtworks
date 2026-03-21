@@ -18,6 +18,10 @@ disable-model-invocation: true
 | `references/interrupt-cascade.md` | 中断处理选项表 + 后端级联影响规则 | all 编排器、backend 编排器 |
 | `references/rationalization-backend.md` | 后端合理化预防表 | all 编排器、backend 编排器 |
 | `references/rationalization-fullstack.md` | 全栈特有的合理化预防行 | all 编排器 |
+| `references/clarify-common.md` | 澄清公共铁律、提问策略、完成检查机制 | 通用 clarify 技能 |
+| `references/clarify-backend.md` | 后端澄清维度、聚合分析步骤、产出模板 | 通用 clarify 技能（backend 场景） |
+| `references/clarify-frontend.md` | 前端澄清维度、条件触发规则、产出模板 | 通用 clarify 技能（frontend 场景） |
+| `references/thinker-common.md` | Thinker agent 公共指令 | 后端/前端 thinker agent |
 
 ## 引用方式
 

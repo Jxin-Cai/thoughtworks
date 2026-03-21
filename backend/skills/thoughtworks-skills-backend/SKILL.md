@@ -41,7 +41,7 @@ agents:
 
 ```
 本 skill (Decision-Maker: 评估、编排、中断处理)
-  ├── /thoughtworks-skills-backend-clarify  (需求澄清 + 聚合分析: 项目上下文扫描 + 结构化提问 + DDD 战略分析)
+  ├── /thoughtworks-skills-clarify backend   (需求澄清 + 聚合分析: 项目上下文扫描 + 结构化提问 + DDD 战略分析)
   ├── /thoughtworks-branch           (功能分支管理: 创建 feature/<idea-name>)
   ├── /thoughtworks-skills-backend-thought  (Thinker 编排: 并行启动 + 自协调 + 校验)
   ├── /thoughtworks-skills-backend-works    (Worker 编排: DAG 拓扑序执行 + 验证)
@@ -91,7 +91,7 @@ ls .thoughtworks/<idea-name>/requirement.md 2>/dev/null
 
 ### 执行
 
-调用 `/thoughtworks-skills-backend-clarify <需求原文>`。
+调用 `/thoughtworks-skills-clarify backend <需求原文>`。
 
 <HARD-GATE>
 澄清技能完成后才能进入 Step 3。
