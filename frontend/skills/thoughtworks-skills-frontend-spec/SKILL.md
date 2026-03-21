@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-frontend-spec
-description: Frontend coding spec: tech-stack-specific constraints
+description: Frontend coding spec router for tech-stack-specific constraints
 argument-hint: "<stack> e.g. react-ts, all | [ui-style] e.g. minimalist-luxury"
 disable-model-invocation: true
 ---

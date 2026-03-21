@@ -2,6 +2,7 @@
 name: thoughtworks-skills-frontend-clarify
 description: Frontend requirements clarification based on OHS API contracts
 argument-hint: "<idea-name>"
+disable-model-invocation: true
 ---
 
 # 前端需求澄清技能

@@ -2,6 +2,7 @@
 name: thoughtworks-skills-branch
 description: Git feature branch management for development ideas
 argument-hint: "<idea-name>"
+disable-model-invocation: true
 ---
 
 # Feature Branch Management

@@ -1,7 +1,8 @@
 ---
 name: thoughtworks-skills-backend-thought
-description: Backend DDD design phase: orchestrates thinker subagents for layered design docs
+description: Backend DDD design phase orchestrating thinker subagents for layered design docs
 argument-hint: "<idea-name>"
+disable-model-invocation: true
 agents:
   - thoughtworks-agent-ddd-thinker
 ---

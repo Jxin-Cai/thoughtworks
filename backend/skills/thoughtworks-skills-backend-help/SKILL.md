@@ -1,6 +1,7 @@
 ---
 name: thoughtworks-skills-backend-help
-description: 后端框架的共享资源。包含工作流定义和状态查询脚本，被 thoughtworks-backend-thought、thoughtworks-backend-works 两个 skill 共同引用。不要直接调用此 skill，它是其他后端 skill 的基础依赖。
+description: 后端框架共享资源，包含工作流定义和状态查询脚本
+disable-model-invocation: true
 ---
 
 # 后端共享资源

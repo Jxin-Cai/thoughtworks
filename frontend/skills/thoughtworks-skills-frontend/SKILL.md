@@ -1,7 +1,8 @@
 ---
 name: thoughtworks-skills-frontend
-description: Frontend end-to-end workflow consuming DDD API contracts: design and implementation
+description: Frontend end-to-end orchestrator consuming DDD API contracts for design and implementation
 argument-hint: "<idea-name>"
+disable-model-invocation: true
 agents:
   - thoughtworks-agent-frontend-thinker
   - thoughtworks-agent-frontend-worker

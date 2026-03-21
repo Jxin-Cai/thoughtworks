@@ -2,6 +2,7 @@
 name: thoughtworks-skills-merge
 description: Squash merge feature branch back to main/master
 argument-hint: "<idea-name>"
+disable-model-invocation: true
 ---
 
 # Feature Branch Merge

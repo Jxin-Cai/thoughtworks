@@ -1,7 +1,8 @@
 ---
 name: thoughtworks-skills-all
-description: Fullstack DDD workflow: orchestrates backend and frontend in sequence
+description: Fullstack DDD orchestrator for backend and frontend in sequence
 argument-hint: "<需求描述或文件路径>"
+disable-model-invocation: true
 agents:
   - thoughtworks-agent-ddd-thinker
   - thoughtworks-agent-ddd-worker

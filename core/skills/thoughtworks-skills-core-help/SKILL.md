@@ -1,6 +1,7 @@
 ---
 name: thoughtworks-skills-core-help
-description: Shared reference resources for orchestrators: iron rules, state machine, assessment dimensions
+description: Shared reference resources including iron rules, state machine, and assessment dimensions
+disable-model-invocation: true
 ---
 
 # Core 共享引用资源

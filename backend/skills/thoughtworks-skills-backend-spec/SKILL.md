@@ -1,6 +1,6 @@
 ---
 name: thoughtworks-skills-backend-spec
-description: Backend DDD coding spec router: language and layer specific constraints
+description: Backend DDD coding spec router for language and layer specific constraints
 argument-hint: "<language> <layer> e.g. java domain, python application, go ohs, java all"
 disable-model-invocation: true
 ---

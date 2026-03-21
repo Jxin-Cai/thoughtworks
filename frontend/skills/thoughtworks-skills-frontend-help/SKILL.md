@@ -1,6 +1,7 @@
 ---
 name: thoughtworks-skills-frontend-help
-description: 前端框架的共享资源。包含工作流定义和状态查询脚本，被 thoughtworks-frontend-thought、thoughtworks-frontend-works 两个 skill 共同引用。不要直接调用此 skill，它是其他前端 skill 的基础依赖。
+description: 前端框架共享资源，包含工作流定义和状态查询脚本
+disable-model-invocation: true
 ---
 
 # 前端共享资源

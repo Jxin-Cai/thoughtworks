@@ -1,7 +1,8 @@
 ---
 name: thoughtworks-skills-backend
-description: Backend DDD end-to-end workflow: requirements clarification, design, and implementation
+description: Backend DDD end-to-end orchestrator for requirements clarification, design, and implementation
 argument-hint: "<需求描述或文件路径>"
+disable-model-invocation: true
 agents:
   - thoughtworks-agent-ddd-thinker
   - thoughtworks-agent-ddd-worker
