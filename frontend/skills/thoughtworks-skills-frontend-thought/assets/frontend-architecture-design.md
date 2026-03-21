@@ -136,7 +136,7 @@ Entities
 <!-- REQUIRED -->
 ## 导出契约
 
-> 以下列表供下游 `frontend-components.md` 作为依赖契约引用。
+> 以下列表供 Worker 实现和契约校验引用。
 
 ### Entity 列表
 

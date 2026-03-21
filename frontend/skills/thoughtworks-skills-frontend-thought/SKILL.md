@@ -196,7 +196,7 @@ Agent(
 )
 ```
 
-Architecture Thinker 完成后，继续 Phase 2。**不再提取导出契约内联，下游 Thinker 通过 Read 工具按需加载。**
+Architecture Thinker 完成后，继续 Phase 2。**不再提取导出契约内联，Components Thinker 通过 Read 工具按需加载。**
 
 ### Phase 2: Components Thinker
 

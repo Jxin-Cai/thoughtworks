@@ -30,7 +30,7 @@
    - Feature 场景 API 放在对应 Feature slice
    - Shared API 基础封装
    - 每个 API 函数必须有完整的入参类型和返回类型
-4. **填写导出契约** — 汇总输出供下游 checklist-thinker 使用
+4. **填写导出契约** — 汇总输出供 Worker 实现和契约校验引用
 
 ## Frontmatter 格式
 
