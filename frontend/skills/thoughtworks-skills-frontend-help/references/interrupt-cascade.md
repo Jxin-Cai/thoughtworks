@@ -11,17 +11,6 @@
 | "重新澄清需求" | 回到 Step 2 |
 | "终止" | 保存当前状态后退出 |
 
-## 后端级联影响规则
-
-修改某层设计后，按 `workflow.yaml` 的 `requires` 反向查找下游层，重新派发受影响层的 Thinker：
-
-```
-修改 domain → 级联重做 infr + application → 级联重做 ohs
-修改 application → 级联重做 ohs
-修改 infr → 无下游级联
-修改 ohs → 无下游级联
-```
-
 ## 前端级联影响规则
 
 前端 3 层为线性依赖链，修改上游必然级联所有下游：
@@ -34,14 +23,6 @@
 
 ## 中断修改时的 thought skill 调用
 
-单独调用 thought skill 重做某一层时，传入修改指令：
-
-**后端：**
-```
-/thoughtworks-skills-backend-thought <idea-name> --layers <layer> --modification "<修改说明>"
-```
-
-**前端：**
 ```
 /thoughtworks-skills-frontend-thought <idea-name> --layers <layer> --modification "<修改说明>"
 ```

@@ -54,11 +54,10 @@ description: "{一句话描述本文件内容}"
 - **每个组件必须包含交互行为**
 - **API 调用映射必须包含成功/失败的界面反馈**
 - 导出契约必须完整列出所有组件和 API 函数
-- 使用 Read 工具加载 `core/skills/thoughtworks-skills-core-help/references/thinker-common.md`，遵守其中的公共规则
 
 ## 反思循环（铁律 — 禁止跳过）
 
-**最少 1 轮，最多 2 轮**。步骤 1（目标覆盖验证）见 `thinker-common.md`。
+**最少 1 轮，最多 2 轮**。步骤 1（目标覆盖验证）见 `common.md`。
 
 ### 步骤 2: 上游契约一致性验证
 

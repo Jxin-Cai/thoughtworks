@@ -51,7 +51,6 @@ description: "{一句话描述本文件内容}"
 
 - 依赖契约必须从 components 导出契约逐条抄入，不能遗漏
 - 实现清单必须覆盖依赖契约中的每个组件和 API 函数对应的文件
-- 使用 Read 工具加载 `core/skills/thoughtworks-skills-core-help/references/thinker-common.md`，遵守其中的公共规则
 
 ## 反思循环（铁律 — 禁止跳过）
 

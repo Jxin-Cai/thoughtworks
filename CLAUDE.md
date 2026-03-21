@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件（backend/frontend/all），通过各自 `.claude-plugin/plugin.json` 加载。core 是内部共享层，不对外暴露为可安装插件，由 backend/frontend/all 通过符号链接引用。
 
-- **`core/`（内部共享层，不在 marketplace 中暴露）**：branch/merge/clarify 技能（唯一真本）、共享引用资源、hook 配置、shell 脚本库。`agents` 为空数组。backend/frontend/all 通过 symlink 引用 core 的技能和资源。
+- **`core/`（内部共享层，不在 marketplace 中暴露）**：branch/merge/clarify 技能（唯一真本）、hook 配置、shell 脚本库。`agents` 为空数组。backend/frontend/all 通过 symlink 引用 core 的技能和资源。
 - **`thoughtworks-all`（`all/`）**：通过符号链接（`core/backend/frontend -> ../`）将所有技能拉入 all 命名空间。`agents` 为空数组。
 - **`thoughtworks-backend`（`backend/`）**：2 个 agent（1 通用 thinker + 1 通用 worker）、DDD 四层设计/编码技能、编码规范、层级设计指令。
 - **`thoughtworks-frontend`（`frontend/`）**：2 个 agent（1 通用 thinker + 1 通用 worker）、前端三层设计/编码技能、编码规范、层级设计指令。
@@ -25,11 +25,11 @@ Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件
 
 **契约驱动的跨层一致性。** 下游层依赖契约通过扫描上游已实现代码获取（按需引用，非全量）。`backend-output-validate.sh` 验证 C1–C5，`frontend-output-validate.sh` 验证 C6–C7。
 
-**需求澄清为 core 通用技能。** `thoughtworks-skills-clarify` 在 core 中定义，通过首参数 `backend`/`frontend` 路由加载对应场景的澄清知识（`clarify-common.md` + `clarify-backend.md` 或 `clarify-frontend.md`）。后端澄清还执行 DDD 战略分析（聚合识别）。backend/frontend 通过 symlink 引用此技能。
+**需求澄清为 core 通用技能。** `thoughtworks-skills-clarify` 在 core 中定义，通过首参数 `backend`/`frontend` 路由加载对应场景的澄清流程。澄清相关的引用资源（`clarify-common.md`、`clarify-backend.md`、`clarify-frontend.md`）和产出模板均归属 clarify 技能自身（`core/skills/thoughtworks-skills-clarify/references/`）。后端澄清还执行 DDD 战略分析（聚合识别）。backend/frontend 通过 symlink 引用此技能。
 
 **功能分支管理。** `/thoughtworks-branch` 创建 `feature/<idea-name>`，`/thoughtworks-skills-merge` 完成后 squash merge 回默认分支。
 
-**共享引用资源。** 铁律、状态机、中断处理、合理化预防等静态内容在 `core/skills/thoughtworks-skills-core-help/references/`，编排器通过 Read 指令引用。
+**共享引用资源分层管理。** 铁律、状态机、中断处理等编排门控资源归属各自消费方的 `-help` 技能：后端铁律/状态机/中断处理/评估维度/合理化预防在 `backend/skills/thoughtworks-skills-backend-help/references/`，前端中断处理在 `frontend/skills/thoughtworks-skills-frontend-help/references/`，全栈合理化预防在 `all/skills/thoughtworks-skills-all/references/`，前端 thinker 公共指令在 `frontend/skills/thoughtworks-skills-frontend-guide/references/thinker/common.md`。编排器通过 Read 指令按路径变量引用。
 
 ## 关键文件关系
 

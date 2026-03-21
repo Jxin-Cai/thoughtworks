@@ -59,11 +59,10 @@ description: "{一句话描述本文件内容}"
 
 - 依赖契约必须从 OHS 层导出契约逐条抄入，不能遗漏
 - 导出契约必须完整列出所有 Entity、Feature、页面映射和路由
-- 使用 Read 工具加载 `core/skills/thoughtworks-skills-core-help/references/thinker-common.md`，遵守其中的公共规则
 
 ## 反思循环（铁律 — 禁止跳过）
 
-**最少 1 轮，最多 2 轮**。步骤 1（目标覆盖验证）见 `thinker-common.md`。步骤 1 中"指导 Worker 编码"替换为"指导 Worker 实现架构层代码"。
+**最少 1 轮，最多 2 轮**。步骤 1（目标覆盖验证）见 `common.md`。步骤 1 中"指导 Worker 编码"替换为"指导 Worker 实现架构层代码"。
 
 ### 步骤 2: OHS 契约一致性验证
 

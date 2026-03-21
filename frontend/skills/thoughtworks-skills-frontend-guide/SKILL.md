@@ -37,9 +37,9 @@ disable-model-invocation: true
 
 | 参数匹配 | 加载文件 |
 |---|---|
-| `thinker architecture` | [references/thinker/architecture.md](references/thinker/architecture.md) |
-| `thinker components` | [references/thinker/components.md](references/thinker/components.md) |
-| `thinker checklist` | [references/thinker/checklist.md](references/thinker/checklist.md) |
+| `thinker architecture` | [references/thinker/common.md](references/thinker/common.md) + [references/thinker/architecture.md](references/thinker/architecture.md) |
+| `thinker components` | [references/thinker/common.md](references/thinker/common.md) + [references/thinker/components.md](references/thinker/components.md) |
+| `thinker checklist` | [references/thinker/common.md](references/thinker/common.md) + [references/thinker/checklist.md](references/thinker/checklist.md) |
 
 #### Worker 路由
 

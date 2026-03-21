@@ -14,6 +14,7 @@ disable-model-invocation: true
 - `scripts/frontend-status.sh` — 前端设计文档状态查询脚本，扫描 frontend-designs/*.md 的 YAML frontmatter，输出结构化 JSON
 - `scripts/frontend-output-validate.sh` — 前端设计文档校验脚本，执行结构校验和契约匹配，输出 JSON 格式结果
 - `scripts/frontend-workflow-status.sh` — 前端工作流状态管理脚本，支持初始化、设置状态、非阻塞检查
+- `references/interrupt-cascade.md` — 前端中断处理选项与级联影响规则
 
 ## 被以下 skill 引用
 

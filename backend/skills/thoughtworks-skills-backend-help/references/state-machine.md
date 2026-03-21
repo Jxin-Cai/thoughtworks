@@ -23,3 +23,13 @@
 | 有 idea，某层 designed | `workflow-state.json` 某层为 `designed`，未确认 | → 等用户确认该 Phase 设计 |
 | 有 idea，某层 coding | `workflow-state.json` 某层为 `coding` | → 从该层重新启动 Worker |
 | 有 idea，designs 全 done | `.approved` 存在 | → 提示已完成 |
+
+## 后端断点续传
+
+Decision-Maker 支持从中断处恢复。检查 `.thoughtworks/<idea-name>/` 目录：
+
+1. `.approved` 存在 → 已完成
+2. `workflow-state.json` 存在 → 检查各层状态，从中断处继续
+3. `assessment.md` 存在 → 从 Phase 循环继续
+4. `requirement.md` 存在但无 assessment → 从层级评估开始
+5. `requirement.md` 不存在 → 从 Step 2 澄清开始

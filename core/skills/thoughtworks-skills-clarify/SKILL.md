@@ -26,19 +26,11 @@ disable-model-invocation: true
 
 ---
 
-## 路径变量
-
-| 变量 | 路径（从当前 skill 目录的相对路径） |
-|------|--------------------------------------|
-| `{CORE_HELP}` | `../thoughtworks-skills-core-help` |
-
----
-
 ## 加载公共引用
 
 使用 Read 工具加载公共引用文件，严格遵守其中所有规则：
 
-- `{CORE_HELP}/references/clarify-common.md` — 公共铁律、苏格拉底式提问方法、完成检查机制
+- `references/clarify-common.md` — 公共铁律、苏格拉底式提问方法、完成检查机制
 
 ---
 
@@ -48,7 +40,7 @@ disable-model-invocation: true
 
 ### 当 scenario = `backend`
 
-使用 Read 工具加载 `{CORE_HELP}/references/clarify-backend.md` — 后端澄清维度、聚合分析步骤、产出模板。
+使用 Read 工具加载 `references/clarify-backend.md` — 后端澄清维度、聚合分析步骤、产出模板。
 
 然后按以下步骤顺序执行，每一步的具体操作细节见上方加载的引用文件：
 
@@ -86,7 +78,7 @@ disable-model-invocation: true
 
 ### 当 scenario = `frontend`
 
-使用 Read 工具加载 `{CORE_HELP}/references/clarify-frontend.md` — 前端澄清维度、条件触发规则、产出模板。
+使用 Read 工具加载 `references/clarify-frontend.md` — 前端澄清维度、条件触发规则、产出模板。
 
 然后按以下步骤顺序执行，每一步的具体操作细节见上方加载的引用文件：
 
