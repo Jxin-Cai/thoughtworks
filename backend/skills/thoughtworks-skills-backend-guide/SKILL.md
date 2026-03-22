@@ -2,7 +2,6 @@
 name: thoughtworks-skills-backend-guide
 description: Backend DDD layer-specific design and coding instructions router
 argument-hint: "<role> <layer> e.g. thinker domain, worker infr"
-disable-model-invocation: true
 ---
 
 # DDD 层级指令加载器

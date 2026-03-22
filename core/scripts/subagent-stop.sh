@@ -32,7 +32,10 @@ collect_task_files() {
 
 TASK_FILES=$(collect_task_files) || exit 0
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 解析物理路径以穿透 symlink（backend/scripts → ../core/scripts）
+# core/scripts → dirname → core → dirname → thoughtworks（仓库根）
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 while IFS= read -r TASK_FILE; do
   # 解析任务文件（纯 bash，不依赖 jq）
@@ -59,11 +62,11 @@ while IFS= read -r TASK_FILE; do
     continue
   fi
 
-  # 确定使用哪个 workflow-status.sh
+  # 确定使用哪个 workflow-status.sh（基于仓库根目录）
   if [ "$STACK" = "frontend" ]; then
-    STATUS_SCRIPT="$(dirname "$SCRIPT_DIR")/frontend/skills/thoughtworks-skills-frontend-help/scripts/frontend-workflow-status.sh"
+    STATUS_SCRIPT="$REPO_ROOT/frontend/skills/thoughtworks-skills-frontend-help/scripts/frontend-workflow-status.sh"
   else
-    STATUS_SCRIPT="$(dirname "$SCRIPT_DIR")/backend/skills/thoughtworks-skills-backend-help/scripts/backend-workflow-status.sh"
+    STATUS_SCRIPT="$REPO_ROOT/backend/skills/thoughtworks-skills-backend-help/scripts/backend-workflow-status.sh"
   fi
 
   # 只在状态为预期值时才标记完成（避免重复标记或覆盖 failed）

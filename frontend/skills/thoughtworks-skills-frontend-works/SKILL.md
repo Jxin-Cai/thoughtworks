@@ -2,7 +2,7 @@
 name: thoughtworks-skills-frontend-works
 description: Frontend coding phase orchestrating worker from frontend design docs
 argument-hint: "<idea-name>"
-disable-model-invocation: true
+
 agent:
   - thoughtworks-agent-frontend-worker
 ---

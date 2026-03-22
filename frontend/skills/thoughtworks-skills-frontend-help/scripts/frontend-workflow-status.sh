@@ -5,6 +5,7 @@
 #   frontend-workflow-status.sh <idea-dir> --init <idea-name> <layer1> [layer2...]  — 初始化
 #   frontend-workflow-status.sh <idea-dir> --set <layer> <status>   — 设置某层状态
 #   frontend-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成
+#   frontend-workflow-status.sh <idea-dir> --get-status <layer>     — 获取指定层的纯文本状态值
 
 set -euo pipefail
 
@@ -126,6 +127,21 @@ case "$MODE" in
     else
       echo "{\"overall\": \"in_progress\"}"
     fi
+    ;;
+
+  # ── --get-status 模式：获取指定层的纯文本状态值（供 SubagentStop hook 使用）──
+  --get-status)
+    LAYER="${3:?--get-status 需要指定层名}"
+
+    if [ ! -f "$STATE_FILE" ]; then
+      exit 1
+    fi
+
+    if ! is_tracked "$LAYER"; then
+      exit 1
+    fi
+
+    get_tracked_status "$LAYER"
     ;;
 
   *)

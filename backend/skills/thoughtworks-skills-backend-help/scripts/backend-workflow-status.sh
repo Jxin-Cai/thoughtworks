@@ -6,6 +6,7 @@
 #   backend-workflow-status.sh <idea-dir> --set <layer> <status>   — 设置某层状态
 #   backend-workflow-status.sh <idea-dir> --check-upstream <layer> — 非阻塞检查上游是否 ready
 #   backend-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成（含校验）
+#   backend-workflow-status.sh <idea-dir> --get-status <layer>     — 获取指定层的纯文本状态值
 #
 # 状态文件: <idea-dir>/workflow-state.json
 # 状态机: pending → designing → designed → confirmed → coding → coded / failed
@@ -288,9 +289,24 @@ case "$MODE" in
     fi
     ;;
 
+  # ── --get-status 模式：获取指定层的纯文本状态值（供 SubagentStop hook 使用）──
+  --get-status)
+    LAYER="${3:?--get-status 需要指定层名}"
+
+    if [ ! -f "$STATE_FILE" ]; then
+      exit 1
+    fi
+
+    if ! is_tracked "$LAYER"; then
+      exit 1
+    fi
+
+    get_tracked_status "$LAYER"
+    ;;
+
   *)
     echo "未知模式: $MODE" >&2
-    echo "用法: backend-workflow-status.sh <idea-dir> [--init|--set|--check-upstream|--check-all]" >&2
+    echo "用法: backend-workflow-status.sh <idea-dir> [--init|--set|--check-upstream|--check-all|--get-status]" >&2
     exit 1
     ;;
 esac

@@ -2,7 +2,6 @@
 name: thoughtworks-skills-clarify
 description: Requirements clarification with project context scanning, supporting backend DDD and frontend scenarios
 argument-hint: "<backend|frontend> <需求描述或 idea-name>"
-disable-model-invocation: true
 ---
 
 # 通用需求澄清技能

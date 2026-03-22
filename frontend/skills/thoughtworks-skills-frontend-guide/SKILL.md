@@ -2,7 +2,6 @@
 name: thoughtworks-skills-frontend-guide
 description: Frontend layer-specific design and coding instructions router
 argument-hint: "<role> <layer> e.g. thinker architecture, thinker components, worker frontend"
-disable-model-invocation: true
 ---
 
 # 前端层级指令加载器

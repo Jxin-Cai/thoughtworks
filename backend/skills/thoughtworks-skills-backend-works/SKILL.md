@@ -2,7 +2,7 @@
 name: thoughtworks-skills-backend-works
 description: Backend DDD coding phase orchestrating worker subagents from design docs
 argument-hint: "<idea-name>"
-disable-model-invocation: true
+
 agent:
   - thoughtworks-agent-ddd-worker
 ---

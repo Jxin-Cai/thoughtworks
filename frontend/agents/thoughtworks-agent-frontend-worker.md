@@ -6,6 +6,7 @@ model: opus
 maxTurns: 15
 permissionMode: acceptEdits
 skills:
+  - thoughtworks-skills-frontend-help
   - thoughtworks-skills-frontend-spec
   - thoughtworks-skills-frontend-guide
   - ui-ux-pro-max
@@ -20,7 +21,11 @@ skills:
 1. 你的 skills 已自动注入编码指令和规范技能：
    - `thoughtworks-skills-frontend-guide`：使用 `worker frontend` 加载前端编码指令
    - `thoughtworks-skills-frontend-spec`：按项目技术栈关键词加载编码规范
-2. **UI/UX 设计能力**：如果 `ui-ux-pro-max` 技能的使用指引已注入到你的上下文中（即该技能已安装），则在编码开始前完全按照该技能的工作流操作。如果该技能未注入则跳过此步骤。
+2. `thoughtworks-skills-frontend-help` 已注入上下文，你可以使用以下资源：
+   - 用 Bash 运行 `frontend-status.sh {IDEA_DIR}` 了解整体进度
+   - 完成编码后用 Bash 运行 `frontend-workflow-status.sh {IDEA_DIR} --set {layer} coded` 标记完成
+   - 遇到无法解决的问题时用 Bash 运行 `frontend-workflow-status.sh {IDEA_DIR} --set {layer} failed` 标记失败
+3. **UI/UX 设计能力**：如果 `ui-ux-pro-max` 技能的使用指引已注入到你的上下文中（即该技能已安装），则在编码开始前完全按照该技能的工作流操作。如果该技能未注入则跳过此步骤。
 
 ## 角色约束
 

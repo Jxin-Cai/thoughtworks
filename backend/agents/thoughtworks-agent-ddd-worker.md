@@ -6,6 +6,7 @@ model: opus
 maxTurns: 15
 permissionMode: acceptEdits
 skills:
+  - thoughtworks-skills-backend-help
   - thoughtworks-skills-backend-spec
   - thoughtworks-skills-backend-guide
 ---
@@ -21,6 +22,10 @@ skills:
 3. 你的 skills 已自动注入两个技能，按以下顺序加载：
    - `thoughtworks-skills-backend-guide`：使用 `worker {target_layer}` 加载层级特有的编码指令
    - `thoughtworks-skills-backend-spec`：使用 `{language} {target_layer}` 加载编码规范
+4. `thoughtworks-skills-backend-help` 已注入上下文，你可以使用以下资源：
+   - 用 Bash 运行 `backend-status.sh {IDEA_DIR}` 了解整体进度
+   - 完成编码后用 Bash 运行 `backend-workflow-status.sh {IDEA_DIR} --set {layer} coded` 标记完成
+   - 遇到无法解决的问题时用 Bash 运行 `backend-workflow-status.sh {IDEA_DIR} --set {layer} failed` 标记失败
 
 ## 角色约束
 

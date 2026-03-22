@@ -182,8 +182,3 @@ touch .thoughtworks/<idea-name>/.frontend-approved
 merge 技能完成后才能进入最终结束。
 </HARD-GATE>
 
----
-
-## 中断处理
-
-使用 Read 工具读取 `{FRONTEND_HELP}/references/interrupt-cascade.md`，按其中的选项表和前端级联规则处理。
