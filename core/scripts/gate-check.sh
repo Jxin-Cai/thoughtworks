@@ -30,6 +30,15 @@ gate_fail() {
 
 case "$GATE_ID" in
 
+  # idea 目录存在性
+  idea-dir-exists)
+    if [ -d "$IDEA_DIR" ]; then
+      gate_pass
+    else
+      gate_fail "idea directory does not exist: $IDEA_DIR"
+    fi
+    ;;
+
   # 后端需求澄清完成
   requirement-exists)
     if [ -f "$IDEA_DIR/requirement.md" ]; then

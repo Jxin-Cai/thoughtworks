@@ -52,18 +52,40 @@ disable-model-invocation: true
 
 1. 使用 Read 工具加载编排定义：`{FRONTEND_HELP}/orchestration.yaml`
 2. 使用 Read 工具加载工作流定义：`{FRONTEND_HELP}/workflow.yaml`
-3. 如果 `.thoughtworks/` 下已有 idea 目录：从 orchestration.yaml 的 `resume-table` 判断恢复点
-4. 按 orchestration.yaml 的 `steps` 顺序执行
+3. 确定 idea-dir：
+   - 从 `$ARGUMENTS` 解析 idea-name，检查 `.thoughtworks/<idea-name>/` 是否存在
+   - 如果不存在，idea-dir = `none`
+4. **运行编排状态检查**：`bash core/scripts/orchestration-status.sh <idea-dir> frontend`
+5. 严格按脚本输出的 `resume_step` 作为起点，进入步骤执行循环
 
 ---
 
-## 执行规则
+## 步骤执行循环
 
-- 每个 step 执行前，如果有 `gate.check`，运行 `bash core/scripts/gate-check.sh {IDEA_DIR} <gate-id>`
-- `gate.on-pass: skip` → 门控通过时跳过该步骤（表示已完成）
-- `gate.on-fail: execute` → 门控不通过时执行该步骤
-- 每个 step 执行后，如果有 `postcondition.check`，运行门控脚本验证
+<HARD-GATE>
+编排器必须严格按以下循环执行。脚本输出是唯一权威的恢复点判定。
+禁止跳过状态检查自行决定下一步，禁止凭记忆、推断或合理化跳过任何步骤。
+</HARD-GATE>
+
+```
+LOOP:
+  1. result = bash core/scripts/orchestration-status.sh <idea-dir> frontend
+  2. IF result.resume_step == "merge" 且已完成合并 → 执行 summary 步骤，退出
+  3. 执行 orchestration.yaml 中 id == result.resume_step 的步骤：
+     - 如果 resume_step 携带 phase_detail：
+       sub_step=design → 调用 /thoughtworks-skills-frontend-thought
+       sub_step=confirm → 标记各层 confirmed + touch .frontend-approved
+       sub_step=code → 调用 /thoughtworks-skills-frontend-works
+  4. 步骤完成后，更新 idea-dir（receive-idea 步骤会创建目录）
+  5. GOTO LOOP
+```
+
+---
+
+## 步骤执行规则
+
 - `type: skill` → 调用对应 slash 命令
 - `type: script` → 用 Bash 执行
 - `type: self` → 自己执行（如有 `read-first` 则先 Read 这些文件）
 - `for-each` → 对列出的每个元素重复执行 action
+- 每个 step 执行后，如果有 `postcondition.check`，运行 `bash core/scripts/gate-check.sh {IDEA_DIR} <gate-id>` 验证

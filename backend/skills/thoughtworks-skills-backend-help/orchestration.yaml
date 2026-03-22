@@ -133,6 +133,8 @@ steps:
       type: self
       instructions: "向用户展示实现摘要、各层完成状态、产出文件总列表"
 
+# resume-table 已由 core/scripts/orchestration-status.sh 程序化实现
+# 以下表格仅作为逻辑文档保留
 resume-table:
   - condition: "requirement.md 不存在"
     resume-from: clarify

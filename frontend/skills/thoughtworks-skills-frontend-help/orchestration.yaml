@@ -109,6 +109,8 @@ steps:
       name: thoughtworks-skills-merge
       args: "{idea-name}"
 
+# resume-table 已由 core/scripts/orchestration-status.sh 程序化实现
+# 以下表格仅作为逻辑文档保留
 resume-table:
   - condition: "frontend-requirement.md 不存在"
     resume-from: clarify

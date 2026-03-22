@@ -60,37 +60,65 @@ disable-model-invocation: true
 2. 使用 Read 工具加载后端工作流定义：`{DDD_HELP}/workflow.yaml`（含 `state-machine` 段）
 3. 使用 Read 工具加载前端编排定义：`{FRONTEND_HELP}/orchestration.yaml`
 4. 使用 Read 工具加载前端工作流定义：`{FRONTEND_HELP}/workflow.yaml`（含 `state-machine` 段）
-5. 按下方状态机判断恢复点，执行全栈编排步骤
+5. 确定 idea-dir：
+   - 从 `$ARGUMENTS` 解析 idea-name，检查 `.thoughtworks/<idea-name>/` 是否存在
+   - 如果 `$ARGUMENTS` 为空或目录不存在，idea-dir = `none`
+6. **运行编排状态检查**：`bash core/scripts/orchestration-status.sh <idea-dir> all`
+7. 严格按脚本输出的 `resume_step` 作为起点，进入步骤执行循环
 
 ---
 
-## 状态机
+## 步骤执行循环
 
-| 状态 | 判断方式 | 行为 |
-|------|---------|------|
-| 无 idea | 无匹配目录 | → Step 1 接收需求 |
-| 有 idea，无后端澄清 | `requirement.md` 不存在 | → Step 2.1 后端澄清 |
-| 有 idea，后端澄清完成，无前端澄清 | `requirement.md` 存在但无 `frontend-requirement.md` | → Step 2.2 前端澄清 |
-| 有 idea，双端澄清完成，无后端设计 | 两个 requirement 都存在但无 `assessment.md` | → Step 3 编排 |
-| 有 idea，后端完成，无前端设计 | `.approved` 存在但无 `.frontend-approved` | → Step 3.5 前端评估 |
-| 有 idea，前端设计中 | `frontend-workflow-state.yaml` 存在 | → 检查前端各层状态，从中断处继续 |
-| 有 idea，全部完成 | `.frontend-approved` 存在 + 前端代码已生成 | → 提示已完成 |
+<HARD-GATE>
+编排器必须严格按以下循环执行。脚本输出是唯一权威的恢复点判定。
+禁止跳过状态检查自行决定下一步，禁止凭记忆、推断或合理化跳过任何步骤。
+</HARD-GATE>
+
+```
+LOOP:
+  1. result = bash core/scripts/orchestration-status.sh <idea-dir> all
+  2. IF result.resume_step == "merge" 且已完成合并 → 执行 summary 步骤，退出
+  3. 根据 result.resume_step 执行对应步骤：
+
+     | resume_step             | 执行动作 |
+     |------------------------|---------|
+     | receive-requirement     | 接收需求（self），创建 idea-dir |
+     | backend-clarify         | /thoughtworks-skills-clarify backend {payload} |
+     | frontend-clarify        | /thoughtworks-skills-clarify frontend {idea-name} |
+     | branch                  | /thoughtworks-skills-branch {idea-name} |
+     | backend-assessment      | 自行执行后端层级评估（参照 backend orchestration.yaml assessment step） |
+     | backend-phase-loop      | 根据 phase_detail 执行后端设计/确认/编码 |
+     | backend-mark-approved   | touch {IDEA_DIR}/.approved |
+     | frontend-assessment     | 自行执行前端评估（参照 frontend orchestration.yaml assessment step） |
+     | frontend-design         | /thoughtworks-skills-frontend-thought {idea-name} |
+     | frontend-confirm-layers | 标记各层 confirmed + touch .frontend-approved |
+     | frontend-code           | /thoughtworks-skills-frontend-works {idea-name} |
+     | frontend-mark-approved  | touch {IDEA_DIR}/.frontend-approved |
+     | merge                   | /thoughtworks-skills-merge {idea-name} |
+
+     - backend-phase-loop 的 phase_detail：
+       sub_step=design → /thoughtworks-skills-backend-thought
+       sub_step=confirm → bash backend-workflow-status.sh --set {layer} confirmed
+       sub_step=code → /thoughtworks-skills-backend-works
+  4. 步骤完成后，更新 idea-dir（receive-requirement 步骤会创建目录）
+  5. GOTO LOOP
+```
 
 ---
 
-## 执行规则
+## 步骤执行规则
 
-- 每个 step 执行前，如果有 `gate.check`，运行 `bash core/scripts/gate-check.sh {IDEA_DIR} <gate-id>`
-- `gate.on-pass: skip` → 门控通过时跳过该步骤（表示已完成）
-- `gate.on-fail: execute` → 门控不通过时执行该步骤
 - `type: skill` → 调用对应 slash 命令
 - `type: script` → 用 Bash 执行
 - `type: self` → 自己执行（如有 `read-first` 则先 Read 这些文件）
-- `type: loop` → 按 workflow.yaml 的 `phase` 字段分组循环
+- 每个 step 执行后，如果有 `postcondition.check`，运行 `bash core/scripts/gate-check.sh {IDEA_DIR} <gate-id>` 验证
 
 ---
 
-## 全栈编排步骤
+## 全栈编排步骤参考
+
+> 以下表格为参考文档，实际执行由 `core/scripts/orchestration-status.sh` 驱动。
 
 ```
 Step 1:   接收需求
