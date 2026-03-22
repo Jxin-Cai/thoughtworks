@@ -3,8 +3,6 @@ name: thoughtworks-skills-backend-works
 description: Backend DDD coding phase orchestrating worker subagents from design docs
 argument-hint: "<idea-name>"
 disable-model-invocation: true
-agents:
-  - thoughtworks-agent-ddd-worker
 ---
 
 # DDD Spec-Driven Development — 执行流程

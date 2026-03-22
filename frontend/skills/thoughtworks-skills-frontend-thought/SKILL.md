@@ -3,8 +3,6 @@ name: thoughtworks-skills-frontend-thought
 description: Frontend design phase orchestrating architecture, components, and checklist thinkers
 argument-hint: "<idea-name>"
 disable-model-invocation: true
-agents:
-  - thoughtworks-agent-frontend-thinker
 ---
 
 # Frontend Spec-Driven Development — 思考流程
