@@ -30,6 +30,7 @@ disable-model-invocation: true
 3. **禁止自动执行编码** — 设计完成后必须等用户确认才能进入编码阶段
 4. **禁止跳过用户确认** — 每个 HARD-GATE 必须等用户明确确认后才能推进
 5. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
+6. **工作流数据源唯一性** — 前端层级顺序、phase 分组、依赖关系必须从 `{FRONTEND_HELP}/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
 
 ---
 
@@ -47,6 +48,8 @@ disable-model-invocation: true
 ---
 
 ## 状态机
+
+先用 Read 工具读取 `{FRONTEND_HELP}/workflow.yaml` 获取前端层定义，再按下表判断状态：
 
 | 状态 | 判断方式 | 行为 |
 |------|---------|------|
@@ -106,6 +109,10 @@ ls .thoughtworks/<idea-name>/frontend-requirement.md 2>/dev/null
 
 ## Step 3: 前端评估
 
+<HARD-GATE>
+必须用 Read 工具实际读取 `{FRONTEND_HELP}/workflow.yaml` 并解析出前端层定义（id、phase、requires、design-template）。禁止凭记忆或 SKILL.md 文本推断层定义和执行顺序。
+</HARD-GATE>
+
 读取 `.thoughtworks/<idea-name>/backend-designs/ohs.md` 的导出契约，评估前端需要做什么：
 
 将评估结果写入 `.thoughtworks/<idea-name>/frontend-assessment.md`：
@@ -120,9 +127,9 @@ ls .thoughtworks/<idea-name>/frontend-requirement.md 2>/dev/null
 （需要哪些页面、组件、API 调用）
 ```
 
-初始化前端工作流状态：
+从 workflow.yaml 中解析出所有前端层的 id 列表，初始化前端工作流状态：
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea-name> frontend-architecture frontend-components frontend-checklist
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea-name> <workflow.yaml 中所有层的 id，空格分隔>
 ```
 
 ---
@@ -137,12 +144,15 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea
 
 ## Step 5: 标记设计完成
 
-thought skill 返回后（用户确认已在 thought skill 内部完成），标记各层为 confirmed：
+thought skill 返回后（用户确认已在 thought skill 内部完成），按 workflow.yaml 中的层列表，逐个标记为 confirmed：
 
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-architecture confirmed
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-components confirmed
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist confirmed
+# 对 workflow.yaml 中的每个层 id 执行：
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set <layer-id> confirmed
+```
+
+所有层标记完成后：
+```bash
 touch .thoughtworks/<idea-name>/.frontend-approved
 ```
 

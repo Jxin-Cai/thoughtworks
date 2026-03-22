@@ -30,6 +30,7 @@ disable-model-invocation: true
 5. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
 6. **禁止跳过层级评估** — 不管需求看起来多简单，必须逐层评估后才能启动 thinker subagent
 7. **Thinker 只产设计，Worker 只写代码** — 用户的调整请求一律路由到 Thinker，不影响 Worker
+8. **工作流数据源唯一性** — Phase 顺序、层定义（id/phase/requires/design-template）、验证模式（verify）必须从 `{DDD_HELP}/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
 
 **额外铁律：只做后端** — 即使需求描述涉及前端，也只生成后端代码，不调用任何前端技能。如需前后端联动，提示用户安装全栈插件（`thoughtworks-all`）。
 
@@ -115,9 +116,13 @@ ls .thoughtworks/<idea-name>/requirement.md 2>/dev/null
 
 **你（Decision-Maker）亲自执行评估**，不启动 subagent。
 
-1. 读取 `{DDD_HELP}/workflow.yaml`，解析出所有层的定义
+<HARD-GATE>
+必须用 Read 工具实际读取 `{DDD_HELP}/workflow.yaml` 并解析出所有层的定义（id、phase、requires、design-template、verify），才能开始评估。禁止凭记忆或 SKILL.md 文本推断层定义。
+</HARD-GATE>
+
+1. **用 Read 工具读取** `{DDD_HELP}/workflow.yaml`，解析出所有层的定义（id、phase、requires、design-template）
 2. 读取 `../thoughtworks-skills-clarify/references/assessment-dimensions.md`，获取评估维度和输出格式
-3. 逐层评估，将结果按模板格式写入 `.thoughtworks/<idea-name>/assessment.md`
+3. 按 workflow.yaml 中的层逐个评估，将结果按模板格式写入 `.thoughtworks/<idea-name>/assessment.md`
 4. 初始化工作流状态（**只注册评估为"需要开发"的层**）：
 
 ```bash
@@ -130,13 +135,11 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init <idea-name>
 
 ### 3.3 Phase 循环编排
 
-读取 `{DDD_HELP}/workflow.yaml`，按 Phase 顺序循环编排：
+<HARD-GATE>
+如果 Step 3.2 中未用 Read 工具实际读取过 `{DDD_HELP}/workflow.yaml`，禁止开始任何 Phase。必须从 workflow.yaml 中获取 phase 分组和 requires 依赖关系。
+</HARD-GATE>
 
-```
-Phase 1: domain
-Phase 2: infr, application（并行）
-Phase 3: ohs
-```
+按 workflow.yaml 中各层的 `phase` 字段分组（phase 值相同的层属于同一 Phase），按 phase 从小到大遍历，对每个 Phase 中的层执行设计→编码循环。同一 Phase 内的多个层可并行。
 
 对每个 Phase：
 
@@ -206,3 +209,5 @@ merge 技能完成后才能进入 Step 4。
 | "修改太小了，直接改设计文件" | 修改必须走 thinker 流程，保证契约一致性 |
 | "只改了一层，不需要级联" | 必须检查下游依赖，层间契约可能已经不一致 |
 | "用户说继续就行" | 分辨"继续当前步骤"和"跳过确认"的区别 |
+| "Phase 顺序我已经知道了，不用再读 workflow.yaml" | workflow.yaml 是唯一数据源，每次启动都必须用 Read 工具重新读取，不得凭记忆 |
+| "SKILL.md 里已经写了 Phase 顺序" | SKILL.md 的文本是编排逻辑说明，不是数据源。Phase 顺序、层定义的数据源只有 workflow.yaml |

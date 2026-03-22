@@ -15,9 +15,10 @@ agent:
 
 ## 铁律
 
-1. **checklist 驱动编码** — Worker 从 `frontend-checklist.md` 提取实现清单作为主执行清单，`frontend-architecture.md` 和 `frontend-components.md` 作为上下文参考
+1. **checklist 驱动编码** — Worker 从 `frontend-checklist.md` 提取实现清单作为主执行清单，其他设计文件作为上下文参考
 2. **禁止修改实现清单** — 实现清单由 thought skill 产出，执行阶段不能修改
 3. **禁止未验证就标记 done** — agent 完成后必须验证文件已创建
+4. **工作流数据源唯一性** — 前端层定义、verify 模式必须从 `{FRONTEND_HELP}/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息
 
 ---
 
@@ -36,7 +37,15 @@ agent:
 
 ---
 
-## Step 2: 读取状态与设计文件
+## Step 2: 读取工作流定义、状态与设计文件
+
+<HARD-GATE>
+必须用 Read 工具实际读取 `{FRONTEND_HELP}/workflow.yaml` 并解析前端层定义后，才能进入 Step 3。
+</HARD-GATE>
+
+读取 `{FRONTEND_HELP}/workflow.yaml`，解析出前端层定义（id、phase、requires、verify、worker-ref）。
+
+查询状态：
 
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
@@ -46,12 +55,9 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 - `blocked` → 列出 failed 文件
 - 其他 → 继续执行
 
-读取 3 个设计文件：
-- `{DESIGNS_DIR}/frontend-architecture.md` — 架构设计（FSD 层级、路由、依赖契约）
-- `{DESIGNS_DIR}/frontend-components.md` — 组件设计（Props/State/API 映射）
-- `{DESIGNS_DIR}/frontend-checklist.md` — 实现清单（主执行清单）
+读取 `{DESIGNS_DIR}/` 下的所有设计文件（文件列表来自 workflow.yaml 中定义的层 id）。
 
-从 `frontend-checklist.md` 提取实现清单表格作为 Worker 的执行清单。
+从 workflow.yaml 中 `worker-ref` 不为 null 的层对应的设计文件提取实现清单表格作为 Worker 的执行清单。其他设计文件作为上下文参考。
 
 ---
 

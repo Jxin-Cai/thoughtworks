@@ -22,6 +22,7 @@ agent:
 1. **上游依赖通过扫描已实现代码获取** — 构建 thinker subagent prompt 时，上游依赖接口通过指引 Thinker 扫描已实现的代码获取，不再从上游设计文档内联导出契约
 2. **禁止在评估前启动设计** — assessment.md 必须已存在才能进入设计
 3. **禁止跳过用户确认** — Step 4 展示设计摘要后，必须等用户确认才能提示下一步
+4. **工作流数据源唯一性** — Phase 顺序、层定义（id/phase/requires/design-template）必须从 `../thoughtworks-skills-backend-help/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
 
 ---
 
@@ -73,6 +74,11 @@ agent:
 
 ## Step 2: 读取工作流定义
 
+<HARD-GATE>
+必须用 Read 工具实际读取 `../thoughtworks-skills-backend-help/workflow.yaml` 并解析完成后，才能进入 Step 3。
+禁止凭记忆或 SKILL.md 文本中的示例编排 Phase 顺序。
+</HARD-GATE>
+
 读取 `../thoughtworks-skills-backend-help/workflow.yaml`（thoughtworks-skills-backend-help skill 目录下），解析出：
 - 所有层的定义（id、phase、design-template、thinker-ref、requires）
 - 层之间的依赖关系（DAG）
@@ -103,14 +109,12 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 主 agent 负责按 `workflow.yaml` 的 Phase 顺序编排，保证上游完成后再启动下游：
 
 1. **确定要执行的层**：根据 `--layers` 参数（如有）过滤出本次要执行的层
-2. **按 Phase 分组**：将要执行的层按 Phase 分组
-3. **Phase 1**：对每个目标层，先执行启动前准备（见下方），再启动 thinker subagent（如 domain）
-4. **等待 Phase 1 完成**：所有 Phase 1 的 subagent 返回后，执行 `backend-workflow-status.sh --check-all` 检查状态
-5. **Phase 2**：Phase 1 全部 done 后，对每个目标层执行启动前准备，再**并行启动**所有 phase=2 的目标层（如 infr + application，放在同一条消息的多个 Agent 调用中）
-6. **等待 Phase 2 完成**
-7. **Phase 3**：Phase 2 全部 done 后，对目标层执行启动前准备，再启动 phase=3 的目标层（如 ohs）
-8. 所有目标 Phase 完成后，执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
-9. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
+2. **按 Phase 分组**：将要执行的层按 workflow.yaml 中的 `phase` 字段分组（phase 值相同的层属于同一 Phase）
+3. **按 phase 从小到大遍历**：对每个 Phase 中的目标层，先执行启动前准备（见下方），再启动 thinker subagent。同一 Phase 内多层可**并行启动**（放在同一条消息的多个 Agent 调用中）
+4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，执行 `backend-workflow-status.sh --check-all` 检查状态
+5. **进入下一 Phase**：当前 Phase 全部 done 后，继续下一个 Phase，重复步骤 3-4
+6. 所有目标 Phase 完成后，执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
+7. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
 
 ### subagent 启动前准备（每个层都执行）
 

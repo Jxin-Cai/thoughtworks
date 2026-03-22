@@ -19,6 +19,7 @@ agent:
 2. **禁止跳过设计文件** — 每个 pending 的设计文件都必须执行，不能以"太简单"或"已被其他文件覆盖"为由跳过
 3. **禁止修改实现清单** — 实现清单由 `/thoughtworks-skills-backend-thought` 产出，执行阶段不能擅自修改
 4. **禁止未验证就标记 done** — agent 完成后必须验证文件已创建，才能将 frontmatter status 更新为 done
+5. **工作流数据源唯一性** — Phase 顺序、层定义（id/phase/requires）、验证模式（verify）必须从 `{DDD_HELP}/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
 
 ## 合理化预防
 
@@ -54,6 +55,11 @@ agent:
 ---
 
 ## Step 2: 读取工作流定义和状态
+
+<HARD-GATE>
+必须用 Read 工具实际读取 `{DDD_HELP}/workflow.yaml` 并解析完成后，才能进入 Step 3。
+禁止凭 SKILL.md 中的文本描述推断 Phase 顺序或层间依赖。
+</HARD-GATE>
 
 1. 读取 `{DDD_HELP}/workflow.yaml`，解析出所有层的定义和依赖关系
 2. 运行状态查询脚本获取结构化状态：
