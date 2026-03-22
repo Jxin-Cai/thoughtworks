@@ -1,0 +1,1 @@
+../../frontend/commands/thoughtworks-skills-frontend.md

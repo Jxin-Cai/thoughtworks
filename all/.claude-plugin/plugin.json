@@ -11,11 +11,11 @@
   "license": "MIT",
   "keywords": ["ddd", "domain-driven-design", "java", "python", "go", "layered-architecture", "code-generation", "frontend", "fullstack"],
   "agents": [
-    "./backend/agents/thoughtworks-agent-ddd-thinker.md",
-    "./backend/agents/thoughtworks-agent-ddd-worker.md",
-    "./frontend/agents/thoughtworks-agent-frontend-thinker.md",
-    "./frontend/agents/thoughtworks-agent-frontend-worker.md"
+    "./agents/thoughtworks-agent-ddd-thinker.md",
+    "./agents/thoughtworks-agent-ddd-worker.md",
+    "./agents/thoughtworks-agent-frontend-thinker.md",
+    "./agents/thoughtworks-agent-frontend-worker.md"
   ],
-  "skills": ["./skills/", "./core/skills/", "./backend/skills/", "./frontend/skills/"],
-  "commands": ["./commands/", "./core/commands/", "./backend/commands/", "./frontend/commands/"]
+  "skills": ["./skills/"],
+  "commands": ["./commands/"]
 }

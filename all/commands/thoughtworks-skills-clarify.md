@@ -1,0 +1,1 @@
+../../core/commands/thoughtworks-skills-clarify.md
