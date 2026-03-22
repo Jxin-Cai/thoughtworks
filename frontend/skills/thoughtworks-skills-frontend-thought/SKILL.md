@@ -24,10 +24,12 @@ agent:
 
 ## 铁律
 
-1. **上游依赖通过扫描已有代码获取** — 构建 thinker prompt 时，OHS 层依赖接口通过指引 Thinker 扫描已有 OHS 代码获取，不从设计文档内联导出契约；后续 Phase 的上游设计文档通过提供路径让 Agent 自行 Read 加载，避免链式内联导致 prompt 膨胀
+使用 Read 工具加载通用铁律：`core/references/iron-rules.md`
+
+**本技能附加铁律：**
+
+1. **上游依赖通过扫描已有代码获取** — 构建 thinker prompt 时，OHS 层依赖接口通过指引 Thinker 扫描已有 OHS 代码获取，不从设计文档内联导出契约
 2. **Phase 串行** — 按 workflow.yaml 的 phase 字段从小到大串行执行，前一个 Phase 完成后才能启动下一个 Phase
-3. **禁止跳过用户确认** — 所有 Phase 完成后（Step 3），必须等用户确认
-4. **工作流数据源唯一性** — 前端层级顺序、phase 分组、依赖关系（requires）、设计模板路径（design-template）必须从 `../thoughtworks-skills-frontend-help/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
 
 ---
 
@@ -120,7 +122,7 @@ agent:
 
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set {layer-id} designing
-cat > {IDEA_DIR}/.current-task-{layer-id}.json << 'TASK_EOF'
+cat > {IDEA_DIR}/.current-task-{layer-id}-$(date +%s).json << 'TASK_EOF'
 {"role":"thinker","layer":"{layer-id}","idea_dir":"{IDEA_DIR}","stack":"frontend"}
 TASK_EOF
 ```

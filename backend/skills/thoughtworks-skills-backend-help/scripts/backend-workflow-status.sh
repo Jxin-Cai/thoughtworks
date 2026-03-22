@@ -8,7 +8,7 @@
 #   backend-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成（含校验）
 #   backend-workflow-status.sh <idea-dir> --get-status <layer>     — 获取指定层的纯文本状态值
 #
-# 状态文件: <idea-dir>/workflow-state.json
+# 状态文件: <idea-dir>/workflow-state.yaml
 # 状态机: pending → designing → designed → confirmed → coding → coded / failed
 
 set -euo pipefail
@@ -16,9 +16,8 @@ set -euo pipefail
 IDEA_DIR="${1:?用法: backend-workflow-status.sh <idea-dir> [--init|--set|--check-upstream|--check-all]}"
 MODE="${2:-status}"
 
-STATE_FILE="$IDEA_DIR/workflow-state.json"
+STATE_FILE="$IDEA_DIR/workflow-state.yaml"
 DESIGNS_DIR="$IDEA_DIR/designs"
-LAYER_PATTERN="domain|infr|application|ohs"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
@@ -56,6 +55,42 @@ build_layers_snapshot() {
   echo "$snap"
 }
 
+# ── 状态转换合法性校验 ──
+
+validate_transition() {
+  local layer="$1" new_status="$2"
+  local current_status
+  current_status=$(get_tracked_status "$layer")
+
+  # 如果无当前状态（刚初始化），只允许 pending
+  if [ -z "$current_status" ]; then
+    return 0
+  fi
+
+  # 从 workflow.yaml 的 state-machine.transitions 中验证
+  # 简化实现：硬编码合法转换表（与 workflow.yaml state-machine 保持一致）
+  local valid=false
+  case "${current_status}:${new_status}" in
+    pending:designing)     valid=true ;;
+    designing:designed)    valid=true ;;
+    designed:confirmed)    valid=true ;;
+    confirmed:coding)      valid=true ;;
+    coding:coded)          valid=true ;;
+    designing:failed)      valid=true ;;
+    coding:failed)         valid=true ;;
+    failed:pending)        valid=true ;;
+    # 允许编排器强制覆盖
+    *:failed)              valid=true ;;
+    *:pending)             valid=true ;;
+  esac
+
+  if [ "$valid" = "false" ]; then
+    echo "{\"error\": \"非法状态转换: $layer $current_status → $new_status\"}" >&2
+    return 1
+  fi
+  return 0
+}
+
 # ── 模式分发 ──
 
 case "$MODE" in
@@ -63,7 +98,7 @@ case "$MODE" in
   # ── 默认模式：查看整体状态（非阻塞）──
   status|--status)
     if [ ! -f "$STATE_FILE" ]; then
-      echo '{"error": "workflow-state.json 不存在"}' >&2
+      echo '{"error": "workflow-state.yaml 不存在"}' >&2
       exit 1
     fi
 
@@ -80,25 +115,8 @@ case "$MODE" in
     layers_json=""
     for layer in $tracked; do
       st=$(get_tracked_status "$layer")
-      files_csv=$(get_tracked_files "$layer")
 
-      files_arr="[]"
-      if [ -n "$files_csv" ]; then
-        items=""
-        IFS=',' read -ra parts <<< "$files_csv"
-        for p in "${parts[@]}"; do
-          p=$(echo "$p" | tr -d ' ')
-          [ -z "$p" ] && continue
-          if [ -z "$items" ]; then
-            items="\"$p\""
-          else
-            items="$items, \"$p\""
-          fi
-        done
-        [ -n "$items" ] && files_arr="[$items]"
-      fi
-
-      entry="\"$layer\": { \"status\": \"$st\", \"files\": $files_arr }"
+      entry="\"$layer\": { \"status\": \"$st\" }"
       if [ -z "$layers_json" ]; then
         layers_json="$entry"
       else
@@ -141,23 +159,14 @@ case "$MODE" in
       exit 1
     fi
 
-    layers_json=""
     for layer in $LAYERS; do
       case "$layer" in
         domain|infr|application|ohs) ;;
         *) echo "{\"error\": \"无效层名: $layer，可选: domain|infr|application|ohs\"}" >&2; exit 1 ;;
       esac
-      entry="    \"$layer\": {\n      \"status\": \"pending\",\n      \"files\": []\n    }"
-      if [ -z "$layers_json" ]; then
-        layers_json="$entry"
-      else
-        layers_json="$layers_json,\n$entry"
-      fi
     done
 
-    mkdir -p "$(dirname "$STATE_FILE")"
-    init_content=$(printf "{\n  \"idea\": \"$IDEA_NAME\",\n  \"tracked_layers\": {\n$layers_json\n  }\n}")
-    locked_write "$init_content"
+    init_state "$IDEA_NAME" $LAYERS
     echo "{\"initialized\": true, \"idea\": \"$IDEA_NAME\", \"layers\": [$(echo "$LAYERS" | sed 's/ /", "/g;s/^/"/;s/$/"/' )]}"
     ;;
 
@@ -172,12 +181,16 @@ case "$MODE" in
     esac
 
     if [ ! -f "$STATE_FILE" ]; then
-      echo '{"error": "workflow-state.json 不存在，请先执行 --init"}' >&2
+      echo '{"error": "workflow-state.yaml 不存在，请先执行 --init"}' >&2
       exit 1
     fi
 
     if ! is_tracked "$LAYER"; then
       echo "{\"error\": \"层 $LAYER 不在 tracked_layers 中\"}" >&2
+      exit 1
+    fi
+
+    if ! validate_transition "$LAYER" "$STATUS"; then
       exit 1
     fi
 
@@ -190,7 +203,7 @@ case "$MODE" in
     LAYER="${3:?--check-upstream 需要指定层名}"
 
     if [ ! -f "$STATE_FILE" ]; then
-      echo '{"error": "workflow-state.json 不存在"}' >&2
+      echo '{"error": "workflow-state.yaml 不存在"}' >&2
       exit 1
     fi
 
@@ -252,7 +265,7 @@ case "$MODE" in
   # ── --check-all 模式（非阻塞，含校验）──
   --check-all)
     if [ ! -f "$STATE_FILE" ]; then
-      echo '{"error": "workflow-state.json 不存在"}' >&2
+      echo '{"error": "workflow-state.yaml 不存在"}' >&2
       exit 1
     fi
 

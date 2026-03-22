@@ -23,7 +23,7 @@ skills:
    - `thoughtworks-skills-frontend-spec`：按项目技术栈关键词加载编码规范
 3. `thoughtworks-skills-frontend-help` 已注入上下文，你可以用 Read 工具按需加载以下资源：
    - `workflow.yaml`：了解本层在 DAG 中的位置和上下游依赖关系
-   - `{CONTEXT 中 idea_dir}/frontend-workflow-state.json`：确认上游层完成状态
+   - `{CONTEXT 中 idea_dir}/frontend-workflow-state.yaml`：确认上游层完成状态
 
 ## 角色约束
 

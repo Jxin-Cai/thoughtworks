@@ -16,7 +16,7 @@ while [ $# -gt 0 ]; do
 done
 
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
-STATE_FILE="$IDEA_DIR/workflow-state.json"
+STATE_FILE="$IDEA_DIR/workflow-state.yaml"
 
 if [ ! -d "$BACKEND_DESIGNS_DIR" ]; then
   echo '{"status":"fail","checks":[{"layer":"","file":"","rule":"INIT","pass":false,"detail":"backend-designs 目录不存在"}]}'
@@ -24,73 +24,32 @@ if [ ! -d "$BACKEND_DESIGNS_DIR" ]; then
 fi
 
 if [ ! -f "$STATE_FILE" ]; then
-  echo '{"status":"fail","checks":[{"layer":"","file":"","rule":"INIT","pass":false,"detail":"workflow-state.json 不存在"}]}'
+  echo '{"status":"fail","checks":[{"layer":"","file":"","rule":"INIT","pass":false,"detail":"workflow-state.yaml 不存在"}]}'
   exit 1
 fi
 
-# ── 解析 workflow-state.json 中的 tracked_layers ──
-# 格式: {"idea":"xxx","tracked_layers":{"domain":{"status":"done","files":["domain.md"]},...}}
+# ── 解析 workflow-state.yaml 中的 tracked_layers ──
+# 格式:
+#   idea: xxx
+#   layers:
+#     domain: coded
+#     infr: coding
+
+# source 共享库（用于 get_tracked_layers / get_tracked_status）
+CORE_LIB="$(cd "$(dirname "$0")" && pwd)/../../../../core/scripts/workflow-lib.sh"
+source "$CORE_LIB"
 
 # 提取所有 tracked layer 名称（status 为 done 或 coded 的层）
-# 兼容多行格式化 JSON（locked_write 生成的格式）
 parse_tracked_layers() {
-  if [ ! -f "$STATE_FILE" ]; then return; fi
-  awk '
-    BEGIN { in_tracked=0; cur_layer=""; cur_status="" }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && /"(domain|infr|application|ohs)"[[:space:]]*:/ {
-      line=$0
-      sub(/^[^"]*"/, "", line)
-      sub(/".*/, "", line)
-      cur_layer=line
-      cur_status=""
-      next
-    }
-    in_tracked && cur_layer != "" && /"status"/ {
-      line=$0
-      gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "", line)
-      gsub(/".*/, "", line)
-      cur_status=line
-      if (cur_status == "done" || cur_status == "coded") { print cur_layer }
-      cur_layer=""
-      next
-    }
-  ' "$STATE_FILE"
-}
-
-# 提取某层的文件列表
-# 兼容多行格式化 JSON
-parse_layer_files() {
-  local layer="$1"
-  if [ ! -f "$STATE_FILE" ]; then return; fi
-  awk -v layer="$layer" '
-    BEGIN { in_tracked=0; in_layer=0; in_files=0 }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && !in_layer {
-      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
-    }
-    in_tracked && in_layer {
-      if ($0 ~ /"files"/) {
-        in_files=1
-        line=$0
-        gsub(/.*"files"[[:space:]]*:[[:space:]]*\[/, "", line)
-        gsub(/\].*/, "", line)
-        gsub(/"/, "", line)
-        gsub(/[[:space:]]/, "", line)
-        if (line != "") print line
-        if ($0 ~ /\]/) { in_files=0 }
-        next
-      }
-      if (in_files) {
-        if ($0 ~ /\]/) { in_files=0; next }
-        line=$0
-        gsub(/"/, "", line)
-        gsub(/[[:space:]]/, "", line)
-        gsub(/,/, "", line)
-        if (line != "") print line
-      }
-    }
-  ' "$STATE_FILE"
+  local all_layers
+  all_layers=$(get_tracked_layers)
+  for layer in $all_layers; do
+    local st
+    st=$(get_tracked_status "$layer")
+    case "$st" in
+      done|coded) echo "$layer" ;;
+    esac
+  done
 }
 
 TRACKED_LAYERS=$(parse_tracked_layers)
@@ -271,17 +230,21 @@ extract_aggregate_body_before_export() {
   ' "$file"
 }
 
-# ── 收集各层文件（bash 3.2 兼容：使用 _LAYER_FILES_<layer> 变量代替关联数组）──
+# ── 收集各层文件（从 backend-designs/ 目录扫描，按文件名前缀匹配层）──
 
-for layer in $TRACKED_LAYERS; do
-  files=$(parse_layer_files "$layer")
-  eval "_LAYER_FILES_${layer}=\"\$files\""
-done
-
-# 获取某层的文件列表
+# 获取某层的文件列表（从文件系统扫描）
 get_layer_files_cached() {
   local l="$1"
-  eval "echo \"\${_LAYER_FILES_${l}:-}\""
+  for f in "$BACKEND_DESIGNS_DIR"/*.md; do
+    [ -f "$f" ] || continue
+    local base
+    base=$(basename "$f")
+    local prefix
+    prefix=$(echo "${base%.md}" | sed 's/-.*//')
+    if [ "$prefix" = "$l" ]; then
+      echo "$base"
+    fi
+  done
 }
 
 # 检查某层是否在 tracked_layers 中

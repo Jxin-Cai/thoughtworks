@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 # SubagentStop hook — subagent 结束时自动收敛状态
 #
-# 编排器在启动 subagent 前写入 .thoughtworks/<idea>/.current-task-<layer>.json：
+# 编排器在启动 subagent 前写入 .thoughtworks/<idea>/.current-task-<layer>-<timestamp>.json：
 #   { "role": "thinker|worker", "layer": "<layer>", "idea_dir": "<path>", "stack": "backend|frontend" }
+#
+# 文件名中的 timestamp 用于避免并发 session 的文件冲突。
 #
 # 本脚本在 subagent 结束后读取所有匹配的任务文件，逐个标记状态：
 #   thinker (designing → designed)
 #   worker  (coding → coded)
 #
 # 如果无任务文件（非 DDD 流程调用），静默退出。
+# 超过 30 分钟的残留任务文件视为过期，清理而非处理。
 #
 # 使用方式: 在 hooks.json 的 SubagentStop 中配置
 
 set -euo pipefail
+
+STALE_THRESHOLD=1800  # 30 分钟（秒）
 
 # 收集所有 .current-task-*.json 文件
 collect_task_files() {
@@ -30,6 +35,21 @@ collect_task_files() {
   printf '%s\n' "${files[@]}"
 }
 
+# 检查文件是否过期（创建时间超过阈值）
+is_stale() {
+  local file="$1"
+  local now file_mtime age
+  now=$(date +%s)
+  # macOS 兼容: stat -f %m (macOS) 或 stat -c %Y (Linux)
+  if stat -f %m "$file" >/dev/null 2>&1; then
+    file_mtime=$(stat -f %m "$file")
+  else
+    file_mtime=$(stat -c %Y "$file")
+  fi
+  age=$((now - file_mtime))
+  [ "$age" -gt "$STALE_THRESHOLD" ]
+}
+
 TASK_FILES=$(collect_task_files) || exit 0
 
 # 解析物理路径以穿透 symlink（backend/scripts → ../core/scripts）
@@ -38,6 +58,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 while IFS= read -r TASK_FILE; do
+  # 清理过期的残留任务文件
+  if is_stale "$TASK_FILE"; then
+    rm -f "$TASK_FILE"
+    continue
+  fi
+
   # 解析任务文件（纯 bash，不依赖 jq）
   ROLE=$(sed -n 's/.*"role"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$TASK_FILE" | head -1)
   LAYER=$(sed -n 's/.*"layer"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$TASK_FILE" | head -1)

@@ -1,0 +1,122 @@
+# 前端编排定义
+name: frontend-orchestration
+version: 1
+description: 前端端到端编排步骤
+
+variables:
+  IDEA_DIR: ".thoughtworks/{idea-name}"
+  FRONTEND_HELP: "../thoughtworks-skills-frontend-help"
+
+steps:
+  - id: receive-idea
+    description: 接收 idea-name
+    action:
+      type: self
+      instructions: |
+        解析 $ARGUMENTS 确定 idea-name。
+        检查 .thoughtworks/<idea-name>/ 目录是否存在。
+        检查 backend-designs/ohs.md 是否存在。
+        mkdir -p .thoughtworks/<idea-name>/frontend-designs
+
+  - id: clarify
+    description: 前端需求澄清
+    gate:
+      check: frontend-requirement-exists
+      on-pass: skip
+      on-fail: execute
+    action:
+      type: skill
+      name: thoughtworks-skills-clarify
+      args: "frontend {idea-name}"
+    postcondition:
+      check: frontend-requirement-exists
+
+  - id: branch
+    description: 创建功能分支
+    action:
+      type: skill
+      name: thoughtworks-skills-branch
+      args: "{idea-name}"
+    postcondition:
+      check: branch-ready
+
+  - id: assessment
+    description: 前端评估（Decision-Maker 亲自执行）
+    gate:
+      check: frontend-assessment-exists
+      on-pass: skip
+      on-fail: execute
+    action:
+      type: self
+      read-first:
+        - "{FRONTEND_HELP}/workflow.yaml"
+        - "{IDEA_DIR}/backend-designs/ohs.md"
+      instructions: |
+        1. 读取 OHS 导出契约，评估前端工作
+        2. 写入 {IDEA_DIR}/frontend-assessment.md
+        3. 从 workflow.yaml 解析所有前端层 id，初始化状态:
+           bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init {idea-name} <所有层 id>
+    postcondition:
+      check: frontend-assessment-exists
+
+  - id: design
+    description: 前端设计编排
+    action:
+      type: skill
+      name: thoughtworks-skills-frontend-thought
+      args: "{idea-name}"
+
+  - id: confirm-layers
+    description: 标记各层为 confirmed（thought skill 内部已完成用户确认）
+    action:
+      type: script
+      command: "bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set {layer-id} confirmed"
+    for-each: "workflow.yaml 中所有前端层 id"
+    postcondition:
+      action:
+        type: script
+        command: "touch {IDEA_DIR}/.frontend-approved"
+
+  - id: code
+    description: 前端编码编排
+    action:
+      type: skill
+      name: thoughtworks-skills-frontend-works
+      args: "{idea-name}"
+
+  - id: supplementary
+    description: 执行工程支撑任务
+    gate:
+      check: supplementary-tasks-exist
+      on-pass: execute
+      on-fail: skip
+    action:
+      type: self
+      instructions: |
+        对 supplementary-tasks.md 中每项未完成的前端相关任务，
+        使用 Agent 工具（subagent_type: general-purpose, max_turns: 10）执行。
+
+  - id: summary
+    description: 完成汇总
+    action:
+      type: self
+      instructions: "向用户展示实现摘要、各层完成状态、产出文件总列表"
+
+  - id: merge
+    description: 合并分支
+    action:
+      type: skill
+      name: thoughtworks-skills-merge
+      args: "{idea-name}"
+
+resume-table:
+  - condition: "frontend-requirement.md 不存在"
+    resume-from: clarify
+  - condition: "frontend-assessment.md 不存在"
+    resume-from: assessment
+  - condition: "frontend-designs/ 为空"
+    resume-from: design
+  - condition: "无 .frontend-approved"
+    resume-from: confirm-layers
+  - condition: ".frontend-approved 存在，编码未完成"
+    resume-from: code

@@ -11,10 +11,9 @@ BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
-STATE_FILE="$IDEA_DIR/workflow-state.json"
+STATE_FILE="$IDEA_DIR/workflow-state.yaml"
 
 # source 共享库
-LAYER_PATTERN="domain|infr|application|ohs"
 CORE_LIB="$SCRIPT_DIR/../../../../core/scripts/workflow-lib.sh"
 source "$CORE_LIB"
 
@@ -238,7 +237,7 @@ for i in $(seq 0 $((layer_count - 1))); do
   fi
 done
 
-# 构建 workflow_phases JSON（从 workflow-state.json）
+# 构建 workflow_phases JSON（从 workflow-state.yaml）
 workflow_phases_json=""
 if [ -f "$STATE_FILE" ]; then
   for layer_id in domain infr application ohs; do

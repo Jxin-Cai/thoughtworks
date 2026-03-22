@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # 工作流脚本共享库 — backend/frontend workflow-status 脚本共用
 # 使用方式: source 本文件，确保调用前设置 STATE_FILE 变量
+#
+# 状态文件格式 (YAML):
+#   idea: user-management
+#   layers:
+#     domain: coded
+#     infr: coding
+#     application: pending
+#     ohs: pending
 
 # ── 文件锁（防止并发写入竞态）──
 
@@ -33,72 +41,22 @@ locked_write() {
   fi
 }
 
-# ── JSON 辅助函数（纯 bash + awk，不依赖 jq/python）──
+# ── YAML 读取函数 ──
 
 read_idea() {
   if [ ! -f "$STATE_FILE" ]; then echo ""; return; fi
-  sed -n 's/.*"idea"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$STATE_FILE" | head -1
+  grep "^idea:" "$STATE_FILE" | head -1 | sed 's/^idea:[[:space:]]*//'
 }
 
-# get_tracked_layers 需要调用者定义 LAYER_PATTERN 变量
-# 后端: LAYER_PATTERN="domain|infr|application|ohs"
-# 前端: LAYER_PATTERN="frontend-architecture|frontend-components|frontend-checklist"
 get_tracked_layers() {
   if [ ! -f "$STATE_FILE" ]; then return; fi
-  grep -oE "\"(${LAYER_PATTERN})\"[[:space:]]*:" "$STATE_FILE" | sed 's/"//g;s/[[:space:]]*://g'
+  sed -n '/^layers:/,/^[^ ]/p' "$STATE_FILE" | grep '^  [a-zA-Z]' | sed 's/:.*//' | tr -d ' '
 }
 
 get_tracked_status() {
   local layer="$1"
   if [ ! -f "$STATE_FILE" ]; then echo ""; return; fi
-  awk -v layer="$layer" '
-    BEGIN { in_tracked=0; in_layer=0 }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && !in_layer {
-      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
-    }
-    in_tracked && in_layer {
-      if ($0 ~ /"status"/) {
-        gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "")
-        gsub(/".*/, "")
-        print
-        exit
-      }
-    }
-  ' "$STATE_FILE"
-}
-
-get_tracked_files() {
-  local layer="$1"
-  if [ ! -f "$STATE_FILE" ]; then echo ""; return; fi
-  awk -v layer="$layer" '
-    BEGIN { in_tracked=0; in_layer=0; in_files=0 }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && !in_layer {
-      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
-    }
-    in_tracked && in_layer {
-      if ($0 ~ /"files"/) {
-        in_files=1
-        line=$0
-        gsub(/.*"files"[[:space:]]*:[[:space:]]*\[/, "", line)
-        gsub(/\].*/, "", line)
-        gsub(/"/, "", line)
-        gsub(/[[:space:]]/, "", line)
-        if (line != "") print line
-        if ($0 ~ /\]/) { in_files=0 }
-        next
-      }
-      if (in_files) {
-        if ($0 ~ /\]/) { in_files=0; next }
-        line=$0
-        gsub(/"/, "", line)
-        gsub(/[[:space:]]/, "", line)
-        gsub(/,/, "", line)
-        if (line != "") print line
-      }
-    }
-  ' "$STATE_FILE" | paste -sd',' -
+  sed -n '/^layers:/,/^[^ ]/p' "$STATE_FILE" | grep "^  ${layer}:" | head -1 | sed "s/^  ${layer}:[[:space:]]*//"
 }
 
 is_tracked() {
@@ -114,43 +72,23 @@ is_tracked() {
 update_layer_status() {
   local target_layer="$1"
   local new_status="$2"
-  local idea
-  idea=$(read_idea)
-  local tracked_layers
-  tracked_layers=$(get_tracked_layers)
+  if [ ! -f "$STATE_FILE" ]; then return 1; fi
+  # sed 原地替换（macOS 兼容）
+  sed -i.bak "s/^  ${target_layer}:.*$/  ${target_layer}: ${new_status}/" "$STATE_FILE"
+  rm -f "${STATE_FILE}.bak"
+}
 
-  local layers_json=""
-  for layer in $tracked_layers; do
-    local st files_csv
-    if [ "$layer" = "$target_layer" ]; then
-      st="$new_status"
-    else
-      st=$(get_tracked_status "$layer")
-    fi
-    files_csv=$(get_tracked_files "$layer")
-
-    local files_arr="[]"
-    if [ -n "$files_csv" ]; then
-      local items=""
-      IFS=',' read -ra parts <<< "$files_csv"
-      for p in "${parts[@]}"; do
-        p=$(echo "$p" | tr -d ' ')
-        [ -z "$p" ] && continue
-        if [ -z "$items" ]; then items="\"$p\""; else items="$items, \"$p\""; fi
-      done
-      [ -n "$items" ] && files_arr="[$items]"
-    fi
-
-    local entry="    \"$layer\": {\n      \"status\": \"$st\",\n      \"files\": $files_arr\n    }"
-    if [ -z "$layers_json" ]; then layers_json="$entry"; else layers_json="$layers_json,\n$entry"; fi
-  done
-
+init_state() {
+  local idea="$1"; shift
   local content
-  content=$(printf "{\n  \"idea\": \"$idea\",\n  \"tracked_layers\": {\n$layers_json\n  }\n}")
+  content=$(printf "idea: %s\nlayers:" "$idea")
+  for layer in "$@"; do
+    content=$(printf "%s\n  %s: pending" "$content" "$layer")
+  done
   locked_write "$content"
 }
 
-# ── status-status.sh 共享函数 ──
+# ── 设计文件 frontmatter 辅助函数 ──
 
 # 从 YAML frontmatter 提取字段值
 extract_field() {
@@ -177,23 +115,7 @@ get_layer_phase() {
   ' "$WORKFLOW"
 }
 
-# 从 workflow-state.json 读取某层的工作流状态（需要调用者设置 STATE_FILE 变量）
+# 从 workflow-state.yaml 读取某层的工作流状态（get_tracked_status 的别名，兼容旧调用）
 get_workflow_status() {
-  local layer="$1"
-  if [ ! -f "$STATE_FILE" ]; then echo ""; return; fi
-  awk -v layer="$layer" '
-    BEGIN { in_tracked=0; in_layer=0 }
-    /"tracked_layers"/ { in_tracked=1; next }
-    in_tracked && !in_layer {
-      if ($0 ~ "\"" layer "\"[[:space:]]*:") { in_layer=1 }
-    }
-    in_tracked && in_layer {
-      if ($0 ~ /"status"/) {
-        gsub(/.*"status"[[:space:]]*:[[:space:]]*"/, "")
-        gsub(/".*/, "")
-        print
-        exit
-      }
-    }
-  ' "$STATE_FILE"
+  get_tracked_status "$1"
 }

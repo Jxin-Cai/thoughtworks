@@ -14,7 +14,7 @@ set -euo pipefail
 
 IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir>}"
 FRONTEND_DESIGNS_DIR="$IDEA_DIR/frontend-designs"
-STATE_FILE="$IDEA_DIR/frontend-workflow-state.json"
+STATE_FILE="$IDEA_DIR/frontend-workflow-state.yaml"
 
 if [ ! -d "$FRONTEND_DESIGNS_DIR" ]; then
   echo '{"status":"fail","checks":[{"layer":"","file":"","rule":"INIT","pass":false,"detail":"frontend-designs 目录不存在"}]}'
@@ -22,7 +22,7 @@ if [ ! -d "$FRONTEND_DESIGNS_DIR" ]; then
 fi
 
 if [ ! -f "$STATE_FILE" ]; then
-  echo '{"status":"fail","checks":[{"layer":"","file":"","rule":"INIT","pass":false,"detail":"frontend-workflow-state.json 不存在"}]}'
+  echo '{"status":"fail","checks":[{"layer":"","file":"","rule":"INIT","pass":false,"detail":"frontend-workflow-state.yaml 不存在"}]}'
   exit 1
 fi
 

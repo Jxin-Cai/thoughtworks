@@ -19,10 +19,12 @@ agent:
 
 ## 铁律
 
+使用 Read 工具加载通用铁律：`core/references/iron-rules.md`
+
+**本技能附加铁律：**
+
 1. **上游依赖通过扫描已实现代码获取** — 构建 thinker subagent prompt 时，上游依赖接口通过指引 Thinker 扫描已实现的代码获取，不再从上游设计文档内联导出契约
 2. **禁止在评估前启动设计** — assessment.md 必须已存在才能进入设计
-3. **禁止跳过用户确认** — Step 4 展示设计摘要后，必须等用户确认才能提示下一步
-4. **工作流数据源唯一性** — Phase 顺序、层定义（id/phase/requires/design-template）必须从 `../thoughtworks-skills-backend-help/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
 
 ---
 
@@ -125,9 +127,9 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} designing
 ```
 
-2. **写入任务文件**（供 SubagentStop hook 收敛状态）：
+2. **写入任务文件**（供 SubagentStop hook 收敛状态，文件名含时间戳避免并发冲突）：
 ```bash
-cat > {IDEA_DIR}/.current-task-{layer}.json << 'TASK_EOF'
+cat > {IDEA_DIR}/.current-task-{layer}-$(date +%s).json << 'TASK_EOF'
 {"role":"thinker","layer":"{layer}","idea_dir":"{IDEA_DIR}","stack":"backend"}
 TASK_EOF
 ```
@@ -138,7 +140,7 @@ TASK_EOF
 
 **禁止使用 --wait-upstream 或 --wait-all 的阻塞轮询模式**（与 Claude Code Bash 120s 超时不兼容）。
 
-如果某层不需要开发，不注册到 workflow-state.json，该层的 Phase 直接跳过。
+如果某层不需要开发，不注册到 workflow-state.yaml，该层的 Phase 直接跳过。
 
 ### CONTEXT 区块构建规则（上游依赖来源判定）
 

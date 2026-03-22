@@ -15,10 +15,13 @@ agent:
 
 ## 铁律
 
+使用 Read 工具加载通用铁律：`core/references/iron-rules.md`
+
+**本技能附加铁律：**
+
 1. **checklist 驱动编码** — Worker 从 `frontend-checklist.md` 提取实现清单作为主执行清单，其他设计文件作为上下文参考
 2. **禁止修改实现清单** — 实现清单由 thought skill 产出，执行阶段不能修改
 3. **禁止未验证就标记 done** — agent 完成后必须验证文件已创建
-4. **工作流数据源唯一性** — 前端层定义、verify 模式必须从 `{FRONTEND_HELP}/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息
 
 ---
 
@@ -74,7 +77,7 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 **subagent 启动前准备**：在开始执行前，运行：
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set frontend-checklist coding
-cat > {IDEA_DIR}/.current-task-frontend-checklist.json << 'TASK_EOF'
+cat > {IDEA_DIR}/.current-task-frontend-checklist-$(date +%s).json << 'TASK_EOF'
 {"role":"worker","layer":"frontend-checklist","idea_dir":"{IDEA_DIR}","stack":"frontend"}
 TASK_EOF
 ```

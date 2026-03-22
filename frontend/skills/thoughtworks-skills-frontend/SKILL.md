@@ -25,12 +25,13 @@ disable-model-invocation: true
 
 ## 铁律
 
+使用 Read 工具加载通用铁律：`core/references/iron-rules.md`
+
+**本技能附加铁律：**
+
 1. **只做前端** — 即使需求描述涉及后端，也只生成前端代码，不调用任何后端技能。如需前后端联动，提示用户安装全栈插件（`thoughtworks-all`）
-2. **禁止跳过需求澄清** — 无论后端 OHS 契约多完整，**只要 `frontend-requirement.md` 不存在，就必须调用澄清技能**。OHS 契约定义了 API，但页面布局、交互流程、UI 风格需要与用户确认
+2. **禁止跳过需求澄清** — 无论后端 OHS 契约多完整，**只要 `frontend-requirement.md` 不存在，就必须调用澄清技能**
 3. **禁止自动执行编码** — 设计完成后必须等用户确认才能进入编码阶段
-4. **禁止跳过用户确认** — 每个 HARD-GATE 必须等用户明确确认后才能推进
-5. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
-6. **工作流数据源唯一性** — 前端层级顺序、phase 分组、依赖关系必须从 `{FRONTEND_HELP}/workflow.yaml` 实际读取获得。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
 
 ---
 
@@ -47,148 +48,22 @@ disable-model-invocation: true
 
 ---
 
-## 状态机
+## 启动
 
-先用 Read 工具读取 `{FRONTEND_HELP}/workflow.yaml` 获取前端层定义，再按下表判断状态：
-
-| 状态 | 判断方式 | 行为 |
-|------|---------|------|
-| 无 idea | `$ARGUMENTS` 为空 | → Step 1 接收 idea-name |
-| 有 idea，无前端需求 | `frontend-requirement.md` 不存在 | → Step 2 前端需求澄清 |
-| 有 idea，有需求，无设计 | `frontend-designs/` 为空 | → Step 3 评估 → Step 4 编排 thought |
-| 有 idea，设计完成，未确认 | 无 `.frontend-approved` | → Step 5 标记状态 |
-| 有 idea，设计已确认 | `.frontend-approved` 存在 | → Step 6 编排 works |
+1. 使用 Read 工具加载编排定义：`{FRONTEND_HELP}/orchestration.yaml`
+2. 使用 Read 工具加载工作流定义：`{FRONTEND_HELP}/workflow.yaml`
+3. 如果 `.thoughtworks/` 下已有 idea 目录：从 orchestration.yaml 的 `resume-table` 判断恢复点
+4. 按 orchestration.yaml 的 `steps` 顺序执行
 
 ---
 
-## Step 1: 接收 idea-name
+## 执行规则
 
-解析 `$ARGUMENTS` 确定 idea-name。
-
-检查 `.thoughtworks/<idea-name>/` 目录是否存在。如不存在，提示用户先运行 `/thoughtworks-skills-backend` 完成后端开发。
-
-检查 `.thoughtworks/<idea-name>/backend-designs/ohs.md` 是否存在。如不存在，提示用户先完成后端 OHS 层设计。
-
-执行：
-```bash
-mkdir -p .thoughtworks/<idea-name>/frontend-designs
-```
-
----
-
-## Step 2: 前端需求澄清（HARD-GATE）
-
-<HARD-GATE>
-**澄清是否完成的唯一判据：`.thoughtworks/<idea-name>/frontend-requirement.md` 是否存在于磁盘上。** 该文件存在后才能进入 Step 2.5。
-</HARD-GATE>
-
-**必须用 Bash 工具实际执行以下命令**（不能凭记忆或推断）：
-
-```bash
-ls .thoughtworks/<idea-name>/frontend-requirement.md 2>/dev/null
-```
-
-- **命令有输出（文件已存在）** → 跳过澄清，直接进入 Step 2.5
-- **命令无输出（文件不存在）** → 调用 `/thoughtworks-skills-clarify frontend <idea-name>`
-
-<HARD-GATE>
-澄清技能完成后才能进入 Step 2.5。
-</HARD-GATE>
-
----
-
-## Step 2.5: 功能分支管理
-
-调用 `/thoughtworks-branch <idea-name>`。
-
-<HARD-GATE>
-分支技能完成后才能进入 Step 3。
-</HARD-GATE>
-
----
-
-## Step 3: 前端评估
-
-<HARD-GATE>
-必须用 Read 工具实际读取 `{FRONTEND_HELP}/workflow.yaml` 并解析出前端层定义（id、phase、requires、design-template）。禁止凭记忆或 SKILL.md 文本推断层定义和执行顺序。
-</HARD-GATE>
-
-读取 `.thoughtworks/<idea-name>/backend-designs/ohs.md` 的导出契约，评估前端需要做什么：
-
-将评估结果写入 `.thoughtworks/<idea-name>/frontend-assessment.md`：
-
-```markdown
-# 前端评估
-
-## API 契约概要
-（列出 OHS 层提供的所有 API 端点）
-
-## 前端工作概要
-（需要哪些页面、组件、API 调用）
-```
-
-从 workflow.yaml 中解析出所有前端层的 id 列表，初始化前端工作流状态：
-```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init <idea-name> <workflow.yaml 中所有层的 id，空格分隔>
-```
-
----
-
-## Step 4: 编排 thought skill
-
-调用 `/thoughtworks-skills-frontend-thought <idea-name>`。
-
-等待 thought skill 完成后，进入 Step 5。
-
----
-
-## Step 5: 标记设计完成
-
-thought skill 返回后（用户确认已在 thought skill 内部完成），按 workflow.yaml 中的层列表，逐个标记为 confirmed：
-
-```bash
-# 对 workflow.yaml 中的每个层 id 执行：
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set <layer-id> confirmed
-```
-
-所有层标记完成后：
-```bash
-touch .thoughtworks/<idea-name>/.frontend-approved
-```
-
----
-
-## Step 6: 编排 works skill
-
-调用 `/thoughtworks-skills-frontend-works <idea-name>`。
-
-等待 works skill 完成后，进入 Step 6.5。
-
----
-
-## Step 6.5: 执行工程支撑任务
-
-检查 `.thoughtworks/<idea-name>/supplementary-tasks.md`。如果文件不存在或为空 → 跳过。
-
-对每项未完成的任务（仅限前端相关），使用 Agent 工具（subagent_type: general-purpose, max_turns: 10）执行，传入项目结构和技术栈信息作为上下文。完成后标记为 [x]。
-
-<HARD-GATE>
-此步骤不得跳过。即使业务代码已全部完成，也必须检查是否有遗留的工程支撑任务。
-</HARD-GATE>
-
----
-
-## Step 7: 完成汇总
-
-向用户展示：实现摘要、各层完成状态、产出文件总列表。
-
----
-
-## Step 8: 合并分支
-
-调用 `/thoughtworks-skills-merge <idea-name>`。
-
-<HARD-GATE>
-merge 技能完成后才能进入最终结束。
-</HARD-GATE>
-
+- 每个 step 执行前，如果有 `gate.check`，运行 `bash core/scripts/gate-check.sh {IDEA_DIR} <gate-id>`
+- `gate.on-pass: skip` → 门控通过时跳过该步骤（表示已完成）
+- `gate.on-fail: execute` → 门控不通过时执行该步骤
+- 每个 step 执行后，如果有 `postcondition.check`，运行门控脚本验证
+- `type: skill` → 调用对应 slash 命令
+- `type: script` → 用 Bash 执行
+- `type: self` → 自己执行（如有 `read-first` 则先 Read 这些文件）
+- `for-each` → 对列出的每个元素重复执行 action

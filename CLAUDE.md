@@ -48,12 +48,12 @@ Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件
 .thoughtworks/<idea-name>/
 ├── requirement.md                # 需求存档（含聚合分析章节）
 ├── assessment.md                 # 后端层级评估结果
-├── workflow-state.json           # 后端工作流状态
+├── workflow-state.yaml           # 后端工作流状态
 ├── .approved                     # 后端设计确认标记
 ├── backend-designs/              # 后端各层设计文档（domain/infr/application/ohs.md）
 ├── frontend-requirement.md       # 前端需求
 ├── frontend-assessment.md        # 前端评估
-├── frontend-workflow-state.json  # 前端工作流状态
+├── frontend-workflow-state.yaml  # 前端工作流状态
 ├── .frontend-approved            # 前端设计确认标记
 └── frontend-designs/             # 前端设计文档（architecture/components/checklist.md）
 ```

@@ -10,10 +10,9 @@ FRONTEND_DESIGNS_DIR="$IDEA_DIR/frontend-designs"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
-STATE_FILE="$IDEA_DIR/frontend-workflow-state.json"
+STATE_FILE="$IDEA_DIR/frontend-workflow-state.yaml"
 
 # source 共享库
-LAYER_PATTERN="frontend-architecture|frontend-components|frontend-checklist"
 CORE_LIB="$SCRIPT_DIR/../../../../core/scripts/workflow-lib.sh"
 source "$CORE_LIB"
 
@@ -124,7 +123,7 @@ elif [ "$overall_done" -gt 0 ] || [ "$overall_in_progress" -gt 0 ]; then state="
 else state="not_started"
 fi
 
-# 构建 workflow_phases JSON（从 frontend-workflow-state.json）
+# 构建 workflow_phases JSON（从 frontend-workflow-state.yaml）
 workflow_phases_json=""
 if [ -f "$STATE_FILE" ]; then
   for layer_id in frontend-architecture frontend-components frontend-checklist; do

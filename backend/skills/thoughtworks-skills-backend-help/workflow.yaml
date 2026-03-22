@@ -105,3 +105,28 @@ layers:
           description: 验证 Request DTO 已创建
         - pattern: "**/ohs/**/*_response.go"
           description: 验证 Response DTO 已创建
+
+state-machine:
+  states: [pending, designing, designed, confirmed, coding, coded, failed]
+  transitions:
+    - from: pending
+      to: designing
+      trigger: thinker-start
+    - from: designing
+      to: designed
+      trigger: subagent-stop
+    - from: designed
+      to: confirmed
+      trigger: user-confirm
+    - from: confirmed
+      to: coding
+      trigger: worker-start
+    - from: coding
+      to: coded
+      trigger: subagent-stop
+    - from: [designing, coding]
+      to: failed
+      trigger: error
+    - from: failed
+      to: pending
+      trigger: retry
