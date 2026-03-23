@@ -41,6 +41,7 @@
 - 常用注解：`@Data`、`@Builder`、`@RequiredArgsConstructor`、`@NoArgsConstructor`、`@AllArgsConstructor`、`@Slf4j`、`@EqualsAndHashCode`、`@Getter`、`@Setter`
 - DTO / PO / Command 等数据类优先使用 `@Data` 或 `@Builder`
 - 领域模型（实体、值对象）使用 `@Getter` + 手写业务方法，禁止 `@Data`（避免暴露 setter 破坏封装性）
+- Spring Boot 3.x 须在 `build.gradle` / `pom.xml` 中显式声明 Lombok annotation processor 路径，否则编译期注解不生效
 
 ### 依赖注入
 

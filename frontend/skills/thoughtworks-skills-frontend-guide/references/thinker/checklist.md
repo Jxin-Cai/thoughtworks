@@ -47,6 +47,11 @@ description: "{一句话描述本文件内容}"
 
 - 设计文档必须包含实现清单表格，列出所有需要创建的文件路径、类型和说明
 
+## 跨 Slice 导入标注
+
+- 实现清单中引用其他 slice 的符号时，必须标注来源 slice：写 `fetchCategories（@entities/category）` 而非只写 `fetchCategories`
+- 禁止将不同 slice 的符号混列在同一行，每个符号单独标注来源
+
 ## 输出要求
 
 - 依赖契约必须从 components 导出契约逐条抄入，不能遗漏

@@ -43,6 +43,7 @@
 - 层级单向依赖：`app → pages → widgets → features → entities → shared`
 - 禁止穿透导入 slice 内部文件
 - Slice 目录使用 kebab-case
+- **跨 Slice 导入**：一条 import 只对应一个 slice，禁止从 A slice 导入属于 B slice 的符号。写 import 前必须 Read 目标 slice 的 `index.ts` 确认符号确实由该 slice 导出
 
 ### 路由
 - 集中定义路由配置在 `src/app/router/`
@@ -93,3 +94,4 @@
 | "类型定义后面再补" | 请求/响应类型必须与 API 函数同步定义 |
 | "直接从 slice 内部文件导入更方便" | 禁止穿透导入，必须通过 index.ts |
 | "Feature 直接导入另一个 Feature 的内部组件" | 同层 slice 之间不能互相导入内部文件 |
+| "这两个函数都是 entity 层的，写一条 import 就行" | 不同 slice 的符号必须分开 import，先 Read 目标 index.ts 确认导出 |
