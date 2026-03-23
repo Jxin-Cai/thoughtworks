@@ -75,6 +75,7 @@ src/features/order-create/
 - 表单验证逻辑集中在提交时或 `onBlur` 时执行
 - 复杂表单推荐使用 `react-hook-form`
 - 验证规则与错误提示就近定义，不分散到多个文件
+- **表单事件与校验策略必须一致**：若使用 UI 框架内置校验回调（如 Ant Design `@finish`、Element Plus `@submit`），则表单项必须完整配置 `model`/`name`/`rules`；若使用手动校验，则使用原生 `@submit.prevent` / `onSubmit`。禁止混用两种模式
 
 ## 其他约束
 

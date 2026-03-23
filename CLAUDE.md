@@ -51,6 +51,7 @@ Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件
 ├── workflow-state.yaml                   # 后端层级工作流状态
 ├── task-workflow-state.yaml              # 后端 Task 级工作流状态
 ├── .approved                             # 后端设计确认标记
+├── .supplementary-reviewed               # 后端需求遗漏审查完成标记
 ├── backend-designs/
 │   └── tasks/                            # 后端各层 task 设计文档
 │       ├── domain-001-{aggregate}.md     # 按聚合拆分的 domain task
@@ -62,6 +63,8 @@ Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件
 ├── frontend-workflow-state.yaml          # 前端层级工作流状态
 ├── frontend-task-workflow-state.yaml     # 前端 Task 级工作流状态
 ├── .frontend-approved                    # 前端设计确认标记
+├── .frontend-supplementary-reviewed      # 前端需求遗漏审查完成标记
+├── supplementary-tasks.md               # 遗漏需求清单（仅在有遗漏时生成）
 └── frontend-designs/
     └── tasks/                            # 前端各层 task 设计文档
         ├── arch-001-{topic}.md           # 架构设计 task

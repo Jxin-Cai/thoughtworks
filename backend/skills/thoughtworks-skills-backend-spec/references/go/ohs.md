@@ -43,6 +43,11 @@ type CreateOrderItemRequest struct {
 
 ### 统一响应结构
 
+- 项目必须有一个公共 `Response` struct，包含 `Code`、`Message`、`Data` 三个字段
+- **复用优先**：先用 Glob 搜索 `**/ohs/**/response.go`；已有则直接复用，没有才新建
+- 面向 HTTP 的接口统一用 Response 包装后再返回给调用方
+- 同一项目可能存在多端（如 user 端、admin 端），按端在 `ohs/http/` 下分子目录（如 `ohs/http/user/`、`ohs/http/admin/`），公共 Response 放在 `ohs/http/` 的公共包中，各端共享
+
 ```go
 type Response struct {
     Code    int         `json:"code"`
@@ -98,6 +103,12 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
     OK(c, nil)
 }
 ```
+
+### 全局错误处理中间件
+
+- 项目必须有一个 Gin 全局错误处理中间件，拦截所有 `c.Error(err)` 传递的错误并统一包装为 Response 返回
+- **复用优先**：先用 Glob 搜索 `**/ohs/**/error_middleware.go` 或 `**/ohs/**/error_handler.go` 或 `**/infrastructure/**/error_middleware.go`；已有则直接复用，没有才新建
+- 内部业务逻辑只需返回 error，Handler 通过 `c.Error(err)` 传递，不写 recover
 
 ## 禁止
 

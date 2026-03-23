@@ -108,24 +108,28 @@ steps:
     postcondition:
       check: approved
 
+  - id: supplementary
+    description: 审查需求遗漏并执行工程支撑任务
+    action:
+      type: self
+      instructions: |
+        1. Read {IDEA_DIR}/requirement.md，逐条审查需求项
+        2. 对比已完成的 DDD 四层代码，识别出不属于四层但在需求中提到的事项
+           （如 Dockerfile、docker-compose、部署配置、启动脚本、CI/CD 配置、环境变量配置等）
+        3. 如果有遗漏：
+           - 生成 {IDEA_DIR}/supplementary-tasks.md，每个遗漏需求一项，checklist 格式
+           - 向用户展示遗漏清单，确认后逐项用 Agent（subagent_type: general-purpose, max_turns: 10）执行
+        4. 如果无遗漏：告知用户所有需求项均已覆盖
+        5. 审查完成（无论是否有遗漏）：touch {IDEA_DIR}/.supplementary-reviewed
+    postcondition:
+      check: supplementary-reviewed
+
   - id: merge
     description: 合并分支
     action:
       type: skill
       name: thoughtworks-skills-merge
       args: "{idea-name}"
-
-  - id: supplementary
-    description: 执行工程支撑任务
-    gate:
-      check: supplementary-tasks-exist
-      on-pass: execute
-      on-fail: skip
-    action:
-      type: self
-      instructions: |
-        对 supplementary-tasks.md 中每项未完成的任务（仅限后端相关），
-        使用 Agent 工具（subagent_type: general-purpose, max_turns: 10）执行。
 
   - id: summary
     description: 完成汇总
@@ -148,5 +152,7 @@ resume-table:
     resume-from: "phase-loop (该层 code)"
   - condition: "某层 status=coding"
     resume-from: "phase-loop (该层 code)"
-  - condition: ".approved 存在"
+  - condition: ".approved 存在, .supplementary-reviewed 不存在"
+    resume-from: supplementary
+  - condition: ".supplementary-reviewed 存在"
     resume-from: merge

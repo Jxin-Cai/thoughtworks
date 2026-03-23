@@ -84,16 +84,20 @@ steps:
       args: "{idea-name}"
 
   - id: supplementary
-    description: 执行工程支撑任务
-    gate:
-      check: supplementary-tasks-exist
-      on-pass: execute
-      on-fail: skip
+    description: 审查需求遗漏并执行工程支撑任务
     action:
       type: self
       instructions: |
-        对 supplementary-tasks.md 中每项未完成的前端相关任务，
-        使用 Agent 工具（subagent_type: general-purpose, max_turns: 10）执行。
+        1. Read {IDEA_DIR}/frontend-requirement.md，逐条审查需求项
+        2. 对比已完成的前端代码，识别出不属于前端三层但在需求中提到的事项
+           （如 Dockerfile、nginx 配置、环境变量配置、构建脚本等）
+        3. 如果有遗漏：
+           - 生成 {IDEA_DIR}/supplementary-tasks.md（如已存在则追加），每个遗漏需求一项，checklist 格式
+           - 向用户展示遗漏清单，确认后逐项用 Agent（subagent_type: general-purpose, max_turns: 10）执行
+        4. 如果无遗漏：告知用户所有需求项均已覆盖
+        5. 审查完成（无论是否有遗漏）：touch {IDEA_DIR}/.frontend-supplementary-reviewed
+    postcondition:
+      check: frontend-supplementary-reviewed
 
   - id: summary
     description: 完成汇总
@@ -121,3 +125,7 @@ resume-table:
     resume-from: confirm-layers
   - condition: ".frontend-approved 存在，编码未完成"
     resume-from: code
+  - condition: "编码完成, .frontend-supplementary-reviewed 不存在"
+    resume-from: supplementary
+  - condition: ".frontend-supplementary-reviewed 存在"
+    resume-from: merge

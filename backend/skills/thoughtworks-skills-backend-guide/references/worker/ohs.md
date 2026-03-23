@@ -46,6 +46,21 @@ OHS 层设计文档只提供：API 端点列表（HTTP 方法、URL、用途、R
 
 **关键：** 扫描上游已实现的 Command 代码获取字段定义，扫描领域模型代码获取返回类型字段。
 
+### OHS 基础设施复用探索
+
+在编写 Controller/Router/Handler 之前，先检查项目中是否已存在以下基础设施，有则复用，没有才新建：
+
+1. **统一 Response 包装类** — 用 Glob 搜索：
+   - Java：`**/ohs/**/*Response.java`（排除业务 DTO，查找含 `code`/`message`/`data` 字段的通用类）
+   - Python：`**/ohs/**/api_response.py` 或 `**/ohs/**/response.py`
+   - Go：`**/ohs/**/response.go`
+2. **全局异常处理器** — 用 Glob 搜索：
+   - Java：`**/ohs/**/*Advice.java` 或 `**/ohs/**/*ExceptionHandler.java`
+   - Python：`**/ohs/**/exception_handler*.py`
+   - Go：`**/ohs/**/error_middleware.go` 或 `**/infrastructure/**/error_middleware.go`
+
+找到后用 Read 确认其用法，在编码时直接引用。
+
 ## 完成标准
 
 - DTO 和 Controller 都已创建，校验注解完整

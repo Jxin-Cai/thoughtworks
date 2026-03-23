@@ -2,7 +2,6 @@
 name: thoughtworks-skills-frontend
 description: Frontend end-to-end orchestrator consuming DDD API contracts for design and implementation
 argument-hint: "<idea-name>"
-disable-model-invocation: true
 ---
 
 # Frontend Spec-Driven Development — Decision-Maker
@@ -76,6 +75,8 @@ LOOP:
        sub_step=design → 调用 /thoughtworks-skills-frontend-thought
        sub_step=confirm → 标记各层 confirmed + touch .frontend-approved
        sub_step=code → 调用 /thoughtworks-skills-frontend-works
+     - 如果 resume_step == "supplementary"：
+       自行执行需求遗漏审查（参照 orchestration.yaml supplementary step 的 instructions）
   4. 步骤完成后，更新 idea-dir（receive-idea 步骤会创建目录）
   5. GOTO LOOP
 ```

@@ -52,6 +52,11 @@ async def get_order(
 
 ## 统一响应包装
 
+- 项目必须有一个公共 `ApiResponse`（或同等语义类），包含 `code`、`message`、`data` 三个字段
+- **复用优先**：先用 Glob 搜索 `**/ohs/**/api_response.py` 或 `**/ohs/**/response.py`；已有则直接复用，没有才新建
+- 面向 HTTP 的接口统一用 ApiResponse 包装后再返回给调用方
+- 同一项目可能存在多端（如 user 端、admin 端），按端在 `ohs/http/` 下分子目录（如 `ohs/http/user/`、`ohs/http/admin/`），公共 ApiResponse 放在 `ohs/http/` 的公共模块中，各端共享
+
 ```python
 from pydantic import BaseModel, Field
 from typing import Generic, TypeVar
@@ -71,6 +76,12 @@ class ApiResponse(BaseModel, Generic[T]):
     def fail(cls, code: int, message: str) -> "ApiResponse[None]":
         return cls(code=code, message=message, data=None)
 ```
+
+## 全局异常处理
+
+- 项目必须有一个全局异常处理器（FastAPI exception_handler），拦截所有异常并统一包装为 ApiResponse 返回
+- **复用优先**：先用 Glob 搜索 `**/ohs/**/exception_handler*.py` 或 `**/ohs/**/error_handler*.py`；已有则直接复用，没有才新建
+- 内部业务逻辑只需 raise 异常，Router 不写 try-except
 
 ## 禁止
 

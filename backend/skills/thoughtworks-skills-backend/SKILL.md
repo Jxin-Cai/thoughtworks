@@ -2,7 +2,6 @@
 name: thoughtworks-skills-backend
 description: Backend DDD end-to-end orchestrator for requirements clarification, design, and implementation
 argument-hint: "<需求描述或文件路径>"
-disable-model-invocation: true
 ---
 
 # DDD Spec-Driven Development — Decision-Maker
@@ -76,6 +75,8 @@ LOOP:
        sub_step=design → 调用 /thoughtworks-skills-backend-thought
        sub_step=confirm → 运行 backend-workflow-status.sh --set {layer} confirmed
        sub_step=code → 调用 /thoughtworks-skills-backend-works
+     - 如果 resume_step == "supplementary"：
+       自行执行需求遗漏审查（参照 orchestration.yaml supplementary step 的 instructions）
   4. 步骤完成后，更新 idea-dir（receive-requirement 步骤会创建目录）
   5. GOTO LOOP
 ```

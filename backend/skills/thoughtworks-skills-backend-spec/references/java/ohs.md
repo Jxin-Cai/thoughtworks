@@ -21,6 +21,19 @@
 - 分页查询返回：`{ code, message, data: { list, total, pageNum, pageSize } }`
 - Controller 层不写 try-catch，交由 @RestControllerAdvice 全局处理器兜底
 
+## 统一响应包装
+
+- 项目必须有一个公共 `Response`（或同等语义类），包含 `code`、`message`、`data` 三个字段
+- **复用优先**：先用 Glob 搜索 `**/ohs/**/Response.java` 或 `**/ohs/**/ApiResponse.java`；已有则直接复用，没有才新建
+- 面向 HTTP 的接口统一用 Response 包装后再返回给调用方
+- 同一项目可能存在多端（如 user 端、admin 端），按端在 `ohs/http/` 下分子目录（如 `ohs/http/user/`、`ohs/http/admin/`），公共 Response 类放在 `ohs/http/` 的公共包中，各端共享
+
+## 全局异常处理
+
+- 项目必须有一个 `@RestControllerAdvice` 全局异常处理器，拦截所有异常并统一包装为 Response 返回
+- **复用优先**：先用 Glob 搜索 `**/ohs/**/*Advice.java` 或 `**/ohs/**/*ExceptionHandler.java`；已有则直接复用，没有才新建
+- 内部业务逻辑只需抛出异常，Controller 不写 try-catch
+
 ## 禁止
 
 - 包含任何业务逻辑或业务规则判断

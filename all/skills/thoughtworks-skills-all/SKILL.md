@@ -2,7 +2,6 @@
 name: thoughtworks-skills-all
 description: Fullstack DDD orchestrator for backend and frontend in sequence
 argument-hint: "<需求描述或文件路径>"
-disable-model-invocation: true
 ---
 
 # Fullstack Spec-Driven Development — 全栈编排器
@@ -95,12 +94,16 @@ LOOP:
      | frontend-confirm-layers | 标记各层 confirmed + touch .frontend-approved |
      | frontend-code           | /thoughtworks-skills-frontend-works {idea-name} |
      | frontend-mark-approved  | touch {IDEA_DIR}/.frontend-approved |
+     | supplementary           | 自行执行需求遗漏审查（参照 backend/frontend orchestration.yaml supplementary step） |
      | merge                   | /thoughtworks-skills-merge {idea-name} |
 
      - backend-phase-loop 的 phase_detail：
        sub_step=design → /thoughtworks-skills-backend-thought
        sub_step=confirm → bash backend-workflow-status.sh --set {layer} confirmed
        sub_step=code → /thoughtworks-skills-backend-works
+     - supplementary 的执行逻辑：
+       1. Read requirement.md，识别后端遗漏 → 有则生成 supplementary-tasks.md 并执行 → touch .supplementary-reviewed
+       2. Read frontend-requirement.md，识别前端遗漏 → 有则追加 supplementary-tasks.md 并执行 → touch .frontend-supplementary-reviewed
   4. 步骤完成后，更新 idea-dir（receive-requirement 步骤会创建目录）
   5. GOTO LOOP
 ```
@@ -136,9 +139,9 @@ Step 3:   全栈线性编排
   3.7  标记前端设计完成
   3.8  前端编码编排
   3.9  展示完成状态
-  3.10 合并分支
-Step 4:   执行工程支撑任务
-Step 5:   全栈完成汇总
+  3.10 需求遗漏审查与工程支撑任务执行
+  3.11 合并分支
+Step 4:   全栈完成汇总
 ```
 
 **关键：** 后端和前端各自的编排步骤细节参照对应的 `orchestration.yaml`。全栈编排器的职责是按正确顺序串联两个编排定义中的步骤。

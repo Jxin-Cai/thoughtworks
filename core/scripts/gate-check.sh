@@ -178,6 +178,24 @@ case "$GATE_ID" in
     fi
     ;;
 
+  # 后端需求遗漏审查完成
+  supplementary-reviewed)
+    if [ -f "$IDEA_DIR/.supplementary-reviewed" ]; then
+      gate_pass
+    else
+      gate_fail ".supplementary-reviewed 标记不存在"
+    fi
+    ;;
+
+  # 前端需求遗漏审查完成
+  frontend-supplementary-reviewed)
+    if [ -f "$IDEA_DIR/.frontend-supplementary-reviewed" ]; then
+      gate_pass
+    else
+      gate_fail ".frontend-supplementary-reviewed 标记不存在"
+    fi
+    ;;
+
   # 清理残留的 .current-task 文件（超过 30 分钟的视为残留）
   stale-tasks)
     cleaned=0

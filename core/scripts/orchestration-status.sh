@@ -222,7 +222,14 @@ check_backend() {
   fi
   add_completed "mark-approved"
 
-  # Step 8: merge
+  # Step 8: supplementary（需求遗漏审查）
+  if ! check_gate "supplementary-reviewed"; then
+    emit_result "supplementary" "requirement review not done yet"
+    return
+  fi
+  add_completed "supplementary"
+
+  # Step 9: merge
   emit_result "merge" "backend approved, ready to merge"
 }
 
@@ -337,7 +344,14 @@ check_frontend() {
   fi
   add_completed "frontend-approved"
 
-  # Step 8: merge
+  # Step 8: supplementary（前端需求遗漏审查）
+  if ! check_gate "frontend-supplementary-reviewed"; then
+    emit_result "supplementary" "frontend requirement review not done yet"
+    return
+  fi
+  add_completed "supplementary"
+
+  # Step 9: merge
   emit_result "merge" "frontend approved, ready to merge"
 }
 
@@ -530,7 +544,19 @@ check_all() {
   fi
   add_completed "frontend-mark-approved"
 
-  # Step 3.10: merge
+  # Step: supplementary（全栈需求遗漏审查）
+  local be_reviewed fe_reviewed
+  be_reviewed=true
+  fe_reviewed=true
+  check_gate "supplementary-reviewed" || be_reviewed=false
+  check_gate "frontend-supplementary-reviewed" || fe_reviewed=false
+  if [ "$be_reviewed" = "false" ] || [ "$fe_reviewed" = "false" ]; then
+    emit_result "supplementary" "requirement review not done for all stacks"
+    return
+  fi
+  add_completed "supplementary"
+
+  # merge
   emit_result "merge" "all stacks approved, ready to merge"
 }
 
