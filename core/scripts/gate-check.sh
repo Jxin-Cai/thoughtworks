@@ -116,18 +116,22 @@ case "$GATE_ID" in
     fi
     ;;
 
-  # 后端设计文件存在
+  # 后端设计文件存在（支持 tasks/ 目录和旧版 *.md 目录）
   designs-exist)
-    if [ -d "$IDEA_DIR/backend-designs" ] && ls "$IDEA_DIR/backend-designs/"*.md >/dev/null 2>&1; then
+    if [ -d "$IDEA_DIR/backend-designs/tasks" ] && ls "$IDEA_DIR/backend-designs/tasks/"*.md >/dev/null 2>&1; then
+      gate_pass
+    elif [ -d "$IDEA_DIR/backend-designs" ] && ls "$IDEA_DIR/backend-designs/"*.md >/dev/null 2>&1; then
       gate_pass
     else
       gate_fail "backend-designs/ 目录不存在或无设计文件"
     fi
     ;;
 
-  # 前端设计文件存在
+  # 前端设计文件存在（支持 tasks/ 目录和旧版 *.md 目录）
   frontend-designs-exist)
-    if [ -d "$IDEA_DIR/frontend-designs" ] && ls "$IDEA_DIR/frontend-designs/"*.md >/dev/null 2>&1; then
+    if [ -d "$IDEA_DIR/frontend-designs/tasks" ] && ls "$IDEA_DIR/frontend-designs/tasks/"*.md >/dev/null 2>&1; then
+      gate_pass
+    elif [ -d "$IDEA_DIR/frontend-designs" ] && ls "$IDEA_DIR/frontend-designs/"*.md >/dev/null 2>&1; then
       gate_pass
     else
       gate_fail "frontend-designs/ 目录不存在或无设计文件"

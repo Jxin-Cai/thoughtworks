@@ -39,21 +39,27 @@
 | 事件发布接口 | `{聚合根名}EventPublisher` | `OrderEventPublisher` |
 | 防腐层接口 | `{外部领域名}AclService` | `InventoryAclService` |
 
+## Task 拆分规则
+
+- 按聚合拆 task：每个聚合独立一个 task 文件
+- 命名：`domain-{nnn}-{aggregate-slug}.md`（如 `domain-001-order-aggregate.md`）
+- 小聚合可合并（如共享值对象较多的 2 个聚合），但单个 task ≤800 行
+- domain task 通常无依赖（`depends_on: []`）
+
 ## Frontmatter 格式
 
 ```yaml
 ---
-spec_id: Spec_Domain
+task_id: domain-{nnn}
 layer: domain
-order: 1
+order: {N}
 status: pending
 depends_on: []
-description: "{一句话描述本文件内容}"
+description: "{一句话描述本 task 内容}"
 ---
 ```
 
-- 实现清单 output_id 格式为 `Output_Domain_{IdeaName}_{两位序号}`（IdeaName 取 idea-name 的 PascalCase），序号从 01 开始
-- **domain 层始终单文件** `domain.md`，内部按聚合分章节（`## 聚合: {Name}`），不拆分为多个文件
+- 实现清单 output_id 格式为 `Output_Domain_{IdeaName}_{nnn}_{两位序号}`（IdeaName 取 idea-name 的 PascalCase），序号从 01 开始
 
 ## 层级特有输出要求
 

@@ -46,17 +46,30 @@ Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件
 
 ```
 .thoughtworks/<idea-name>/
-├── requirement.md                # 需求存档（含聚合分析章节）
-├── assessment.md                 # 后端层级评估结果
-├── workflow-state.yaml           # 后端工作流状态
-├── .approved                     # 后端设计确认标记
-├── backend-designs/              # 后端各层设计文档（domain/infr/application/ohs.md）
-├── frontend-requirement.md       # 前端需求
-├── frontend-assessment.md        # 前端评估
-├── frontend-workflow-state.yaml  # 前端工作流状态
-├── .frontend-approved            # 前端设计确认标记
-└── frontend-designs/             # 前端设计文档（architecture/components/checklist.md）
+├── requirement.md                        # 需求存档（含聚合分析章节）
+├── assessment.md                         # 后端层级评估结果
+├── workflow-state.yaml                   # 后端层级工作流状态
+├── task-workflow-state.yaml              # 后端 Task 级工作流状态
+├── .approved                             # 后端设计确认标记
+├── backend-designs/
+│   └── tasks/                            # 后端各层 task 设计文档
+│       ├── domain-001-{aggregate}.md     # 按聚合拆分的 domain task
+│       ├── infr-001-{aggregate}.md       # 按聚合拆分的 infr task
+│       ├── application-001-{usecase}.md  # 按用例组拆分的 application task
+│       └── ohs-001-{resource}.md         # 按资源拆分的 ohs task
+├── frontend-requirement.md               # 前端需求
+├── frontend-assessment.md                # 前端评估
+├── frontend-workflow-state.yaml          # 前端层级工作流状态
+├── frontend-task-workflow-state.yaml     # 前端 Task 级工作流状态
+├── .frontend-approved                    # 前端设计确认标记
+└── frontend-designs/
+    └── tasks/                            # 前端各层 task 设计文档
+        ├── arch-001-{topic}.md           # 架构设计 task
+        ├── comp-001-{topic}.md           # 组件设计 task
+        └── impl-001-{topic}.md           # 实现清单 task
 ```
+
+每个 task 文件 ≤800 行，frontmatter 含 `task_id` 字段。层级状态从 task 状态聚合推导。
 
 ## 约束
 项目的 README.md 同步由 pre-commit hook 检查保证，不需要手动维护。

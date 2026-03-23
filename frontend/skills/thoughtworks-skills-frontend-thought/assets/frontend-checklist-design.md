@@ -5,6 +5,14 @@
 ---
 
 ```markdown
+---
+task_id: impl-{nnn}
+layer: frontend-checklist
+order: {N}
+status: pending
+depends_on: [{上游 task_id 列表}]
+description: "{一句话描述}"
+---
 # 前端实现清单
 
 <!-- REQUIRED -->

@@ -4,6 +4,11 @@
 # 编排器在启动 subagent 前写入 .thoughtworks/<idea>/.current-task-<layer>-<timestamp>.json：
 #   { "role": "thinker|worker", "layer": "<layer>", "idea_dir": "<path>", "stack": "backend|frontend" }
 #
+# Task 级模式（新增 task_id 字段）：
+#   { "role": "thinker|worker", "task_id": "<task_id>", "layer": "<layer>", "idea_dir": "<path>", "stack": "backend|frontend" }
+#   有 task_id 时：先更新 task 级状态（--set-task），再同步层级状态（--sync-layer-status）
+#   无 task_id 时：走旧逻辑，直接更新层级状态（--set）
+#
 # 文件名中的 timestamp 用于避免并发 session 的文件冲突。
 #
 # 本脚本在 subagent 结束后读取所有匹配的任务文件，逐个标记状态：
@@ -69,6 +74,7 @@ while IFS= read -r TASK_FILE; do
   LAYER=$(sed -n 's/.*"layer"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$TASK_FILE" | head -1)
   IDEA_DIR=$(sed -n 's/.*"idea_dir"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$TASK_FILE" | head -1)
   STACK=$(sed -n 's/.*"stack"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$TASK_FILE" | head -1)
+  TASK_ID=$(sed -n 's/.*"task_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$TASK_FILE" | head -1)
 
   # 验证必要字段
   if [ -z "$ROLE" ] || [ -z "$LAYER" ] || [ -z "$IDEA_DIR" ]; then
@@ -97,9 +103,19 @@ while IFS= read -r TASK_FILE; do
 
   # 只在状态为预期值时才标记完成（避免重复标记或覆盖 failed）
   if [ -f "$STATUS_SCRIPT" ] && [ -d "$IDEA_DIR" ]; then
-    CURRENT_STATUS=$(bash "$STATUS_SCRIPT" "$IDEA_DIR" --get-status "$LAYER" 2>/dev/null || echo "")
-    if [ "$CURRENT_STATUS" = "$EXPECTED_CURRENT" ]; then
-      bash "$STATUS_SCRIPT" "$IDEA_DIR" --set "$LAYER" "$TARGET_STATUS" 2>/dev/null || true
+    if [ -n "$TASK_ID" ]; then
+      # ── Task 级模式：先更新 task 状态，再同步层级状态 ──
+      CURRENT_TASK_STATUS=$(bash "$STATUS_SCRIPT" "$IDEA_DIR" --get-task-status "$TASK_ID" 2>/dev/null || echo "")
+      if [ "$CURRENT_TASK_STATUS" = "$EXPECTED_CURRENT" ]; then
+        bash "$STATUS_SCRIPT" "$IDEA_DIR" --set-task "$TASK_ID" "$TARGET_STATUS" 2>/dev/null || true
+        bash "$STATUS_SCRIPT" "$IDEA_DIR" --sync-layer-status 2>/dev/null || true
+      fi
+    else
+      # ── 层级模式（旧逻辑）：直接更新层级状态 ──
+      CURRENT_STATUS=$(bash "$STATUS_SCRIPT" "$IDEA_DIR" --get-status "$LAYER" 2>/dev/null || echo "")
+      if [ "$CURRENT_STATUS" = "$EXPECTED_CURRENT" ]; then
+        bash "$STATUS_SCRIPT" "$IDEA_DIR" --set "$LAYER" "$TARGET_STATUS" 2>/dev/null || true
+      fi
     fi
   fi
 

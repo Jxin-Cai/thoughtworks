@@ -36,7 +36,10 @@ skills:
 ## 输出要求
 
 - 严格按照 prompt 中提供的**设计文档模板**结构输出
+- 每个 task 文件对应一个聚合（domain/infr）或一组用例（application）或一组资源（ohs），每个文件 ≤800 行
 - 设计文档必须分段写入：先用 Write 写入 frontmatter + 前半部分，再用 Edit 追加。每段不超过 300 行
+- 所有 task 文件输出到 `backend-designs/tasks/` 目录
+- frontmatter 必须包含 `task_id` 字段（格式：`{layer}-{nnn}`）
 - 设计文档末尾必须包含「实现清单」表格
-- 导出契约区必须完整填写
+- 导出契约区必须完整填写（domain 和 application 层）
 - 每个方法签名必须具体到参数类型和返回类型

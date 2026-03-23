@@ -6,6 +6,11 @@
 #   frontend-workflow-status.sh <idea-dir> --set <layer> <status>   — 设置某层状态
 #   frontend-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成
 #   frontend-workflow-status.sh <idea-dir> --get-status <layer>     — 获取指定层的纯文本状态值
+#   frontend-workflow-status.sh <idea-dir> --init-tasks <idea-name> <task_spec>... — 初始化 task 级状态文件
+#   frontend-workflow-status.sh <idea-dir> --set-task <task_id> <status>  — 设置 task 状态
+#   frontend-workflow-status.sh <idea-dir> --get-task-status <task_id>    — 获取 task 的纯文本状态值
+#   frontend-workflow-status.sh <idea-dir> --sync-layer-status            — 从 task 状态同步层级状态
+#   frontend-workflow-status.sh <idea-dir> --next-tasks <design|code>     — 获取下一批可执行 task
 #
 # 状态文件: <idea-dir>/frontend-workflow-state.yaml
 # 状态机: pending → designing → designed → confirmed → coding → coded / failed
@@ -16,6 +21,7 @@ IDEA_DIR="${1:?用法: frontend-workflow-status.sh <idea-dir> [--init|--set|--ch
 MODE="${2:-status}"
 
 STATE_FILE="$IDEA_DIR/frontend-workflow-state.yaml"
+TASK_STATE_FILE="$IDEA_DIR/frontend-task-workflow-state.yaml"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VALIDATE_SCRIPT="$SCRIPT_DIR/frontend-output-validate.sh"
@@ -206,9 +212,115 @@ case "$MODE" in
     get_tracked_status "$LAYER"
     ;;
 
+  # ════════════════════════════════════════════════════
+  # ── Task 级命令 ──
+  # ════════════════════════════════════════════════════
+
+  # ── --init-tasks 模式：初始化 task 级状态文件 ──
+  --init-tasks)
+    IDEA_NAME="${3:?--init-tasks 需要指定 idea-name}"
+    shift 3
+    TASK_SPECS="$*"
+
+    if [ -z "$TASK_SPECS" ]; then
+      echo '{"error": "--init-tasks 需要至少一个 task 规格 (task_id:layer:depends:description:file)"}' >&2
+      exit 1
+    fi
+
+    init_task_state "$IDEA_NAME" $TASK_SPECS
+    echo "{\"initialized\": true, \"idea\": \"$IDEA_NAME\", \"task_count\": $(echo "$TASK_SPECS" | wc -w | tr -d ' ')}"
+    ;;
+
+  # ── --set-task 模式：设置 task 状态 ──
+  --set-task)
+    TASK_ID="${3:?--set-task 需要指定 task_id}"
+    TASK_STATUS="${4:?--set-task 需要指定状态}"
+
+    case "$TASK_STATUS" in
+      pending|designing|designed|confirmed|coding|coded|failed) ;;
+      *) echo "{\"error\": \"无效状态: ${TASK_STATUS}\"}" >&2; exit 1 ;;
+    esac
+
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      echo '{"error": "frontend-task-workflow-state.yaml 不存在，请先执行 --init-tasks"}' >&2
+      exit 1
+    fi
+
+    update_task_status "$TASK_ID" "$TASK_STATUS"
+    echo "{\"updated\": true, \"task_id\": \"$TASK_ID\", \"status\": \"$TASK_STATUS\"}"
+    ;;
+
+  # ── --get-task-status 模式：获取 task 的纯文本状态值 ──
+  --get-task-status)
+    TASK_ID="${3:?--get-task-status 需要指定 task_id}"
+
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      exit 1
+    fi
+
+    get_task_status "$TASK_ID"
+    ;;
+
+  # ── --sync-layer-status 模式：从 task 状态同步层级状态到 frontend-workflow-state.yaml ──
+  --sync-layer-status)
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      echo '{"error": "frontend-task-workflow-state.yaml 不存在"}' >&2
+      exit 1
+    fi
+    if [ ! -f "$STATE_FILE" ]; then
+      echo '{"error": "frontend-workflow-state.yaml 不存在"}' >&2
+      exit 1
+    fi
+
+    sync_layer_status_from_tasks
+    # 构建 layers snapshot
+    tracked=$(get_tracked_layers)
+    snap=""
+    for layer in $tracked; do
+      st=$(get_tracked_status "$layer")
+      if [ -z "$snap" ]; then
+        snap="\"$layer\": \"$st\""
+      else
+        snap="$snap, \"$layer\": \"$st\""
+      fi
+    done
+    echo "{\"synced\": true, \"layers\": { $snap }}"
+    ;;
+
+  # ── --next-tasks 模式：获取下一批可执行的 task ──
+  --next-tasks)
+    PHASE="${3:-design}"
+
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      echo '{"error": "frontend-task-workflow-state.yaml 不存在"}' >&2
+      exit 1
+    fi
+
+    next_tasks=$(get_next_executable_tasks "$PHASE")
+    if [ -z "$next_tasks" ]; then
+      echo '{"next_tasks": [], "count": 0}'
+    else
+      task_json=""
+      count=0
+      for tid in $next_tasks; do
+        tl=$(get_task_layer "$tid")
+        tf=$(get_task_file "$tid")
+        td=$(get_task_description "$tid")
+        entry="{\"task_id\": \"$tid\", \"layer\": \"$tl\", \"file\": \"$tf\", \"description\": \"$td\"}"
+        if [ -z "$task_json" ]; then
+          task_json="$entry"
+        else
+          task_json="$task_json, $entry"
+        fi
+        count=$((count + 1))
+      done
+      echo "{\"next_tasks\": [$task_json], \"count\": $count}"
+    fi
+    ;;
+
   *)
     echo "未知模式: $MODE" >&2
-    echo "用法: frontend-workflow-status.sh <idea-dir> [--init|--set|--check-all|--get-status]" >&2
+    echo "用法: frontend-workflow-status.sh <idea-dir> [--init|--set|--check-all|--get-status|--init-tasks|--set-task|--get-task-status|--sync-layer-status|--next-tasks]" >&2
     exit 1
     ;;
 esac

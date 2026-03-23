@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 后端设计文档校验脚本
+# 后端设计文档校验脚本（支持 tasks/ 目录和旧版 *.md 目录）
 # 用法: backend-output-validate.sh <idea-dir> [--layer <layer>]
 # 输出: JSON 格式校验结果
 
@@ -16,6 +16,7 @@ while [ $# -gt 0 ]; do
 done
 
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
+TASKS_DIR="$BACKEND_DESIGNS_DIR/tasks"
 STATE_FILE="$IDEA_DIR/workflow-state.yaml"
 
 if [ ! -d "$BACKEND_DESIGNS_DIR" ]; then
@@ -230,12 +231,32 @@ extract_aggregate_body_before_export() {
   ' "$file"
 }
 
-# ── 收集各层文件（从 backend-designs/ 目录扫描，按文件名前缀匹配层）──
+# ── 收集各层文件（优先扫描 tasks/ 目录，回退到旧版 *.md）──
+
+# 判断是否使用 tasks/ 目录
+USE_TASKS_DIR=""
+if [ -d "$TASKS_DIR" ]; then
+  task_file_count=$(find "$TASKS_DIR" -maxdepth 1 -name '*.md' 2>/dev/null | head -1)
+  if [ -n "$task_file_count" ]; then
+    USE_TASKS_DIR="1"
+  fi
+fi
+
+# 获取设计文件所在的基础目录
+get_designs_base_dir() {
+  if [ -n "$USE_TASKS_DIR" ]; then
+    echo "$TASKS_DIR"
+  else
+    echo "$BACKEND_DESIGNS_DIR"
+  fi
+}
 
 # 获取某层的文件列表（从文件系统扫描）
 get_layer_files_cached() {
   local l="$1"
-  for f in "$BACKEND_DESIGNS_DIR"/*.md; do
+  local scan_dir
+  scan_dir=$(get_designs_base_dir)
+  for f in "$scan_dir"/*.md; do
     [ -f "$f" ] || continue
     local base
     base=$(basename "$f")
@@ -255,18 +276,24 @@ is_tracked() {
 
 # ── 开始校验 ──
 
+SCAN_DIR=$(get_designs_base_dir)
+
 for layer in $TRACKED_LAYERS; do
   files=$(get_layer_files_cached "$layer")
   [ -z "$files" ] && continue
 
   for fname in $files; do
-    filepath="$BACKEND_DESIGNS_DIR/$fname"
+    filepath="$SCAN_DIR/$fname"
     [ -f "$filepath" ] || continue
 
     # ====== S1: frontmatter 必填字段 ======
     s1_pass=true
     s1_detail=""
-    for field in layer order status depends_on description; do
+    required_fields="layer order status depends_on description"
+    if [ -n "$USE_TASKS_DIR" ]; then
+      required_fields="task_id layer order status depends_on description"
+    fi
+    for field in $required_fields; do
       if ! has_frontmatter_field "$filepath" "$field"; then
         s1_pass=false
         s1_detail="frontmatter 缺少 ${field} 字段"
@@ -317,11 +344,11 @@ for layer in $TRACKED_LAYERS; do
     # ====== S5: 导出契约存在（仅 domain 和 application） ======
     case "$layer" in
       domain)
-        # domain 层：导出契约在 ## 聚合: xxx 下的 ### 导出契约
-        if has_aggregate_export_contracts "$filepath"; then
+        # 新模板：## 导出契约（二级章节）；旧模板：### 导出契约（在 ## 聚合: xxx 下）
+        if has_section "$filepath" "导出契约" || has_aggregate_export_contracts "$filepath"; then
           add_check "$layer" "$fname" "S5" "true"
         else
-          add_check "$layer" "$fname" "S5" "false" "缺少 ### 导出契约 章节（应在 ## 聚合: xxx 下）"
+          add_check "$layer" "$fname" "S5" "false" "缺少导出契约章节（## 导出契约 或 ### 导出契约）"
         fi
         ;;
       application)
@@ -347,8 +374,35 @@ for layer in $TRACKED_LAYERS; do
     # ====== S7: 导出契约中每张子表至少有一行数据（仅 domain 和 application） ======
     case "$layer" in
       domain)
-        # domain 层：检查每个聚合的 ### 导出契约下的 #### 子表
-        if has_aggregate_export_contracts "$filepath"; then
+        if has_section "$filepath" "导出契约"; then
+          # 新模板：## 导出契约 下的 ### 子表
+          export_content=$(extract_section_content "$filepath" "导出契约")
+          sub_sections=$(echo "$export_content" | grep '^### ' | sed 's/^### //')
+          s7_pass=true
+          s7_detail=""
+          if [ -n "$sub_sections" ]; then
+            while IFS= read -r sub; do
+              [ -z "$sub" ] && continue
+              sub_content=$(echo "$export_content" | awk -v sec="### ${sub}" '
+                $0 == sec { found=1; next }
+                found && /^### / { exit }
+                found { print }
+              ')
+              sub_data_rows=$(echo "$sub_content" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
+              if [ "$sub_data_rows" -eq 0 ]; then
+                s7_pass=false
+                s7_detail="导出契约子表 '${sub}' 没有数据行"
+                break
+              fi
+            done <<< "$sub_sections"
+          fi
+          if [ "$s7_pass" = "true" ]; then
+            add_check "$layer" "$fname" "S7" "true"
+          else
+            add_check "$layer" "$fname" "S7" "false" "$s7_detail"
+          fi
+        elif has_aggregate_export_contracts "$filepath"; then
+          # 旧模板：## 聚合: xxx 下的 ### 导出契约 > #### 子表
           all_export_content=$(extract_all_aggregate_export_content "$filepath")
           sub_sections=$(echo "$all_export_content" | grep '^#### ' | sed 's/^#### //')
           s7_pass=true
@@ -407,8 +461,30 @@ for layer in $TRACKED_LAYERS; do
     # ====== I1: 导出契约中的方法签名能在正文中找到 ======
     case "$layer" in
       domain)
-        # domain 层：从所有聚合的导出契约中提取签名，在聚合正文中查找
-        if has_aggregate_export_contracts "$filepath"; then
+        if has_section "$filepath" "导出契约"; then
+          # 新模板：## 导出契约 下的 ### 子表
+          export_content=$(extract_section_content "$filepath" "导出契约")
+          body_content=$(extract_body_before_export "$filepath")
+          export_sigs=$(echo "$export_content" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+          i1_pass=true
+          i1_detail=""
+          if [ -n "$export_sigs" ]; then
+            while IFS= read -r sig; do
+              [ -z "$sig" ] && continue
+              if ! echo "$body_content" | grep -qF "$sig"; then
+                i1_pass=false
+                i1_detail="导出契约中 \`${sig}\` 在正文中未找到对应"
+                break
+              fi
+            done <<< "$export_sigs"
+          fi
+          if [ "$i1_pass" = "true" ]; then
+            add_check "$layer" "$fname" "I1" "true"
+          else
+            add_check "$layer" "$fname" "I1" "false" "$i1_detail"
+          fi
+        elif has_aggregate_export_contracts "$filepath"; then
+          # 旧模板：## 聚合: xxx 下的 ### 导出契约
           all_export_content=$(extract_all_aggregate_export_content "$filepath")
           body_content=$(extract_aggregate_body_before_export "$filepath")
           export_sigs=$(echo "$all_export_content" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
@@ -462,7 +538,9 @@ for layer in $TRACKED_LAYERS; do
       impl_data_count=$(extract_section_content "$filepath" "实现清单" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
 
       export_data_count=0
-      if [ "$layer" = "domain" ] && has_aggregate_export_contracts "$filepath"; then
+      if [ "$layer" = "domain" ] && has_section "$filepath" "导出契约"; then
+        export_data_count=$(extract_section_content "$filepath" "导出契约" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
+      elif [ "$layer" = "domain" ] && has_aggregate_export_contracts "$filepath"; then
         export_data_count=$(extract_all_aggregate_export_content "$filepath" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
       elif has_section "$filepath" "导出契约"; then
         export_data_count=$(extract_section_content "$filepath" "导出契约" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
@@ -486,7 +564,7 @@ done
 
 # ── C: 跨文件契约匹配 ──
 
-# 辅助：获取某层第一个文件路径
+# 辅助：获取某层第一个文件路径（兼容旧版单文件场景）
 get_layer_file() {
   local l="$1"
   local files
@@ -494,45 +572,115 @@ get_layer_file() {
   local first
   first=$(echo "$files" | head -1)
   if [ -n "$first" ]; then
-    echo "$BACKEND_DESIGNS_DIR/$first"
+    echo "$(get_designs_base_dir)/$first"
   else
     echo ""
   fi
 }
 
-# C1: Infr 依赖契约 > Repository 实现 的方法签名 ⊆ Domain 导出契约 > 接口签名
+# 辅助：合并某层所有 task 文件的指定 ## 章节内容
+# 用于从多个 task 文件中合并导出契约或依赖契约
+merge_layer_section() {
+  local l="$1" section="$2"
+  local files scan_dir
+  files=$(get_layer_files_cached "$l")
+  scan_dir=$(get_designs_base_dir)
+  for fname in $files; do
+    local fpath="$scan_dir/$fname"
+    [ -f "$fpath" ] || continue
+    if has_section "$fpath" "$section"; then
+      extract_section_content "$fpath" "$section"
+    fi
+  done
+}
+
+# 辅助：合并某层所有 task 文件的指定 ### 子章节内容
+merge_layer_subsection() {
+  local l="$1" subsection="$2"
+  local files scan_dir
+  files=$(get_layer_files_cached "$l")
+  scan_dir=$(get_designs_base_dir)
+  for fname in $files; do
+    local fpath="$scan_dir/$fname"
+    [ -f "$fpath" ] || continue
+    extract_subsection_content "$fpath" "$subsection"
+  done
+}
+
+# 辅助：合并某层所有 task 文件的指定 #### 子章节内容
+merge_layer_h4_section() {
+  local l="$1" h4_title="$2"
+  local files scan_dir
+  files=$(get_layer_files_cached "$l")
+  scan_dir=$(get_designs_base_dir)
+  for fname in $files; do
+    local fpath="$scan_dir/$fname"
+    [ -f "$fpath" ] || continue
+    extract_h4_section_content "$fpath" "$h4_title"
+  done
+}
+
+# 辅助：获取 domain 层所有文件合并后的导出契约中指定子表签名
+# 新模板：## 导出契约 > ### 子表；旧模板：## 聚合: xxx > ### 导出契约 > #### 子表
+get_domain_export_sigs() {
+  local sub_title="$1"
+  local files scan_dir
+  files=$(get_layer_files_cached "domain")
+  scan_dir=$(get_designs_base_dir)
+  for fname in $files; do
+    local fpath="$scan_dir/$fname"
+    [ -f "$fpath" ] || continue
+    if has_section "$fpath" "导出契约"; then
+      # 新模板：从 ## 导出契约 > ### 子表 中提取
+      extract_section_content "$fpath" "导出契约" | awk -v sec="### ${sub_title}" '
+        $0 == sec { found=1; next }
+        found && /^### / { exit }
+        found { print }
+      '
+    elif has_aggregate_export_contracts "$fpath"; then
+      # 旧模板：从所有聚合的 ### 导出契约 > #### 子表 中提取
+      extract_all_aggregate_h4_content "$fpath" "$sub_title"
+    fi
+  done
+}
+
+# C1: Infr 依赖契约 > 仓储实现契约/Repository 实现 的方法签名 ⊆ Domain 导出契约 > 接口签名
 if is_tracked "infr" && is_tracked "domain"; then
   if [ -n "$FILTER_LAYER" ] && [ "$FILTER_LAYER" != "infr" ]; then
     : # 跳过
   else
-    domain_file=$(get_layer_file "domain")
     infr_files_list=$(get_layer_files_cached "infr")
-    if [ -n "$domain_file" ] && [ -f "$domain_file" ]; then
-      # domain 多聚合结构：从所有聚合的 ### 导出契约 > #### 接口签名 中合并提取
-      domain_iface_sigs=$(extract_all_aggregate_h4_content "$domain_file" "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-      for fname in $infr_files_list; do
-        filepath="$BACKEND_DESIGNS_DIR/$fname"
-        [ -f "$filepath" ] || continue
+    # 合并所有 domain task 的接口签名（新旧模板兼容）
+    domain_iface_sigs=$(get_domain_export_sigs "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+    scan_dir=$(get_designs_base_dir)
+    for fname in $infr_files_list; do
+      filepath="$scan_dir/$fname"
+      [ -f "$filepath" ] || continue
+      # 新模板: #### 仓储实现契约；旧模板: ### Repository 实现
+      infr_repo_sigs=""
+      if grep -q '^#### 仓储实现契约' "$filepath" 2>/dev/null; then
+        infr_repo_sigs=$(extract_h4_section_content "$filepath" "仓储实现契约" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+      else
         infr_repo_sigs=$(extract_subsection_content "$filepath" "Repository 实现" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-        c1_pass=true
-        c1_detail=""
-        if [ -n "$infr_repo_sigs" ]; then
-          while IFS= read -r sig; do
-            [ -z "$sig" ] && continue
-            if [ -z "$domain_iface_sigs" ] || ! echo "$domain_iface_sigs" | grep -qxF "$sig"; then
-              c1_pass=false
-              c1_detail="依赖契约中 \`${sig}\` 在 Domain 导出契约中未找到匹配"
-              break
-            fi
-          done <<< "$infr_repo_sigs"
-        fi
-        if [ "$c1_pass" = "true" ]; then
-          add_check "infr" "$fname" "C1" "true"
-        else
-          add_check "infr" "$fname" "C1" "false" "$c1_detail"
-        fi
-      done
-    fi
+      fi
+      c1_pass=true
+      c1_detail=""
+      if [ -n "$infr_repo_sigs" ]; then
+        while IFS= read -r sig; do
+          [ -z "$sig" ] && continue
+          if [ -z "$domain_iface_sigs" ] || ! echo "$domain_iface_sigs" | grep -qxF "$sig"; then
+            c1_pass=false
+            c1_detail="依赖契约中 \`${sig}\` 在 Domain 导出契约中未找到匹配"
+            break
+          fi
+        done <<< "$infr_repo_sigs"
+      fi
+      if [ "$c1_pass" = "true" ]; then
+        add_check "infr" "$fname" "C1" "true"
+      else
+        add_check "infr" "$fname" "C1" "false" "$c1_detail"
+      fi
+    done
   fi
 fi
 
@@ -541,34 +689,45 @@ if is_tracked "application" && is_tracked "domain"; then
   if [ -n "$FILTER_LAYER" ] && [ "$FILTER_LAYER" != "application" ]; then
     : # 跳过
   else
-    domain_file=$(get_layer_file "domain")
     app_files_list=$(get_layer_files_cached "application")
-    if [ -n "$domain_file" ] && [ -f "$domain_file" ]; then
-      # domain 多聚合结构：从所有聚合的 ### 导出契约 > #### 聚合根与实体 API 中合并提取
-      domain_agg_sigs=$(extract_all_aggregate_h4_content "$domain_file" "聚合根与实体 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-      for fname in $app_files_list; do
-        filepath="$BACKEND_DESIGNS_DIR/$fname"
-        [ -f "$filepath" ] || continue
+    # 合并所有 domain task 的聚合根与实体 API 签名
+    domain_agg_sigs=$(get_domain_export_sigs "聚合根与实体 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+    scan_dir=$(get_designs_base_dir)
+    for fname in $app_files_list; do
+      filepath="$scan_dir/$fname"
+      [ -f "$filepath" ] || continue
+      # 新模板: ##### 聚合根 API（来自已有代码）；旧模板: #### 聚合根 API
+      app_agg_sigs=""
+      if grep -q '^##### 聚合根 API' "$filepath" 2>/dev/null; then
+        # 提取所有 ##### 聚合根 API 子章节内容
+        app_agg_sigs=$(awk '
+          /^##### 聚合根 API/ { found=1; next }
+          found && /^#####/ { found=0; next }
+          found && /^####/ { found=0; next }
+          found && /^###/ { found=0; next }
+          found { print }
+        ' "$filepath" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+      else
         app_agg_sigs=$(extract_h4_section_content "$filepath" "聚合根 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-        c2_pass=true
-        c2_detail=""
-        if [ -n "$app_agg_sigs" ]; then
-          while IFS= read -r sig; do
-            [ -z "$sig" ] && continue
-            if [ -z "$domain_agg_sigs" ] || ! echo "$domain_agg_sigs" | grep -qxF "$sig"; then
-              c2_pass=false
-              c2_detail="依赖契约中 \`${sig}\` 在 Domain 聚合根与实体 API 中未找到匹配"
-              break
-            fi
-          done <<< "$app_agg_sigs"
-        fi
-        if [ "$c2_pass" = "true" ]; then
-          add_check "application" "$fname" "C2" "true"
-        else
-          add_check "application" "$fname" "C2" "false" "$c2_detail"
-        fi
-      done
-    fi
+      fi
+      c2_pass=true
+      c2_detail=""
+      if [ -n "$app_agg_sigs" ]; then
+        while IFS= read -r sig; do
+          [ -z "$sig" ] && continue
+          if [ -z "$domain_agg_sigs" ] || ! echo "$domain_agg_sigs" | grep -qxF "$sig"; then
+            c2_pass=false
+            c2_detail="依赖契约中 \`${sig}\` 在 Domain 聚合根与实体 API 中未找到匹配"
+            break
+          fi
+        done <<< "$app_agg_sigs"
+      fi
+      if [ "$c2_pass" = "true" ]; then
+        add_check "application" "$fname" "C2" "true"
+      else
+        add_check "application" "$fname" "C2" "false" "$c2_detail"
+      fi
+    done
   fi
 fi
 
@@ -577,69 +736,93 @@ if is_tracked "application" && is_tracked "domain"; then
   if [ -n "$FILTER_LAYER" ] && [ "$FILTER_LAYER" != "application" ]; then
     : # 跳过
   else
-    domain_file=$(get_layer_file "domain")
     app_files_list=$(get_layer_files_cached "application")
-    if [ -n "$domain_file" ] && [ -f "$domain_file" ]; then
-      # domain 多聚合结构：从所有聚合的 ### 导出契约 > #### 接口签名 中合并提取
-      domain_iface_sigs=$(extract_all_aggregate_h4_content "$domain_file" "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-      for fname in $app_files_list; do
-        filepath="$BACKEND_DESIGNS_DIR/$fname"
-        [ -f "$filepath" ] || continue
+    # 合并所有 domain task 的接口签名
+    domain_iface_sigs=$(get_domain_export_sigs "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+    scan_dir=$(get_designs_base_dir)
+    for fname in $app_files_list; do
+      filepath="$scan_dir/$fname"
+      [ -f "$filepath" ] || continue
+      # 新模板: ##### Repository 接口（来自已有代码）；旧模板: #### Repository 接口
+      app_repo_sigs=""
+      if grep -q '^##### Repository 接口' "$filepath" 2>/dev/null; then
+        app_repo_sigs=$(awk '
+          /^##### Repository 接口/ { found=1; next }
+          found && /^#####/ { found=0; next }
+          found && /^####/ { found=0; next }
+          found && /^###/ { found=0; next }
+          found { print }
+        ' "$filepath" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+      else
         app_repo_sigs=$(extract_h4_section_content "$filepath" "Repository 接口" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-        c3_pass=true
-        c3_detail=""
-        if [ -n "$app_repo_sigs" ]; then
-          while IFS= read -r sig; do
-            [ -z "$sig" ] && continue
-            if [ -z "$domain_iface_sigs" ] || ! echo "$domain_iface_sigs" | grep -qxF "$sig"; then
-              c3_pass=false
-              c3_detail="依赖契约中 \`${sig}\` 在 Domain 接口签名中未找到匹配"
-              break
-            fi
-          done <<< "$app_repo_sigs"
-        fi
-        if [ "$c3_pass" = "true" ]; then
-          add_check "application" "$fname" "C3" "true"
-        else
-          add_check "application" "$fname" "C3" "false" "$c3_detail"
-        fi
-      done
-    fi
+      fi
+      c3_pass=true
+      c3_detail=""
+      if [ -n "$app_repo_sigs" ]; then
+        while IFS= read -r sig; do
+          [ -z "$sig" ] && continue
+          if [ -z "$domain_iface_sigs" ] || ! echo "$domain_iface_sigs" | grep -qxF "$sig"; then
+            c3_pass=false
+            c3_detail="依赖契约中 \`${sig}\` 在 Domain 接口签名中未找到匹配"
+            break
+          fi
+        done <<< "$app_repo_sigs"
+      fi
+      if [ "$c3_pass" = "true" ]; then
+        add_check "application" "$fname" "C3" "true"
+      else
+        add_check "application" "$fname" "C3" "false" "$c3_detail"
+      fi
+    done
   fi
 fi
 
-# C4: OHS 依赖契约 > ApplicationService 方法 的方法签名 ⊆ Application 导出契约 > ApplicationService 方法
+# C4: OHS 依赖契约 > ApplicationService 方法 的方法签名 ⊆ Application 导出契约 > 应用服务 API/ApplicationService 方法
 if is_tracked "ohs" && is_tracked "application"; then
   if [ -n "$FILTER_LAYER" ] && [ "$FILTER_LAYER" != "ohs" ]; then
     : # 跳过
   else
-    app_file=$(get_layer_file "application")
     ohs_files_list=$(get_layer_files_cached "ohs")
-    if [ -n "$app_file" ] && [ -f "$app_file" ]; then
-      app_svc_sigs=$(extract_subsection_content "$app_file" "ApplicationService 方法" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-      for fname in $ohs_files_list; do
-        filepath="$BACKEND_DESIGNS_DIR/$fname"
-        [ -f "$filepath" ] || continue
-        ohs_svc_sigs=$(extract_h4_section_content "$filepath" "ApplicationService 方法" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-        c4_pass=true
-        c4_detail=""
-        if [ -n "$ohs_svc_sigs" ]; then
-          while IFS= read -r sig; do
-            [ -z "$sig" ] && continue
-            if [ -z "$app_svc_sigs" ] || ! echo "$app_svc_sigs" | grep -qxF "$sig"; then
-              c4_pass=false
-              c4_detail="依赖契约中 \`${sig}\` 在 Application 导出契约中未找到匹配"
-              break
-            fi
-          done <<< "$ohs_svc_sigs"
-        fi
-        if [ "$c4_pass" = "true" ]; then
-          add_check "ohs" "$fname" "C4" "true"
-        else
-          add_check "ohs" "$fname" "C4" "false" "$c4_detail"
-        fi
-      done
+    # 合并所有 application task 的导出 ApplicationService 方法签名
+    # 新模板: ### 应用服务 API；旧模板: ### ApplicationService 方法
+    app_svc_sigs=""
+    app_svc_sigs_new=$(merge_layer_subsection "application" "应用服务 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+    app_svc_sigs_old=$(merge_layer_subsection "application" "ApplicationService 方法" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+    if [ -n "$app_svc_sigs_new" ]; then
+      app_svc_sigs="$app_svc_sigs_new"
     fi
+    if [ -n "$app_svc_sigs_old" ]; then
+      if [ -n "$app_svc_sigs" ]; then
+        app_svc_sigs="$app_svc_sigs
+$app_svc_sigs_old"
+      else
+        app_svc_sigs="$app_svc_sigs_old"
+      fi
+    fi
+    scan_dir=$(get_designs_base_dir)
+    for fname in $ohs_files_list; do
+      filepath="$scan_dir/$fname"
+      [ -f "$filepath" ] || continue
+      # 新模板: #### ApplicationService 方法（来自已有代码）；旧模板: #### ApplicationService 方法
+      ohs_svc_sigs=$(extract_h4_section_content "$filepath" "ApplicationService 方法" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+      c4_pass=true
+      c4_detail=""
+      if [ -n "$ohs_svc_sigs" ]; then
+        while IFS= read -r sig; do
+          [ -z "$sig" ] && continue
+          if [ -z "$app_svc_sigs" ] || ! echo "$app_svc_sigs" | grep -qxF "$sig"; then
+            c4_pass=false
+            c4_detail="依赖契约中 \`${sig}\` 在 Application 导出契约中未找到匹配"
+            break
+          fi
+        done <<< "$ohs_svc_sigs"
+      fi
+      if [ "$c4_pass" = "true" ]; then
+        add_check "ohs" "$fname" "C4" "true"
+      else
+        add_check "ohs" "$fname" "C4" "false" "$c4_detail"
+      fi
+    done
   fi
 fi
 
@@ -648,36 +831,43 @@ if is_tracked "ohs" && is_tracked "application"; then
   if [ -n "$FILTER_LAYER" ] && [ "$FILTER_LAYER" != "ohs" ]; then
     : # 跳过
   else
-    app_file=$(get_layer_file "application")
     ohs_files_list=$(get_layer_files_cached "ohs")
-    if [ -n "$app_file" ] && [ -f "$app_file" ]; then
-      # 提取 Application 导出契约 > Command 定义 的所有数据行（整行，去掉前后空格）
-      app_cmd_rows=$(extract_subsection_content "$app_file" "Command 定义" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true)
-      for fname in $ohs_files_list; do
-        filepath="$BACKEND_DESIGNS_DIR/$fname"
-        [ -f "$filepath" ] || continue
+    # 合并所有 application task 导出契约中的 Command 定义数据行
+    app_cmd_rows=$(merge_layer_subsection "application" "Command 定义" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true)
+    scan_dir=$(get_designs_base_dir)
+    for fname in $ohs_files_list; do
+      filepath="$scan_dir/$fname"
+      [ -f "$filepath" ] || continue
+      # 新模板: #### Command 类列表（来自已有代码）；旧模板: #### Command 定义
+      ohs_cmd_rows=""
+      if grep -q '^#### Command 类列表' "$filepath" 2>/dev/null; then
+        ohs_cmd_rows=$(extract_h4_section_content "$filepath" "Command 类列表" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true)
+      else
         ohs_cmd_rows=$(extract_h4_section_content "$filepath" "Command 定义" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true)
-        c5_pass=true
-        c5_detail=""
-        if [ -n "$ohs_cmd_rows" ]; then
-          while IFS= read -r row; do
-            [ -z "$row" ] && continue
-            if [ -z "$app_cmd_rows" ] || ! echo "$app_cmd_rows" | grep -qxF "$row"; then
-              # 转义双引号用于 JSON
-              escaped_row=$(echo "$row" | sed 's/"/\\"/g')
-              c5_pass=false
-              c5_detail="OHS 依赖契约 Command 定义行在 Application 导出契约中未找到匹配"
-              break
-            fi
-          done <<< "$ohs_cmd_rows"
-        fi
-        if [ "$c5_pass" = "true" ]; then
-          add_check "ohs" "$fname" "C5" "true"
-        else
-          add_check "ohs" "$fname" "C5" "false" "$c5_detail"
-        fi
-      done
-    fi
+      fi
+      c5_pass=true
+      c5_detail=""
+      if [ -n "$ohs_cmd_rows" ]; then
+        # OHS 新模板的 Command 类列表只有 类名|说明|本层用途，
+        # 与 Application 导出契约的 Command 定义 列不同，改为按第一列类名匹配
+        while IFS= read -r row; do
+          [ -z "$row" ] && continue
+          # 提取第一列（类名）
+          cmd_class=$(echo "$row" | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); gsub(/`/, "", val); print val } }')
+          [ -z "$cmd_class" ] && continue
+          if [ -z "$app_cmd_rows" ] || ! echo "$app_cmd_rows" | grep -qF "$cmd_class"; then
+            c5_pass=false
+            c5_detail="OHS 依赖契约 Command \`${cmd_class}\` 在 Application 导出契约中未找到匹配"
+            break
+          fi
+        done <<< "$ohs_cmd_rows"
+      fi
+      if [ "$c5_pass" = "true" ]; then
+        add_check "ohs" "$fname" "C5" "true"
+      else
+        add_check "ohs" "$fname" "C5" "false" "$c5_detail"
+      fi
+    done
   fi
 fi
 

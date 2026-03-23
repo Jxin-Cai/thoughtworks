@@ -5,6 +5,14 @@
 ---
 
 ```markdown
+---
+task_id: arch-{nnn}
+layer: frontend-architecture
+order: {N}
+status: pending
+depends_on: []
+description: "{一句话描述}"
+---
 # 前端架构设计
 
 <!-- REQUIRED -->

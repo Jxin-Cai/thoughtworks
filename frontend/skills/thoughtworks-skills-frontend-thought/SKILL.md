@@ -37,9 +37,16 @@ agent:
 
 ```
 .thoughtworks/<idea-name>/
-├── frontend-requirement.md       # 前端需求（由 Decision-Maker 写入）
-├── frontend-assessment.md        # 前端评估（由 Decision-Maker 写入）
-└── frontend-designs/             # 前端设计文档（文件名和数量由 workflow.yaml 决定）
+├── frontend-requirement.md              # 前端需求（由 Decision-Maker 写入）
+├── frontend-assessment.md               # 前端评估（由 Decision-Maker 写入）
+├── frontend-workflow-state.yaml         # 层级状态（由 task 状态聚合推导）
+├── frontend-task-workflow-state.yaml    # Task 级工作流状态
+└── frontend-designs/
+    └── tasks/                           # 前端各层 task 设计文档
+        ├── arch-001-entity-order.md
+        ├── arch-002-feature-create-order.md
+        ├── comp-001-order-components.md
+        └── impl-001-order-checklist.md
 ```
 
 ---
@@ -160,13 +167,21 @@ Agent(
     ---
 
     # OUTPUT
-    将设计文档写入：`{IDEA_DIR}/frontend-designs/{layer-id}.md`
+    将设计文档写入：`{IDEA_DIR}/frontend-designs/tasks/` 目录
+    每个 task 一个文件，命名格式：`{layer-prefix}-{nnn}-{topic-slug}.md`
+
+    ## Task 拆分规则
+    - frontend-architecture 层：按 Entity/Feature 拆 task（如 arch-001-entity-order.md, arch-002-feature-create-order.md），小需求可合为一个 task
+    - frontend-components 层：按组件组拆 task（如 comp-001-order-components.md）
+    - frontend-checklist 层：按 FSD slice 拆 task（如 impl-001-order-checklist.md），小需求可合为一个 task
+    - 单个 task 文件不超过 800 行
+    - 每个 task 的 frontmatter 必须包含 task_id、layer、order、status、depends_on、description
 
     ## frontmatter 要求
     - layer: {layer-id}
     - order: {workflow.yaml 中的 phase 值}
     - status: pending
-    - depends_on: {workflow.yaml 中的 requires 列表}
+    - depends_on: {具体的上游 task_id 列表}
     - description: 一句话描述
 
     {如果该层是 workflow.yaml 中最后一个 Phase 的层，追加：}
@@ -245,7 +260,23 @@ Agent(
 
 ---
 
-## Step 2.5: 校验所有设计文件
+## Step 2.5: Task 工作流状态初始化
+
+所有 Phase 的 Thinker 完成后，编排器负责扫描 `frontend-designs/tasks/` 下所有 task 文件的 frontmatter，构建 `--init-tasks` 命令的参数。
+
+```bash
+# 对每个 task 文件提取 frontmatter 后拼接参数，格式：task_id:layer:depends_on:description:file
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init-tasks {idea-name} \
+  "arch-001:frontend-architecture::Entity Order:tasks/arch-001-entity-order.md" \
+  "comp-001:frontend-components:arch-001:Order 组件:tasks/comp-001-order-components.md" \
+  "impl-001:frontend-checklist:comp-001:Order 实现:tasks/impl-001-order-checklist.md"
+```
+
+注意：`depends_on` 多个依赖用逗号分隔，无依赖用空字符串。
+
+---
+
+## Step 3: 校验所有设计文件
 
 所有 Phase 完成后，执行全量校验：
 
@@ -257,14 +288,14 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --check-all
 
 ---
 
-## Step 3: 汇总展示
+## Step 4: 汇总展示
 
 向用户展示：
-1. **页面列表** — 设计了哪些页面（来自 frontend-architecture.md）
-2. **FSD 架构概要** — Entities/Features/Widgets 列表（来自 frontend-architecture.md）
-3. **组件列表** — 设计了哪些组件（按 Entity/Feature 分组，来自 frontend-components.md）
-4. **API 调用映射** — 每个页面调用哪些 API（来自 frontend-components.md）
-5. **产出文件列表** — 各设计文件路径
+1. **页面列表** — 设计了哪些页面
+2. **FSD 架构概要** — Entities/Features/Widgets 列表
+3. **组件列表** — 设计了哪些组件（按 Entity/Feature 分组）
+4. **Task 列表** — 每个 task 的 task_id、层、描述、依赖关系
+5. **产出文件列表** — 各 task 文件路径
 
 <HARD-GATE>
 使用 AskUserQuestion 询问用户是否确认设计。

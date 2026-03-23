@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 后端状态查询脚本
+# 后端状态查询脚本（支持 tasks/ 目录和旧版 *.md 目录）
 # 用法: backend-status.sh <idea-dir> [--pretty]
 # 输出: 结构化 JSON（默认）或人类可读表格（--pretty）
 
@@ -8,6 +8,7 @@ set -euo pipefail
 IDEA_DIR="${1:?用法: backend-status.sh <idea-dir> [--pretty]}"
 PRETTY="${2:-}"
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
+TASKS_DIR="$BACKEND_DESIGNS_DIR/tasks"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
@@ -33,11 +34,18 @@ if [ ! -d "$BACKEND_DESIGNS_DIR" ]; then
   exit 0
 fi
 
-# 收集设计文件列表
+# 收集设计文件列表（优先 tasks/ 目录，回退到旧路径）
 design_files=""
-for f in "$BACKEND_DESIGNS_DIR"/*.md; do
-  [ -f "$f" ] && design_files="$design_files $f"
-done
+if [ -d "$TASKS_DIR" ]; then
+  for f in "$TASKS_DIR"/*.md; do
+    [ -f "$f" ] && design_files="$design_files $f"
+  done
+fi
+if [ -z "$design_files" ]; then
+  for f in "$BACKEND_DESIGNS_DIR"/*.md; do
+    [ -f "$f" ] && design_files="$design_files $f"
+  done
+fi
 
 IDEA_NAME=$(basename "$IDEA_DIR")
 
@@ -84,7 +92,7 @@ is_file_done() {
 
 # 收集所有 thought 文件信息
 layer_count=0
-declare -a all_layers all_files all_orders all_statuses all_depends all_descriptions
+declare -a all_layers all_files all_orders all_statuses all_depends all_descriptions all_task_ids
 
 for design_file in $design_files; do
   [ -f "$design_file" ] || continue
@@ -93,16 +101,19 @@ for design_file in $design_files; do
   order=$(extract_field "$design_file" "order")
   status=$(extract_field "$design_file" "status")
   description=$(extract_field "$design_file" "description")
+  task_id=$(extract_field "$design_file" "task_id")
   depends=$(extract_depends "$design_file")
   [ -z "$layer" ] && continue
   [ -z "$order" ] && order=1
   [ -z "$status" ] && status="pending"
+  [ -z "$task_id" ] && task_id="$filename"
   all_layers[$layer_count]="$layer"
   all_files[$layer_count]="$filename"
   all_orders[$layer_count]="$order"
   all_statuses[$layer_count]="$status"
   all_depends[$layer_count]="$depends"
   all_descriptions[$layer_count]="$description"
+  all_task_ids[$layer_count]="$task_id"
   layer_count=$((layer_count + 1))
 done
 
@@ -155,7 +166,7 @@ for layer_id in $unique_layers; do
     fi
 
     escaped_desc=$(echo "${all_descriptions[$i]}" | sed 's/"/\\"/g')
-    thought="{\"file\":\"${all_files[$i]}\",\"order\":${all_orders[$i]},\"status\":\"${all_statuses[$i]}\",\"depends_on\":$deps_json,\"description\":\"$escaped_desc\"}"
+    thought="{\"task_id\":\"${all_task_ids[$i]}\",\"file\":\"${all_files[$i]}\",\"order\":${all_orders[$i]},\"status\":\"${all_statuses[$i]}\",\"depends_on\":$deps_json,\"description\":\"$escaped_desc\"}"
 
     if [ -z "$thoughts_json" ]; then
       thoughts_json="$thought"
@@ -231,9 +242,9 @@ for i in $(seq 0 $((layer_count - 1))); do
   [ "$inner_ok" -eq 0 ] && continue
 
   if [ -z "$next_thoughts" ]; then
-    next_thoughts="\"${all_files[$i]}\""
+    next_thoughts="\"${all_task_ids[$i]}\""
   else
-    next_thoughts="$next_thoughts,\"${all_files[$i]}\""
+    next_thoughts="$next_thoughts,\"${all_task_ids[$i]}\""
   fi
 done
 

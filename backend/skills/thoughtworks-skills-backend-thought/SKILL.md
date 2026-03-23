@@ -36,11 +36,15 @@ agent:
 .thoughtworks/<idea-name>/
 ├── requirement.md                    # 原始需求存档（由 Decision-Maker 写入）
 ├── assessment.md                     # 层级评估结果（由 Decision-Maker 写入）
-└── backend-designs/                  # 各层设计文档（含 frontmatter + 实现清单）
-    ├── domain.md                     # 领域层设计（按聚合分章节）
-    ├── infr.md                       # 基础设施层设计
-    ├── application.md                # 应用层设计
-    └── ohs.md                        # OHS 层设计
+├── workflow-state.yaml               # 层级状态（由 task 状态聚合推导）
+├── task-workflow-state.yaml          # Task 级工作流状态
+└── backend-designs/
+    └── tasks/                        # 各层 task 设计文档
+        ├── domain-001-order-aggregate.md
+        ├── domain-002-payment-aggregate.md
+        ├── infr-001-order-repository.md
+        ├── application-001-order-management.md
+        └── ohs-001-order-api.md
 ```
 
 ---
@@ -115,8 +119,25 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 3. **按 phase 从小到大遍历**：对每个 Phase 中的目标层，先执行启动前准备（见下方），再启动 thinker subagent。同一 Phase 内多层可**并行启动**（放在同一条消息的多个 Agent 调用中）
 4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，执行 `backend-workflow-status.sh --check-all` 检查状态
 5. **进入下一 Phase**：当前 Phase 全部 done 后，继续下一个 Phase，重复步骤 3-4
-6. 所有目标 Phase 完成后，执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
+6. 所有目标 Phase 完成后：
+   - 扫描 `backend-designs/tasks/` 目录，提取每个 task 文件的 frontmatter，初始化 `task-workflow-state.yaml`（见下方）
+   - 执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
 7. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
+
+### Task 工作流状态初始化
+
+所有 Thinker 完成后，编排器负责扫描 `backend-designs/tasks/` 下所有 task 文件的 frontmatter，构建 `--init-tasks` 命令的参数。每个 task 文件提取 `task_id`、`layer`、`depends_on`、`description` 字段，文件相对路径作为 `file`。
+
+```bash
+# 对每个 task 文件提取 frontmatter 后拼接参数，格式：task_id:layer:depends_on:description:file
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init-tasks {idea-name} \
+  "domain-001:domain::Order 聚合:tasks/domain-001-order-aggregate.md" \
+  "infr-001:infr:domain-001:Order 仓储:tasks/infr-001-order-repository.md" \
+  "application-001:application:domain-001:订单管理:tasks/application-001-order-management.md" \
+  "ohs-001:ohs:application-001:订单 API:tasks/ohs-001-order-api.md"
+```
+
+注意：`depends_on` 多个依赖用逗号分隔（如 `domain-001,domain-002`），无依赖用空字符串。
 
 ### subagent 启动前准备（每个层都执行）
 
@@ -223,9 +244,8 @@ Agent(
     ## 聚合结构要求
 
     requirement.md 的聚合分析章节列出了所有识别的聚合及其依赖关系。
-    按聚合分析中的建议实现顺序，为每个聚合输出独立的 `## 聚合: {Name}` 章节。
-    如果只有一个聚合，仍使用 `## 聚合: {Name}` 结构。
-    每个聚合章节内包含完整设计（聚合根与实体、值对象、仓储接口等）和独立的 `### 导出契约`。
+    为每个聚合输出独立的 task 文件（`domain-{nnn}-{aggregate-slug}.md`），每个 task 包含该聚合的完整设计。
+    小聚合（如共享值对象较多的 2 个聚合）可合并为一个 task，但单个 task 不超过 800 行。
 
     你的设计方案完成后，必须回头逐条验证上述每个工作项都有对应的设计产出。
 
@@ -265,8 +285,18 @@ Agent(
 
     # OUTPUT
 
-    将设计文档写入：`.thoughtworks/<idea-name>/backend-designs/<layer>.md`
-    （主 agent 构建 prompt 时，将 `<idea-name>` 和 `<layer>` 替换为实际值的绝对路径）
+    将设计文档写入：`.thoughtworks/<idea-name>/backend-designs/tasks/` 目录
+    每个 task 一个文件，命名格式：`{layer}-{nnn}-{topic-slug}.md`
+    （主 agent 构建 prompt 时，将 `<idea-name>` 替换为实际值的绝对路径）
+
+    ## Task 拆分规则
+    - domain 层：每个聚合一个 task（小聚合可合并）
+    - infr 层：每个聚合的仓储实现一个 task
+    - application 层：每个用例组一个 task
+    - ohs 层：每个 API 资源组一个 task
+    - 单个 task 文件不超过 800 行
+    - 每个 task 的 frontmatter 必须包含 task_id、layer、order、status、depends_on、description
+
     使用 Write 工具写入。
 
     重要：TEMPLATE 是你的产出结构，MISSION / CONTEXT 是你的参考约束，不要将它们复制到产出文件中。
@@ -314,8 +344,8 @@ Agent(
 
 1. **层级评估结论** — 哪些层需要开发
 2. **各层设计摘要** — 每层一句话概括
-3. **各层 thought 文件数** — 每个层产出了几个 thought 文件
-4. **产出文件列表** — 列出所有生成的文件路径
+3. **Task 列表** — 每个 task 的 task_id、层、描述、依赖关系
+4. **产出文件列表** — 列出所有生成的 task 文件路径
 
 <HARD-GATE>
 展示完毕后，使用 AskUserQuestion 询问用户是否确认设计。

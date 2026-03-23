@@ -37,21 +37,26 @@
 | 应用服务 | `{业务名}ApplicationService` | `OrderApplicationService` |
 | Command | `{操作名}Command` | `CreateOrderCommand` |
 
+## Task 拆分规则
+
+- 按用例组拆 task：相关的写/读用例放在一个 task
+- 命名：`application-{nnn}-{usecase-group-slug}.md`（如 `application-001-order-management.md`）
+- 每个 task 的 `depends_on` 引用其编排步骤中调用的 domain task_id
+
 ## Frontmatter 格式
 
 ```yaml
 ---
-spec_id: Spec_Application
+task_id: application-{nnn}
 layer: application
-order: 1
+order: {N}
 status: pending
-depends_on: []
-description: "{一句话描述本文件内容}"
+depends_on: [{domain task_id 列表}]
+description: "{一句话描述本 task 内容}"
 ---
 ```
 
-- 实现清单 output_id 格式为 `Output_Application_{IdeaName}_{两位序号}`
-- 默认产出单文件 `application.md`，当预估内容超过约 3000 字时按功能独立性拆分为 `application-{order}-{topic}.md`，有关联的内容不拆，拆分后通过 depends_on 声明同层内依赖
+- 实现清单 output_id 格式为 `Output_Application_{IdeaName}_{nnn}_{两位序号}`
 
 ## 层级特有输出要求
 

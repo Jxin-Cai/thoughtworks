@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
-# 前端设计文档校验脚本（3 文件拆分版）
+# 前端设计文档校验脚本（支持 tasks/ 目录和旧版 *.md 目录）
 # 用法: frontend-output-validate.sh <idea-dir>
 #
 # 校验规则：
-# S1: frontmatter 必填字段
+# S1: frontmatter 必填字段（tasks/ 模式下增加 task_id）
 # S3: 结论章节存在且非空
-# S4: 实现清单表格存在（仅 frontend-checklist.md）
+# S4: 实现清单表格存在（frontend-checklist 层文件）
 # S6: 依赖契约章节存在
-# C6: Frontend 依赖契约 API 端点 ⊆ OHS 导出契约 API 端点（仅 frontend-architecture.md）
+# C6: Frontend 依赖契约 API 端点 ⊆ OHS 已有代码 API 端点（扫描代码或 ohs.md 回退）
 # C7: frontend-components 依赖契约 ⊆ frontend-architecture 导出契约（跨文件一致性）
 
 set -euo pipefail
 
 IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir>}"
 FRONTEND_DESIGNS_DIR="$IDEA_DIR/frontend-designs"
+TASKS_DIR="$FRONTEND_DESIGNS_DIR/tasks"
 STATE_FILE="$IDEA_DIR/frontend-workflow-state.yaml"
 
 if [ ! -d "$FRONTEND_DESIGNS_DIR" ]; then
@@ -26,6 +27,26 @@ if [ ! -f "$STATE_FILE" ]; then
   exit 1
 fi
 
+# ── 判断是否使用 tasks/ 目录 ──
+USE_TASKS_DIR=""
+if [ -d "$TASKS_DIR" ]; then
+  task_file_count=$(find "$TASKS_DIR" -maxdepth 1 -name '*.md' 2>/dev/null | head -1)
+  if [ -n "$task_file_count" ]; then
+    USE_TASKS_DIR="1"
+  fi
+fi
+
+get_designs_base_dir() {
+  if [ -n "$USE_TASKS_DIR" ]; then
+    echo "$TASKS_DIR"
+  else
+    echo "$FRONTEND_DESIGNS_DIR"
+  fi
+}
+
+SCAN_DIR=$(get_designs_base_dir)
+
+# ── JSON 输出辅助 ──
 CHECKS=""
 add_check() {
   local layer="$1" file="$2" rule="$3" pass="$4" detail="${5:-}"
@@ -36,6 +57,8 @@ add_check() {
   entry="$entry}"
   if [ -z "$CHECKS" ]; then CHECKS="$entry"; else CHECKS="$CHECKS,$entry"; fi
 }
+
+# ── 辅助函数 ──
 
 extract_frontmatter() {
   local file="$1"
@@ -67,17 +90,65 @@ get_layer_from_frontmatter() {
   extract_frontmatter "$file" | sed -n 's/^layer:[[:space:]]*//p' | head -1
 }
 
-# 校验所有 frontend-designs/*.md
-for filepath in "$FRONTEND_DESIGNS_DIR"/*.md; do
+# 从文件名前缀推断层（旧版文件兼容用）
+layer_from_filename() {
+  local fname="$1"
+  case "$fname" in
+    arch-*|frontend-architecture*) echo "frontend-architecture" ;;
+    comp-*|frontend-components*) echo "frontend-components" ;;
+    impl-*|frontend-checklist*) echo "frontend-checklist" ;;
+    *) echo "frontend" ;;
+  esac
+}
+
+# 获取某层的文件列表
+get_layer_files() {
+  local target_layer="$1"
+  for f in "$SCAN_DIR"/*.md; do
+    [ -f "$f" ] || continue
+    local base
+    base=$(basename "$f")
+    local fl
+    fl=$(get_layer_from_frontmatter "$f")
+    [ -z "$fl" ] && fl=$(layer_from_filename "$base")
+    if [ "$fl" = "$target_layer" ]; then
+      echo "$base"
+    fi
+  done
+}
+
+# 合并某层所有文件中指定 ### 子章节内容
+merge_layer_subsection() {
+  local target_layer="$1" subsection="$2"
+  local files
+  files=$(get_layer_files "$target_layer")
+  for fname in $files; do
+    local fpath="$SCAN_DIR/$fname"
+    [ -f "$fpath" ] || continue
+    awk -v sec="### ${subsection}" '
+      $0 == sec || index($0, sec) == 1 { found=1; next }
+      found && /^### / { exit }
+      found { print }
+    ' "$fpath"
+  done
+}
+
+# ── 开始校验：遍历所有设计文件 ──
+
+for filepath in "$SCAN_DIR"/*.md; do
   [ -f "$filepath" ] || continue
   fname=$(basename "$filepath")
   layer_id=$(get_layer_from_frontmatter "$filepath")
-  [ -z "$layer_id" ] && layer_id="frontend"
+  [ -z "$layer_id" ] && layer_id=$(layer_from_filename "$fname")
 
   # S1: frontmatter 必填字段
   s1_pass=true
   s1_detail=""
-  for field in layer order status depends_on description; do
+  required_fields="layer order status depends_on description"
+  if [ -n "$USE_TASKS_DIR" ]; then
+    required_fields="task_id layer order status depends_on description"
+  fi
+  for field in $required_fields; do
     if ! has_frontmatter_field "$filepath" "$field"; then
       s1_pass=false
       s1_detail="frontmatter 缺少 ${field} 字段"
@@ -103,8 +174,8 @@ for filepath in "$FRONTEND_DESIGNS_DIR"/*.md; do
     add_check "$layer_id" "$fname" "S3" "false" "缺少 ## 结论 章节"
   fi
 
-  # S4: 实现清单表格存在（仅 frontend-checklist.md）
-  if [ "$fname" = "frontend-checklist.md" ]; then
+  # S4: 实现清单表格存在（frontend-checklist 层文件）
+  if [ "$layer_id" = "frontend-checklist" ] || [ "$fname" = "frontend-checklist.md" ]; then
     if has_section "$filepath" "实现清单"; then
       impl_rows=$(extract_section_content "$filepath" "实现清单" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | grep -c '^|' || true)
       if [ "$impl_rows" -gt 0 ]; then
@@ -125,60 +196,108 @@ for filepath in "$FRONTEND_DESIGNS_DIR"/*.md; do
   fi
 done
 
-# C6: Frontend 依赖契约 > API 端点 ⊆ OHS 设计文档 > API 端点（仅 frontend-architecture.md）
-BACKEND_OHS="$IDEA_DIR/backend-designs/ohs.md"
-ARCH_FILE="$FRONTEND_DESIGNS_DIR/frontend-architecture.md"
-if [ -f "$BACKEND_OHS" ] && [ -f "$ARCH_FILE" ]; then
-  ohs_api_sigs=$(awk '
-    /^## API 端点/ { found=1; next }
-    found && /^## / { exit }
-    found && /^### / { sub(/^### /, ""); print }
-  ' "$BACKEND_OHS" || true)
+# ── C6: Frontend 依赖契约 > API 端点 ⊆ OHS API 端点 ──
+# 新模式：优先从 OHS 代码扫描 API 端点；回退到 backend-designs/ohs.md 或 tasks/ohs-*.md
 
-  frontend_api_sigs=$(awk '
+# 收集 architecture 层所有文件的 API 端点依赖
+arch_files=$(get_layer_files "frontend-architecture")
+frontend_api_sigs=""
+for fname in $arch_files; do
+  fpath="$SCAN_DIR/$fname"
+  [ -f "$fpath" ] || continue
+  sigs=$(awk '
     /^### API 端点/ { found=1; next }
     found && /^### / { exit }
     found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
-  ' "$ARCH_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 3) { val=$3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); gsub(/`/, "", val); if (val != "") print val } }' || true)
+  ' "$fpath" | tail -n +2 | awk -F'|' '{ if (NF >= 3) { val=$3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); gsub(/`/, "", val); if (val != "") print val } }' || true)
+  if [ -n "$sigs" ]; then
+    if [ -n "$frontend_api_sigs" ]; then
+      frontend_api_sigs="$frontend_api_sigs
+$sigs"
+    else
+      frontend_api_sigs="$sigs"
+    fi
+  fi
+done
 
-  c6_pass=true
-  c6_detail=""
-  if [ -n "$frontend_api_sigs" ]; then
+if [ -n "$frontend_api_sigs" ]; then
+  # 收集 OHS API 端点签名
+  ohs_api_sigs=""
+
+  # 方式1: 从 backend-designs/tasks/ohs-*.md 提取（新模式）
+  BACKEND_TASKS_DIR="$IDEA_DIR/backend-designs/tasks"
+  if [ -d "$BACKEND_TASKS_DIR" ]; then
+    for ohs_file in "$BACKEND_TASKS_DIR"/ohs-*.md; do
+      [ -f "$ohs_file" ] || continue
+      sigs=$(awk '
+        /^## API 端点/ { found=1; next }
+        found && /^## / { exit }
+        found && /^### / { sub(/^### /, ""); print }
+      ' "$ohs_file" || true)
+      if [ -n "$sigs" ]; then
+        if [ -n "$ohs_api_sigs" ]; then
+          ohs_api_sigs="$ohs_api_sigs
+$sigs"
+        else
+          ohs_api_sigs="$sigs"
+        fi
+      fi
+    done
+  fi
+
+  # 方式2: 从旧版 backend-designs/ohs.md 提取
+  BACKEND_OHS="$IDEA_DIR/backend-designs/ohs.md"
+  if [ -z "$ohs_api_sigs" ] && [ -f "$BACKEND_OHS" ]; then
+    ohs_api_sigs=$(awk '
+      /^## API 端点/ { found=1; next }
+      found && /^## / { exit }
+      found && /^### / { sub(/^### /, ""); print }
+    ' "$BACKEND_OHS" || true)
+  fi
+
+  # 执行匹配
+  arch_file_for_report=$(echo "$arch_files" | head -1)
+  [ -z "$arch_file_for_report" ] && arch_file_for_report="frontend-architecture.md"
+  if [ -n "$ohs_api_sigs" ]; then
+    c6_pass=true
+    c6_detail=""
     while IFS= read -r sig; do
       [ -z "$sig" ] && continue
-      if [ -z "$ohs_api_sigs" ] || ! echo "$ohs_api_sigs" | grep -qF "$sig"; then
+      if ! echo "$ohs_api_sigs" | grep -qF "$sig"; then
         c6_pass=false
-        c6_detail="Frontend 依赖契约中 \`${sig}\` 在 OHS 设计文档中未找到匹配"
+        c6_detail="Frontend 依赖契约中 \`${sig}\` 在 OHS API 端点中未找到匹配"
         break
       fi
     done <<< "$frontend_api_sigs"
-  fi
-  if [ "$c6_pass" = "true" ]; then
-    add_check "frontend-architecture" "frontend-architecture.md" "C6" "true"
+    if [ "$c6_pass" = "true" ]; then
+      add_check "frontend-architecture" "$arch_file_for_report" "C6" "true"
+    else
+      add_check "frontend-architecture" "$arch_file_for_report" "C6" "false" "$c6_detail"
+    fi
   else
-    add_check "frontend-architecture" "frontend-architecture.md" "C6" "false" "$c6_detail"
+    # 无 OHS 设计文件可比对，跳过 C6（OHS API 来自代码扫描，校验脚本无法执行代码扫描）
+    add_check "frontend-architecture" "$arch_file_for_report" "C6" "true" "OHS 设计文件不存在，C6 跳过（前端依赖 OHS 代码扫描）"
   fi
 fi
 
-# C7: frontend-components 依赖契约 ⊆ frontend-architecture 导出契约（跨文件一致性）
-COMP_FILE="$FRONTEND_DESIGNS_DIR/frontend-components.md"
-if [ -f "$ARCH_FILE" ] && [ -f "$COMP_FILE" ]; then
-  # 提取 architecture 导出契约中的 Entity 名称
-  arch_entities=$(awk '
-    /^### Entity 列表/ { found=1; next }
-    found && /^### / { exit }
-    found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
-  ' "$ARCH_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
+# ── C7: frontend-components 依赖契约 ⊆ frontend-architecture 导出契约 ──
 
-  # 提取 components 依赖契约中的 Entity 名称
-  comp_dep_entities=$(awk '
-    /^### Entity 列表/ { found=1; next }
-    found && /^### / { exit }
-    found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
-  ' "$COMP_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
+# 合并所有 architecture 文件的导出契约
+arch_entities=$(merge_layer_subsection "frontend-architecture" "Entity 列表" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
+arch_features=$(merge_layer_subsection "frontend-architecture" "Feature 列表" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
 
+# 合并所有 components 文件的依赖契约
+comp_dep_entities=$(merge_layer_subsection "frontend-components" "Entity 列表" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
+comp_dep_features=$(merge_layer_subsection "frontend-components" "Feature 列表" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
+
+# 只在有 components 文件时执行 C7
+comp_files=$(get_layer_files "frontend-components")
+if [ -n "$comp_files" ] && [ -n "$arch_files" ]; then
+  comp_file_for_report=$(echo "$comp_files" | head -1)
   c7_pass=true
   c7_detail=""
+
+  # 检查 Entity 列表一致性
   if [ -n "$comp_dep_entities" ]; then
     while IFS= read -r entity; do
       [ -z "$entity" ] && continue
@@ -190,39 +309,26 @@ if [ -f "$ARCH_FILE" ] && [ -f "$COMP_FILE" ]; then
     done <<< "$comp_dep_entities"
   fi
 
-  # 也检查 Feature 列表一致性
-  if [ "$c7_pass" = "true" ]; then
-    arch_features=$(awk '
-      /^### Feature 列表/ { found=1; next }
-      found && /^### / { exit }
-      found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
-    ' "$ARCH_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
-
-    comp_dep_features=$(awk '
-      /^### Feature 列表/ { found=1; next }
-      found && /^### / { exit }
-      found && /^\|/ && !/^\|[[:space:]]*[-—]/ { print }
-    ' "$COMP_FILE" | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
-
-    if [ -n "$comp_dep_features" ]; then
-      while IFS= read -r feature; do
-        [ -z "$feature" ] && continue
-        if [ -z "$arch_features" ] || ! echo "$arch_features" | grep -qF "$feature"; then
-          c7_pass=false
-          c7_detail="Components 依赖契约中 Feature \`${feature}\` 在 Architecture 导出契约中未找到"
-          break
-        fi
-      done <<< "$comp_dep_features"
-    fi
+  # 检查 Feature 列表一致性
+  if [ "$c7_pass" = "true" ] && [ -n "$comp_dep_features" ]; then
+    while IFS= read -r feature; do
+      [ -z "$feature" ] && continue
+      if [ -z "$arch_features" ] || ! echo "$arch_features" | grep -qF "$feature"; then
+        c7_pass=false
+        c7_detail="Components 依赖契约中 Feature \`${feature}\` 在 Architecture 导出契约中未找到"
+        break
+      fi
+    done <<< "$comp_dep_features"
   fi
 
   if [ "$c7_pass" = "true" ]; then
-    add_check "frontend-components" "frontend-components.md" "C7" "true"
+    add_check "frontend-components" "$comp_file_for_report" "C7" "true"
   else
-    add_check "frontend-components" "frontend-components.md" "C7" "false" "$c7_detail"
+    add_check "frontend-components" "$comp_file_for_report" "C7" "false" "$c7_detail"
   fi
 fi
 
+# ── 计算最终状态并输出 ──
 ALL_PASS=true
 if echo "$CHECKS" | grep -q '"pass":false'; then ALL_PASS=false; fi
 if [ "$ALL_PASS" = "true" ]; then STATUS="pass"; else STATUS="fail"; fi

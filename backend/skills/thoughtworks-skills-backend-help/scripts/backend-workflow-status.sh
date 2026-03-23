@@ -7,6 +7,11 @@
 #   backend-workflow-status.sh <idea-dir> --check-upstream <layer> — 非阻塞检查上游是否 ready
 #   backend-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成（含校验）
 #   backend-workflow-status.sh <idea-dir> --get-status <layer>     — 获取指定层的纯文本状态值
+#   backend-workflow-status.sh <idea-dir> --init-tasks <idea-name> <task_spec>... — 初始化 task 级状态文件
+#   backend-workflow-status.sh <idea-dir> --set-task <task_id> <status>  — 设置 task 状态
+#   backend-workflow-status.sh <idea-dir> --get-task-status <task_id>    — 获取 task 的纯文本状态值
+#   backend-workflow-status.sh <idea-dir> --sync-layer-status            — 从 task 状态同步层级状态
+#   backend-workflow-status.sh <idea-dir> --next-tasks <design|code>     — 获取下一批可执行 task
 #
 # 状态文件: <idea-dir>/workflow-state.yaml
 # 状态机: pending → designing → designed → confirmed → coding → coded / failed
@@ -17,6 +22,7 @@ IDEA_DIR="${1:?用法: backend-workflow-status.sh <idea-dir> [--init|--set|--che
 MODE="${2:-status}"
 
 STATE_FILE="$IDEA_DIR/workflow-state.yaml"
+TASK_STATE_FILE="$IDEA_DIR/task-workflow-state.yaml"
 DESIGNS_DIR="$IDEA_DIR/designs"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -315,6 +321,102 @@ case "$MODE" in
     fi
 
     get_tracked_status "$LAYER"
+    ;;
+
+  # ════════════════════════════════════════════════════
+  # ── Task 级命令 ──
+  # ════════════════════════════════════════════════════
+
+  # ── --init-tasks 模式：初始化 task 级状态文件 ──
+  --init-tasks)
+    IDEA_NAME="${3:?--init-tasks 需要指定 idea-name}"
+    shift 3
+    TASK_SPECS="$*"
+
+    if [ -z "$TASK_SPECS" ]; then
+      echo '{"error": "--init-tasks 需要至少一个 task 规格 (task_id:layer:depends:description:file)"}' >&2
+      exit 1
+    fi
+
+    init_task_state "$IDEA_NAME" $TASK_SPECS
+    echo "{\"initialized\": true, \"idea\": \"$IDEA_NAME\", \"task_count\": $(echo "$TASK_SPECS" | wc -w | tr -d ' ')}"
+    ;;
+
+  # ── --set-task 模式：设置 task 状态 ──
+  --set-task)
+    TASK_ID="${3:?--set-task 需要指定 task_id}"
+    TASK_STATUS="${4:?--set-task 需要指定状态}"
+
+    case "$TASK_STATUS" in
+      pending|designing|designed|confirmed|coding|coded|failed) ;;
+      *) echo "{\"error\": \"无效状态: ${TASK_STATUS}\"}" >&2; exit 1 ;;
+    esac
+
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      echo '{"error": "task-workflow-state.yaml 不存在，请先执行 --init-tasks"}' >&2
+      exit 1
+    fi
+
+    update_task_status "$TASK_ID" "$TASK_STATUS"
+    echo "{\"updated\": true, \"task_id\": \"$TASK_ID\", \"status\": \"$TASK_STATUS\"}"
+    ;;
+
+  # ── --get-task-status 模式：获取 task 的纯文本状态值 ──
+  --get-task-status)
+    TASK_ID="${3:?--get-task-status 需要指定 task_id}"
+
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      exit 1
+    fi
+
+    get_task_status "$TASK_ID"
+    ;;
+
+  # ── --sync-layer-status 模式：从 task 状态同步层级状态到 workflow-state.yaml ──
+  --sync-layer-status)
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      echo '{"error": "task-workflow-state.yaml 不存在"}' >&2
+      exit 1
+    fi
+    if [ ! -f "$STATE_FILE" ]; then
+      echo '{"error": "workflow-state.yaml 不存在"}' >&2
+      exit 1
+    fi
+
+    sync_layer_status_from_tasks
+    snap=$(build_layers_snapshot)
+    echo "{\"synced\": true, \"layers\": { $snap }}"
+    ;;
+
+  # ── --next-tasks 模式：获取下一批可执行的 task ──
+  --next-tasks)
+    PHASE="${3:-design}"
+
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      echo '{"error": "task-workflow-state.yaml 不存在"}' >&2
+      exit 1
+    fi
+
+    next_tasks=$(get_next_executable_tasks "$PHASE")
+    if [ -z "$next_tasks" ]; then
+      echo '{"next_tasks": [], "count": 0}'
+    else
+      task_json=""
+      count=0
+      for tid in $next_tasks; do
+        tl=$(get_task_layer "$tid")
+        tf=$(get_task_file "$tid")
+        td=$(get_task_description "$tid")
+        entry="{\"task_id\": \"$tid\", \"layer\": \"$tl\", \"file\": \"$tf\", \"description\": \"$td\"}"
+        if [ -z "$task_json" ]; then
+          task_json="$entry"
+        else
+          task_json="$task_json, $entry"
+        fi
+        count=$((count + 1))
+      done
+      echo "{\"next_tasks\": [$task_json], \"count\": $count}"
+    fi
     ;;
 
   *)

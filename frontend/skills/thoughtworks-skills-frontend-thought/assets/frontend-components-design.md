@@ -5,6 +5,14 @@
 ---
 
 ```markdown
+---
+task_id: comp-{nnn}
+layer: frontend-components
+order: {N}
+status: pending
+depends_on: [{上游 task_id 列表}]
+description: "{一句话描述}"
+---
 # 前端组件设计
 
 <!-- REQUIRED -->

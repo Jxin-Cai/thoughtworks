@@ -15,7 +15,7 @@ steps:
       instructions: |
         解析 $ARGUMENTS 确定 idea-name。
         检查 .thoughtworks/<idea-name>/ 目录是否存在。
-        检查 backend-designs/ohs.md 是否存在。
+        检查项目中已有 OHS 层代码（Controller/Router/Handler）。
         mkdir -p .thoughtworks/<idea-name>/frontend-designs
 
   - id: clarify
@@ -50,9 +50,8 @@ steps:
       type: self
       read-first:
         - "{FRONTEND_HELP}/workflow.yaml"
-        - "{IDEA_DIR}/backend-designs/ohs.md"
       instructions: |
-        1. 读取 OHS 导出契约，评估前端工作
+        1. 扫描项目中已有的 OHS 层代码（Controller/Router/Handler），提取 API 端点列表，评估前端工作
         2. 写入 {IDEA_DIR}/frontend-assessment.md
         3. 从 workflow.yaml 解析所有前端层 id，初始化状态:
            bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init {idea-name} <所有层 id>

@@ -35,6 +35,9 @@ skills:
 ## 输出要求
 
 - 严格按照 prompt 中提供的**设计文档模板**结构输出
+- 每个 task 文件对应一个主题（按 Entity/Feature、组件组或 FSD slice 拆分），每个文件 ≤800 行
 - 设计文档必须分段写入：先用 Write 写入 frontmatter + 前半部分，再用 Edit 追加。每段不超过 300 行
+- 所有 task 文件输出到 `frontend-designs/tasks/` 目录
+- frontmatter 必须包含 `task_id` 字段（格式：`arch-{nnn}` / `comp-{nnn}` / `impl-{nnn}`）
 - 导出契约区必须完整填写（architecture 和 components 层）
 - 实现清单必须完整覆盖所有需要创建的文件（checklist 层）
