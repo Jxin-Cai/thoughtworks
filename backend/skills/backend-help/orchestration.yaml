@@ -1,0 +1,158 @@
+# 后端编排定义
+name: backend-orchestration
+version: 1
+description: DDD 后端端到端编排步骤
+
+variables:
+  IDEA_DIR: ".thoughtworks/{idea-name}"
+  DDD_HELP: "../backend-help"
+
+steps:
+  - id: receive-requirement
+    description: 接收需求（从参数/文件/用户输入）
+    action:
+      type: self
+      instructions: |
+        判断 $ARGUMENTS：
+        - 以 `/` 或 `./` 开头，或含 `.md` `.txt` → Read 文件
+        - 非空文本 → 直接作为需求
+        - 空 → AskUserQuestion
+
+  - id: clarify
+    description: 需求澄清与聚合分析
+    gate:
+      check: requirement-exists
+      on-pass: skip
+      on-fail: execute
+    action:
+      type: skill
+      name: clarify
+      args: "backend {payload}"
+    postcondition:
+      check: requirement-exists
+
+  - id: branch
+    description: 创建功能分支
+    action:
+      type: skill
+      name: branch
+      args: "{idea-name}"
+    postcondition:
+      check: branch-ready
+
+  - id: assessment
+    description: 层级评估（Decision-Maker 亲自执行）
+    gate:
+      check: assessment-exists
+      on-pass: skip
+      on-fail: execute
+    action:
+      type: self
+      read-first:
+        - "{DDD_HELP}/workflow.yaml"
+        - "core/skills/clarify/references/assessment-dimensions.md"
+      instructions: |
+        1. 按 workflow.yaml 中的层逐个评估
+        2. 写入 {IDEA_DIR}/assessment.md
+        3. 初始化 workflow-state:
+           bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init {idea-name} <需要开发的层>
+    postcondition:
+      check: assessment-exists
+
+  - id: phase-loop
+    description: Phase 循环（设计→编码）
+    type: loop
+    source: "{DDD_HELP}/workflow.yaml"
+    group-by: phase
+    order: ascending
+    per-phase:
+      - id: check-upstream
+        description: 检查上游就绪（Phase 2+）
+        condition: "phase > 1"
+        action:
+          type: script
+          command: "bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-upstream {layer}"
+          expect-field: upstream_ready
+          expect-value: true
+
+      - id: design
+        description: 设计编排
+        action:
+          type: skill
+          name: backend-thought
+          args: "{idea-name} --layers {layers-in-phase}"
+        postcondition:
+          check: layers-designed
+
+      - id: confirm
+        description: 标记确认（thought skill 内部已完成用户确认）
+        action:
+          type: script
+          command: "bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} confirmed"
+        for-each: layers-in-phase
+
+      - id: code
+        description: 编码编排
+        action:
+          type: skill
+          name: backend-works
+          args: "{idea-name} --layers {layers-in-phase}"
+        postcondition:
+          check: layers-coded
+
+  - id: mark-approved
+    description: 标记后端完成
+    action:
+      type: script
+      command: "touch {IDEA_DIR}/.approved"
+    postcondition:
+      check: approved
+
+  - id: supplementary
+    description: 审查需求遗漏并执行工程支撑任务
+    action:
+      type: self
+      instructions: |
+        1. Read {IDEA_DIR}/requirement.md，逐条审查需求项
+        2. 对比已完成的 DDD 四层代码，识别出不属于四层但在需求中提到的事项
+           （如 Dockerfile、docker-compose、部署配置、启动脚本、CI/CD 配置、环境变量配置等）
+        3. 如果有遗漏：
+           - 生成 {IDEA_DIR}/supplementary-tasks.md，每个遗漏需求一项，checklist 格式
+           - 向用户展示遗漏清单，确认后逐项用 Agent（subagent_type: general-purpose, max_turns: 10）执行
+        4. 如果无遗漏：告知用户所有需求项均已覆盖
+        5. 审查完成（无论是否有遗漏）：touch {IDEA_DIR}/.supplementary-reviewed
+    postcondition:
+      check: supplementary-reviewed
+
+  - id: merge
+    description: 合并分支
+    action:
+      type: skill
+      name: merge
+      args: "{idea-name}"
+
+  - id: summary
+    description: 完成汇总
+    action:
+      type: self
+      instructions: "向用户展示实现摘要、各层完成状态、产出文件总列表"
+
+# resume-table 已由 core/scripts/orchestration-status.sh 程序化实现
+# 以下表格仅作为逻辑文档保留
+resume-table:
+  - condition: "requirement.md 不存在"
+    resume-from: clarify
+  - condition: "assessment.md 不存在"
+    resume-from: assessment
+  - condition: "某层 status=designing"
+    resume-from: "phase-loop (该层 design)"
+  - condition: "某层 status=designed"
+    resume-from: "phase-loop (该层 confirm)"
+  - condition: "某层 status=confirmed"
+    resume-from: "phase-loop (该层 code)"
+  - condition: "某层 status=coding"
+    resume-from: "phase-loop (该层 code)"
+  - condition: ".approved 存在, .supplementary-reviewed 不存在"
+    resume-from: supplementary
+  - condition: ".supplementary-reviewed 存在"
+    resume-from: merge

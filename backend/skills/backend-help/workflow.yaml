@@ -1,0 +1,132 @@
+# DDD 工作流定义
+# tw-backend-thought / tw-backend-works 读取此文件决定执行顺序
+
+name: ddd-layered
+version: 3
+description: DDD 四层架构工作流（支持 Java/Python/Go）
+
+layers:
+  - id: domain
+    phase: 1
+    design-template: ../backend-thought/assets/domain-design.md
+    thinker-ref: ../../agents/agent-ddd-thinker.md
+    worker-ref: ../../agents/agent-ddd-worker.md
+    requires: []
+    verify:
+      java:
+        - pattern: "**/domain/**/model/*.java"
+          description: 验证领域模型类已创建
+        - pattern: "**/domain/**/repository/*.java"
+          description: 验证仓储接口已创建
+      python:
+        - pattern: "**/domain/**/model/*.py"
+          description: 验证领域模型类已创建
+        - pattern: "**/domain/**/repository/*.py"
+          description: 验证仓储接口已创建
+      go:
+        - pattern: "**/domain/**/model/*.go"
+          description: 验证领域模型类已创建
+        - pattern: "**/domain/**/repository/*.go"
+          description: 验证仓储接口已创建
+
+  - id: infr
+    phase: 2
+    design-template: ../backend-thought/assets/infr-design.md
+    thinker-ref: ../../agents/agent-ddd-thinker.md
+    worker-ref: ../../agents/agent-ddd-worker.md
+    requires: [domain]
+    verify:
+      java:
+        - pattern: "**/infr/repository/**/*RepositoryImpl.java"
+          description: 验证仓储实现已创建
+        - pattern: "**/infr/repository/**/*Mapper.java"
+          description: 验证 Mapper 已创建
+        - pattern: "**/infr/repository/**/*PO.java"
+          description: 验证 PO 已创建
+      python:
+        - pattern: "**/infr/repository/**/*_repository_impl.py"
+          description: 验证仓储实现已创建
+        - pattern: "**/infr/repository/**/*_model.py"
+          description: 验证 ORM Model 已创建
+      go:
+        - pattern: "**/infr/repository/**/*_repository_impl.go"
+          description: 验证仓储实现已创建
+        - pattern: "**/infr/repository/**/*_model.go"
+          description: 验证 GORM Model 已创建
+
+  - id: application
+    phase: 2
+    design-template: ../backend-thought/assets/application-design.md
+    thinker-ref: ../../agents/agent-ddd-thinker.md
+    worker-ref: ../../agents/agent-ddd-worker.md
+    requires: [domain]
+    verify:
+      java:
+        - pattern: "**/application/**/*ApplicationService.java"
+          description: 验证应用服务已创建
+        - pattern: "**/application/**/*Command.java"
+          description: 验证 Command 已创建
+      python:
+        - pattern: "**/application/**/*_application_service.py"
+          description: 验证应用服务已创建
+        - pattern: "**/application/**/*_command.py"
+          description: 验证 Command 已创建
+      go:
+        - pattern: "**/application/**/*_application_service.go"
+          description: 验证应用服务已创建
+        - pattern: "**/application/**/*_command.go"
+          description: 验证 Command 已创建
+
+  - id: ohs
+    phase: 3
+    design-template: ../backend-thought/assets/ohs-design.md
+    thinker-ref: ../../agents/agent-ddd-thinker.md
+    worker-ref: ../../agents/agent-ddd-worker.md
+    requires: [application, domain]
+    verify:
+      java:
+        - pattern: "**/ohs/**/*Controller.java"
+          description: 验证 Controller 已创建
+        - pattern: "**/ohs/**/*Request.java"
+          description: 验证 Request DTO 已创建
+        - pattern: "**/ohs/**/*Response.java"
+          description: 验证 Response DTO 已创建
+      python:
+        - pattern: "**/ohs/**/*_router.py"
+          description: 验证 Router 已创建
+        - pattern: "**/ohs/**/*_request.py"
+          description: 验证 Request DTO 已创建
+        - pattern: "**/ohs/**/*_response.py"
+          description: 验证 Response DTO 已创建
+      go:
+        - pattern: "**/ohs/**/*_handler.go"
+          description: 验证 Handler 已创建
+        - pattern: "**/ohs/**/*_request.go"
+          description: 验证 Request DTO 已创建
+        - pattern: "**/ohs/**/*_response.go"
+          description: 验证 Response DTO 已创建
+
+state-machine:
+  states: [pending, designing, designed, confirmed, coding, coded, failed]
+  transitions:
+    - from: pending
+      to: designing
+      trigger: thinker-start
+    - from: designing
+      to: designed
+      trigger: subagent-stop
+    - from: designed
+      to: confirmed
+      trigger: user-confirm
+    - from: confirmed
+      to: coding
+      trigger: worker-start
+    - from: coding
+      to: coded
+      trigger: subagent-stop
+    - from: [designing, coding]
+      to: failed
+      trigger: error
+    - from: failed
+      to: pending
+      trigger: retry

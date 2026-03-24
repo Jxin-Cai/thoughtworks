@@ -1,5 +1,5 @@
 {
-  "name": "thoughtworks-all",
+  "name": "tw-all",
   "description": "DDD Spec-Driven Development framework: fullstack design and code generation",
   "version": "2.0.0",
   "author": {
@@ -11,10 +11,10 @@
   "license": "MIT",
   "keywords": ["ddd", "domain-driven-design", "java", "python", "go", "layered-architecture", "code-generation", "frontend", "fullstack"],
   "agents": [
-    "./agents/thoughtworks-agent-ddd-thinker.md",
-    "./agents/thoughtworks-agent-ddd-worker.md",
-    "./agents/thoughtworks-agent-frontend-thinker.md",
-    "./agents/thoughtworks-agent-frontend-worker.md"
+    "./agents/agent-ddd-thinker.md",
+    "./agents/agent-ddd-worker.md",
+    "./agents/agent-frontend-thinker.md",
+    "./agents/agent-frontend-worker.md"
   ],
   "skills": ["./skills/"],
   "commands": ["./commands/"]

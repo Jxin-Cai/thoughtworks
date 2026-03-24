@@ -1,0 +1,5 @@
+---
+description: "Start frontend development: design and code generation consuming DDD API contracts"
+---
+
+Invoke the frontend skill and follow it exactly as presented to you

@@ -1,1 +1,0 @@
-../../frontend/agents/thoughtworks-agent-frontend-thinker.md

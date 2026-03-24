@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# SessionStart hook for thoughtworks-all plugin (fullstack)
+# SessionStart hook for tw-all plugin (fullstack)
 
 set -euo pipefail
 
-session_context="You have the thoughtworks-all plugin installed.\n\nAvailable slash commands:\n- /thoughtworks-skills-all — Fullstack DDD workflow: orchestrates backend and frontend in sequence\n- /thoughtworks-skills-backend — Backend DDD end-to-end workflow\n- /thoughtworks-skills-frontend — Frontend end-to-end workflow consuming DDD API contracts\n- /thoughtworks-branch — Git feature branch management\n- /thoughtworks-skills-merge — Squash merge feature branch back to main/master\n\nThese skills are ONLY activated when the user explicitly invokes them via slash command.\nDo NOT auto-invoke these skills based on user intent or keywords. Only use them when the user types the slash command."
+session_context="You have the tw-all plugin installed.\n\nAvailable slash commands:\n- /all — Fullstack DDD workflow: orchestrates backend and frontend in sequence\n- /backend — Backend DDD end-to-end workflow\n- /frontend — Frontend end-to-end workflow consuming DDD API contracts\n- /branch — Git feature branch management\n- /merge — Squash merge feature branch back to main/master\n\nThese skills are ONLY activated when the user explicitly invokes them via slash command.\nDo NOT auto-invoke these skills based on user intent or keywords. Only use them when the user types the slash command."
 
 # Output context injection as JSON.
 cat <<EOF

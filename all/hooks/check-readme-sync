@@ -17,11 +17,11 @@ STRUCTURAL_PATTERNS=(
   "backend/skills/*/SKILL.md"
   "backend/commands/*.md"
   "backend/agents/*.md"
-  "backend/skills/thoughtworks-skills-backend-help/workflow.yaml"
+  "backend/skills/backend-help/workflow.yaml"
   "frontend/skills/*/SKILL.md"
   "frontend/commands/*.md"
   "frontend/agents/*.md"
-  "frontend/skills/thoughtworks-skills-frontend-help/workflow.yaml"
+  "frontend/skills/frontend-help/workflow.yaml"
   ".claude-plugin/plugin.json"
   ".claude-plugin/marketplace.json"
 )

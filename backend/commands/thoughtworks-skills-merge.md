@@ -1,1 +1,0 @@
-../../core/commands/thoughtworks-skills-merge.md

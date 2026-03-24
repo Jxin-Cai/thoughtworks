@@ -20,10 +20,10 @@ REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 GATE_CHECK="$SCRIPT_DIR/gate-check.sh"
 
 # 路径设置
-BACKEND_WF_STATUS="$REPO_ROOT/backend/skills/thoughtworks-skills-backend-help/scripts/backend-workflow-status.sh"
-BACKEND_WORKFLOW_YAML="$REPO_ROOT/backend/skills/thoughtworks-skills-backend-help/workflow.yaml"
-FRONTEND_WF_STATUS="$REPO_ROOT/frontend/skills/thoughtworks-skills-frontend-help/scripts/frontend-workflow-status.sh"
-FRONTEND_WORKFLOW_YAML="$REPO_ROOT/frontend/skills/thoughtworks-skills-frontend-help/workflow.yaml"
+BACKEND_WF_STATUS="$REPO_ROOT/backend/skills/backend-help/scripts/backend-workflow-status.sh"
+BACKEND_WORKFLOW_YAML="$REPO_ROOT/backend/skills/backend-help/workflow.yaml"
+FRONTEND_WF_STATUS="$REPO_ROOT/frontend/skills/frontend-help/scripts/frontend-workflow-status.sh"
+FRONTEND_WORKFLOW_YAML="$REPO_ROOT/frontend/skills/frontend-help/workflow.yaml"
 
 # source 共享库（需要 STATE_FILE 变量，按需设置）
 source "$SCRIPT_DIR/workflow-lib.sh"

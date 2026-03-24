@@ -1,5 +1,5 @@
 {
-  "name": "thoughtworks-frontend",
+  "name": "tw-frontend",
   "description": "Frontend code generation consuming DDD API contracts",
   "version": "2.1.0",
   "author": {
@@ -11,8 +11,8 @@
   "license": "MIT",
   "keywords": ["frontend", "fsd", "feature-sliced-design", "typescript", "react", "code-generation"],
   "agents": [
-    "./agents/thoughtworks-agent-frontend-thinker.md",
-    "./agents/thoughtworks-agent-frontend-worker.md"
+    "./agents/agent-frontend-thinker.md",
+    "./agents/agent-frontend-worker.md"
   ],
   "skills": ["./skills/"],
   "commands": ["./commands/"]

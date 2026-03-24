@@ -1,1 +1,0 @@
-../../backend/commands/thoughtworks-skills-backend-thought.md

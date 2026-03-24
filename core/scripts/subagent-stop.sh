@@ -96,9 +96,9 @@ while IFS= read -r TASK_FILE; do
 
   # 确定使用哪个 workflow-status.sh（基于仓库根目录）
   if [ "$STACK" = "frontend" ]; then
-    STATUS_SCRIPT="$REPO_ROOT/frontend/skills/thoughtworks-skills-frontend-help/scripts/frontend-workflow-status.sh"
+    STATUS_SCRIPT="$REPO_ROOT/frontend/skills/frontend-help/scripts/frontend-workflow-status.sh"
   else
-    STATUS_SCRIPT="$REPO_ROOT/backend/skills/thoughtworks-skills-backend-help/scripts/backend-workflow-status.sh"
+    STATUS_SCRIPT="$REPO_ROOT/backend/skills/backend-help/scripts/backend-workflow-status.sh"
   fi
 
   # 只在状态为预期值时才标记完成（避免重复标记或覆盖 failed）

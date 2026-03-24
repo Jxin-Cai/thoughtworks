@@ -14,23 +14,23 @@
 
 ```bash
 # 仅共享能力层（branch / merge / 共享引用资源）
-/plugin install thoughtworks-core@thoughtworks
+/plugin install tw-core@thoughtworks
 
 # 全栈（后端 + 前端）
-/plugin install thoughtworks-all@thoughtworks
+/plugin install tw-all@thoughtworks
 
 # 仅后端
-/plugin install thoughtworks-backend@thoughtworks
+/plugin install tw-backend@thoughtworks
 
 # 仅前端
-/plugin install thoughtworks-frontend@thoughtworks
+/plugin install tw-frontend@thoughtworks
 ```
 
 更新 / 卸载：
 
 ```bash
-/plugin update thoughtworks-all
-/plugin uninstall thoughtworks-all
+/plugin update tw-all
+/plugin uninstall tw-all
 ```
 
 ### 本地开发
@@ -50,9 +50,9 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 
 | 安装模式 | 后端（DDD 四层） | 前端 | 前后端联动 |
 |---------|:-:|:-:|:-:|
-| `thoughtworks-backend` | ✅ | ❌ | ❌ |
-| `thoughtworks-frontend` | ❌ | ✅ | ❌ |
-| `thoughtworks-all` | ✅ | ✅ | ✅ |
+| `tw-backend` | ✅ | ❌ | ❌ |
+| `tw-frontend` | ❌ | ✅ | ❌ |
+| `tw-all` | ✅ | ✅ | ✅ |
 
 - 仅安装后端插件时，即使需求描述涉及前端，也只生成后端代码
 - 仅安装前端插件时，即使需求描述涉及后端，也只生成前端代码
@@ -64,10 +64,10 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 
 项目拆分为 `core/`、`backend/`、`frontend/`、`all/` 四个子插件：
 
-- `thoughtworks-core`：共享能力层，提供 branch/merge 技能和共享引用资源。
-- `thoughtworks-backend`：后端 DDD 闭环（澄清 → 设计 → 编码）。
-- `thoughtworks-frontend`：前端闭环（消费后端 OHS 契约进行设计与编码）。
-- `thoughtworks-all`：全栈编排入口，统一调度前后端能力。
+- `tw-core`：共享能力层，提供 branch/merge 技能和共享引用资源。
+- `tw-backend`：后端 DDD 闭环（澄清 → 设计 → 编码）。
+- `tw-frontend`：前端闭环（消费后端 OHS 契约进行设计与编码）。
+- `tw-all`：全栈编排入口，统一调度前后端能力。
 
 这种拆分确保“按需安装、能力边界清晰、复用集中在 core”。
 
@@ -95,31 +95,31 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 ### 全栈（推荐）
 
 ```
-/thoughtworks-skills-all 实现一个用户注册功能
+/all 实现一个用户注册功能
 ```
 
 ### 仅后端
 
 ```
-/thoughtworks-skills-backend 实现一个用户注册功能，支持邮箱注册和手机号注册
+/backend 实现一个用户注册功能，支持邮箱注册和手机号注册
 ```
 
 ### 仅前端（需先完成后端 OHS 设计）
 
 ```
-/thoughtworks-skills-frontend <idea-name>
+/frontend <idea-name>
 ```
 
 ### 分步执行
 
 ```bash
-/thoughtworks-skills-backend-clarify <idea-name>        # 后端需求澄清
-/thoughtworks-skills-backend-thought <idea-name>        # 后端设计
-/thoughtworks-skills-backend-works <idea-name>          # 后端编码
+/backend-clarify <idea-name>        # 后端需求澄清
+/backend-thought <idea-name>        # 后端设计
+/backend-works <idea-name>          # 后端编码
 
-/thoughtworks-skills-frontend-clarify <idea-name>   # 前端需求澄清
-/thoughtworks-skills-frontend-thought <idea-name>   # 前端设计
-/thoughtworks-skills-frontend-works <idea-name>     # 前端编码
+/frontend-clarify <idea-name>   # 前端需求澄清
+/frontend-thought <idea-name>   # 前端设计
+/frontend-works <idea-name>     # 前端编码
 ```
 
 ### 会话行为说明
@@ -130,14 +130,14 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 
 ### 分支合并行为
 
-- `/thoughtworks-skills-merge <idea-name>` 在合并前会检查未提交变更，并提示确认要纳入合并的文件范围。
+- `/merge <idea-name>` 在合并前会检查未提交变更，并提示确认要纳入合并的文件范围。
 - 清理功能分支时默认采用安全删除（`git branch -d`）；若存在未合并提交，再由用户确认是否强制删除。
 
 ### 加载编码规范
 
 ```bash
-/thoughtworks-skills-backend-spec java|python|go <domain|application|infr|ohs>
-/thoughtworks-skills-frontend-spec react-ts
+/backend-spec java|python|go <domain|application|infr|ohs>
+/frontend-spec react-ts
 ```
 
 ## License

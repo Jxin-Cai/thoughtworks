@@ -1,0 +1,66 @@
+# Frontend 工作流定义
+# tw-frontend-thought / tw-frontend-works 读取此文件决定执行顺序
+
+name: frontend-layered
+version: 2
+description: 前端工作流（3 层拆分：architecture → components → checklist）
+
+layers:
+  - id: frontend-architecture
+    phase: 1
+    design-template: ../frontend-thought/assets/frontend-architecture-design.md
+    thinker-ref: ../../agents/agent-frontend-thinker.md
+    worker-ref: null
+    requires: []
+    verify: "frontend-designs/frontend-architecture.md"
+
+  - id: frontend-components
+    phase: 2
+    design-template: ../frontend-thought/assets/frontend-components-design.md
+    thinker-ref: ../../agents/agent-frontend-thinker.md
+    worker-ref: null
+    requires: [frontend-architecture]
+    verify: "frontend-designs/frontend-components.md"
+
+  - id: frontend-checklist
+    phase: 3
+    design-template: ../frontend-thought/assets/frontend-checklist-design.md
+    thinker-ref: ../../agents/agent-frontend-thinker.md
+    worker-ref: ../../agents/agent-frontend-worker.md
+    requires: [frontend-architecture, frontend-components]
+    verify:
+      - pattern: "**/src/pages/**/*.tsx"
+        description: 验证页面组件已创建
+      - pattern: "**/src/features/**/*.{ts,tsx}"
+        description: 验证 Feature slice 已创建
+      - pattern: "**/src/entities/**/*.{ts,tsx}"
+        description: 验证 Entity slice 已创建
+      - pattern: "**/src/shared/api/**/*.ts"
+        description: 验证 API 客户端基础封装已创建
+      - pattern: "**/src/app/router/**/*.{ts,tsx}"
+        description: 验证路由配置已创建
+
+state-machine:
+  states: [pending, designing, designed, confirmed, coding, coded, failed]
+  transitions:
+    - from: pending
+      to: designing
+      trigger: thinker-start
+    - from: designing
+      to: designed
+      trigger: subagent-stop
+    - from: designed
+      to: confirmed
+      trigger: user-confirm
+    - from: confirmed
+      to: coding
+      trigger: worker-start
+    - from: coding
+      to: coded
+      trigger: subagent-stop
+    - from: [designing, coding]
+      to: failed
+      trigger: error
+    - from: failed
+      to: pending
+      trigger: retry

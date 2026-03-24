@@ -7,7 +7,7 @@
   },
   "plugins": [
     {
-      "name": "thoughtworks-backend",
+      "name": "tw-backend",
       "source": "./backend",
       "description": "DDD backend: design and code generation for Java/Python/Go layered architecture",
       "version": "2.0.0",
@@ -19,7 +19,7 @@
       }
     },
     {
-      "name": "thoughtworks-frontend",
+      "name": "tw-frontend",
       "source": "./frontend",
       "description": "Frontend code generation consuming DDD API contracts",
       "version": "2.1.0",
@@ -31,7 +31,7 @@
       }
     },
     {
-      "name": "thoughtworks-all",
+      "name": "tw-all",
       "source": "./all",
       "description": "DDD Spec-Driven Development framework: fullstack design and code generation",
       "version": "2.0.0",

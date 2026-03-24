@@ -100,9 +100,9 @@ case "$GATE_ID" in
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
     REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
     if [ "$STACK" = "frontend" ]; then
-      STATUS_SCRIPT="$REPO_ROOT/frontend/skills/thoughtworks-skills-frontend-help/scripts/frontend-workflow-status.sh"
+      STATUS_SCRIPT="$REPO_ROOT/frontend/skills/frontend-help/scripts/frontend-workflow-status.sh"
     else
-      STATUS_SCRIPT="$REPO_ROOT/backend/skills/thoughtworks-skills-backend-help/scripts/backend-workflow-status.sh"
+      STATUS_SCRIPT="$REPO_ROOT/backend/skills/backend-help/scripts/backend-workflow-status.sh"
     fi
     if [ -f "$STATUS_SCRIPT" ]; then
       result=$(bash "$STATUS_SCRIPT" "$IDEA_DIR" --check-upstream "$LAYER" 2>/dev/null || echo '{}')
