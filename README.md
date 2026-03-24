@@ -13,9 +13,6 @@
 按需安装：
 
 ```bash
-# 仅共享能力层（branch / merge / 共享引用资源）
-/plugin install tw-core@thoughtworks
-
 # 全栈（后端 + 前端）
 /plugin install tw-all@thoughtworks
 
@@ -113,13 +110,13 @@ claude --plugin-dir ./thoughtworks/frontend       # 仅前端
 ### 分步执行
 
 ```bash
-/backend-clarify <idea-name>        # 后端需求澄清
+/clarify backend <idea-name>        # 后端需求澄清
 /backend-thought <idea-name>        # 后端设计
 /backend-works <idea-name>          # 后端编码
 
-/frontend-clarify <idea-name>   # 前端需求澄清
-/frontend-thought <idea-name>   # 前端设计
-/frontend-works <idea-name>     # 前端编码
+/clarify frontend <idea-name>       # 前端需求澄清
+/frontend-thought <idea-name>       # 前端设计
+/frontend-works <idea-name>         # 前端编码
 ```
 
 ### 会话行为说明

@@ -17,7 +17,7 @@
 
 ## 输出格式要求
 
-- 产出写入 `tasks/` 子目录，每个 task 一个文件，命名格式 `{layer}-{nnn}-{topic-slug}.md`
+- 产出写入 `backend-designs/{layer}/` 子目录，每个 task 一个文件，命名格式 `{nnn}-{topic-slug}.md`
 - 使用 Write 工具将设计文档写入指定的输出路径。**必须分段写入**：先用 Write 写入 frontmatter + 前半部分章节，再用 Edit（追加）写入剩余章节。每段不超过 300 行，防止单次写入内容过长导致失败
 - 每个 task 文件的 frontmatter 必须包含 `task_id`、`layer`、`order`、`status`、`depends_on`、`description` 字段
 - 设计文档末尾必须包含「实现清单」表格，列出所有需要创建的类的全路径、关键实现点和对应章节

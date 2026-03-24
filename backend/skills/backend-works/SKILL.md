@@ -19,7 +19,7 @@ agent:
 
 **本技能附加铁律：**
 
-1. **一个 task 一个 agent** — 每个 `tasks/*.md` 文件启动独立 worker agent 执行其实现清单，禁止合并多个 task 到一个 agent
+1. **一个 task 一个 agent** — 每个 `{layer}/*.md` 文件启动独立 worker agent 执行其实现清单，禁止合并多个 task 到一个 agent
 2. **禁止跳过 task** — 每个 pending/confirmed 的 task 都必须执行，不能以"太简单"或"已被其他 task 覆盖"为由跳过
 3. **禁止修改实现清单** — 实现清单由 `/backend-thought` 产出，执行阶段不能擅自修改
 4. **禁止未验证就标记 coded** — agent 完成后必须验证文件已创建，才能将 task 状态更新为 coded
@@ -52,12 +52,12 @@ agent:
 - `--layers`：可选，逗号分隔的层列表（如 `domain` 或 `infr,application`）。只执行指定层的 task
 - `--tasks`：可选，逗号分隔的 task_id 列表（如 `domain-001` 或 `infr-001,application-001`）。只执行指定 task
 
-验证 `.thoughtworks/<idea-name>/backend-designs/tasks/` 目录存在且包含 task 设计文件。不存在则提示先运行 `/backend-thought`。
+验证 `.thoughtworks/<idea-name>/backend-designs/` 目录存在且包含按层分目录的 task 设计文件（如 `domain/`、`infr/` 等子目录）。不存在则提示先运行 `/backend-thought`。
 
 设置变量：
 - `IDEA_DIR` = `.thoughtworks/<idea-name>`
 - `DDD_HELP` = 本 SKILL.md 所在目录的兄弟目录 `backend-help/`（即 `../backend-help/`）
-- `TASKS_DIR` = `{IDEA_DIR}/backend-designs/tasks`
+- `DESIGNS_DIR` = `{IDEA_DIR}/backend-designs`
 - `BACKEND_LANG` = 从 `{IDEA_DIR}/requirement.md` 的 `## 技术选型` 章节读取后端语言（java/python/go），未找到则默认 `java`
 - `FILE_EXT` = 根据 `BACKEND_LANG` 映射（java→`.java`，python→`.py`，go→`.go`）
 

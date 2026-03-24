@@ -42,11 +42,13 @@ agent:
 ├── frontend-workflow-state.yaml         # 层级状态（由 task 状态聚合推导）
 ├── frontend-task-workflow-state.yaml    # Task 级工作流状态
 └── frontend-designs/
-    └── tasks/                           # 前端各层 task 设计文档
-        ├── arch-001-entity-order.md
-        ├── arch-002-feature-create-order.md
-        ├── comp-001-order-components.md
-        └── impl-001-order-checklist.md
+    ├── frontend-architecture/          # 架构设计 task
+    │   ├── 001-entity-order.md
+    │   └── 002-feature-create-order.md
+    ├── frontend-components/            # 组件设计 task
+    │   └── 001-order-components.md
+    └── frontend-checklist/             # 实现清单 task
+        └── 001-order-checklist.md
 ```
 
 ---
@@ -167,13 +169,13 @@ Agent(
     ---
 
     # OUTPUT
-    将设计文档写入：`{IDEA_DIR}/frontend-designs/tasks/` 目录
-    每个 task 一个文件，命名格式：`{layer-prefix}-{nnn}-{topic-slug}.md`
+    将设计文档写入：`{IDEA_DIR}/frontend-designs/{layer-id}/` 目录
+    每个 task 一个文件，命名格式：`{nnn}-{topic-slug}.md`
 
     ## Task 拆分规则
-    - frontend-architecture 层：按 Entity/Feature 拆 task（如 arch-001-entity-order.md, arch-002-feature-create-order.md），小需求可合为一个 task
-    - frontend-components 层：按组件组拆 task（如 comp-001-order-components.md）
-    - frontend-checklist 层：按 FSD slice 拆 task（如 impl-001-order-checklist.md），小需求可合为一个 task
+    - frontend-architecture 层：按 Entity/Feature 拆 task（如 `001-entity-order.md`, `002-feature-create-order.md`），小需求可合为一个 task
+    - frontend-components 层：按组件组拆 task（如 `001-order-components.md`）
+    - frontend-checklist 层：按 FSD slice 拆 task（如 `001-order-checklist.md`），小需求可合为一个 task
     - 单个 task 文件不超过 800 行
     - 每个 task 的 frontmatter 必须包含 task_id、layer、order、status、depends_on、description
 
@@ -227,7 +229,7 @@ Agent(
 
 ```
 ## 上游设计（{upstream-layer-id} — 必读）
-使用 Read 工具加载：`{IDEA_DIR}/frontend-designs/{upstream-layer-id}.md`
+使用 Read 工具加载上游层设计文档，扫描 `{IDEA_DIR}/frontend-designs/{upstream-layer-id}/` 目录下所有 task 文件。
 重点关注 `## 导出契约` 区，作为本层设计的上游依据。
 ```
 
@@ -262,14 +264,14 @@ Agent(
 
 ## Step 2.5: Task 工作流状态初始化
 
-所有 Phase 的 Thinker 完成后，编排器负责扫描 `frontend-designs/tasks/` 下所有 task 文件的 frontmatter，构建 `--init-tasks` 命令的参数。
+所有 Phase 的 Thinker 完成后，编排器负责扫描 `frontend-designs/` 下各层子目录中所有 task 文件的 frontmatter，构建 `--init-tasks` 命令的参数。
 
 ```bash
 # 对每个 task 文件提取 frontmatter 后拼接参数，格式：task_id:layer:depends_on:description:file
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init-tasks {idea-name} \
-  "arch-001:frontend-architecture::Entity Order:tasks/arch-001-entity-order.md" \
-  "comp-001:frontend-components:arch-001:Order 组件:tasks/comp-001-order-components.md" \
-  "impl-001:frontend-checklist:comp-001:Order 实现:tasks/impl-001-order-checklist.md"
+  "arch-001:frontend-architecture::Entity Order:frontend-architecture/001-entity-order.md" \
+  "comp-001:frontend-components:arch-001:Order 组件:frontend-components/001-order-components.md" \
+  "impl-001:frontend-checklist:comp-001:Order 实现:frontend-checklist/001-order-checklist.md"
 ```
 
 注意：`depends_on` 多个依赖用逗号分隔，无依赖用空字符串。

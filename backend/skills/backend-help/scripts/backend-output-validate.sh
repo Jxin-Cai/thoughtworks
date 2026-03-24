@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 后端设计文档校验脚本（支持 tasks/ 目录和旧版 *.md 目录）
+# 后端设计文档校验脚本（支持按层分目录和旧版 *.md 目录）
 # 用法: backend-output-validate.sh <idea-dir> [--layer <layer>]
 # 输出: JSON 格式校验结果
 
@@ -16,7 +16,7 @@ while [ $# -gt 0 ]; do
 done
 
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
-TASKS_DIR="$BACKEND_DESIGNS_DIR/tasks"
+LAYER_DIRS="domain infr application ohs"
 STATE_FILE="$IDEA_DIR/workflow-state.yaml"
 
 if [ ! -d "$BACKEND_DESIGNS_DIR" ]; then
@@ -104,13 +104,22 @@ has_frontmatter_field() {
   echo "$fm" | grep -q "^${field}:" 2>/dev/null
 }
 
-# 从文件名前缀推断 layer 名
-# domain.md -> domain, infr-1-xxx.md -> infr, application.md -> application, ohs-xxx.md -> ohs
-layer_from_filename() {
-  local fname="$1"
-  local base="${fname%.md}"
-  # 取第一个 - 之前的部分，或整个 base
-  echo "$base" | sed 's/-.*//'
+# 从文件完整路径推断 layer 名
+# 新模式: backend-designs/domain/001-order.md → domain（从目录名）
+# 旧模式: backend-designs/domain-001-order.md → domain（从文件名前缀）
+layer_from_filepath() {
+  local fpath="$1"
+  local parent_dir
+  parent_dir=$(basename "$(dirname "$fpath")")
+  case "$parent_dir" in
+    domain|infr|application|ohs) echo "$parent_dir" ;;
+    *)
+      # 旧模式回退：从文件名前缀推断
+      local fname
+      fname=$(basename "$fpath")
+      echo "${fname%.md}" | sed 's/-.*//'
+      ;;
+  esac
 }
 
 # 检查文件是否包含某个二级章节
@@ -231,21 +240,25 @@ extract_aggregate_body_before_export() {
   ' "$file"
 }
 
-# ── 收集各层文件（优先扫描 tasks/ 目录，回退到旧版 *.md）──
+# ── 收集各层文件（优先按层分目录，回退到旧版 *.md）──
 
-# 判断是否使用 tasks/ 目录
-USE_TASKS_DIR=""
-if [ -d "$TASKS_DIR" ]; then
-  task_file_count=$(find "$TASKS_DIR" -maxdepth 1 -name '*.md' 2>/dev/null | head -1)
-  if [ -n "$task_file_count" ]; then
-    USE_TASKS_DIR="1"
+# 判断是否使用按层分目录模式
+USE_LAYER_DIRS=""
+for layer_name in $LAYER_DIRS; do
+  if [ -d "$BACKEND_DESIGNS_DIR/$layer_name" ]; then
+    has_files=$(find "$BACKEND_DESIGNS_DIR/$layer_name" -maxdepth 1 -name '*.md' 2>/dev/null | head -1)
+    if [ -n "$has_files" ]; then
+      USE_LAYER_DIRS="1"
+      break
+    fi
   fi
-fi
+done
 
-# 获取设计文件所在的基础目录
-get_designs_base_dir() {
-  if [ -n "$USE_TASKS_DIR" ]; then
-    echo "$TASKS_DIR"
+# 获取某层的文件目录
+get_layer_dir() {
+  local l="$1"
+  if [ -n "$USE_LAYER_DIRS" ]; then
+    echo "$BACKEND_DESIGNS_DIR/$l"
   else
     echo "$BACKEND_DESIGNS_DIR"
   fi
@@ -255,17 +268,27 @@ get_designs_base_dir() {
 get_layer_files_cached() {
   local l="$1"
   local scan_dir
-  scan_dir=$(get_designs_base_dir)
-  for f in "$scan_dir"/*.md; do
-    [ -f "$f" ] || continue
-    local base
-    base=$(basename "$f")
-    local prefix
-    prefix=$(echo "${base%.md}" | sed 's/-.*//')
-    if [ "$prefix" = "$l" ]; then
-      echo "$base"
-    fi
-  done
+  scan_dir=$(get_layer_dir "$l")
+  if [ ! -d "$scan_dir" ]; then return; fi
+  if [ -n "$USE_LAYER_DIRS" ]; then
+    # 新模式：目录即层，目录下所有 .md 都属于该层
+    for f in "$scan_dir"/*.md; do
+      [ -f "$f" ] || continue
+      echo "$(basename "$f")"
+    done
+  else
+    # 旧模式：按文件名前缀匹配
+    for f in "$scan_dir"/*.md; do
+      [ -f "$f" ] || continue
+      local base
+      base=$(basename "$f")
+      local prefix
+      prefix=$(echo "${base%.md}" | sed 's/-.*//')
+      if [ "$prefix" = "$l" ]; then
+        echo "$base"
+      fi
+    done
+  fi
 }
 
 # 检查某层是否在 tracked_layers 中
@@ -276,21 +299,20 @@ is_tracked() {
 
 # ── 开始校验 ──
 
-SCAN_DIR=$(get_designs_base_dir)
-
 for layer in $TRACKED_LAYERS; do
   files=$(get_layer_files_cached "$layer")
   [ -z "$files" ] && continue
+  scan_dir=$(get_layer_dir "$layer")
 
   for fname in $files; do
-    filepath="$SCAN_DIR/$fname"
+    filepath="$scan_dir/$fname"
     [ -f "$filepath" ] || continue
 
     # ====== S1: frontmatter 必填字段 ======
     s1_pass=true
     s1_detail=""
     required_fields="layer order status depends_on description"
-    if [ -n "$USE_TASKS_DIR" ]; then
+    if [ -n "$USE_LAYER_DIRS" ]; then
       required_fields="task_id layer order status depends_on description"
     fi
     for field in $required_fields; do
@@ -306,13 +328,13 @@ for layer in $TRACKED_LAYERS; do
       add_check "$layer" "$fname" "S1" "false" "$s1_detail"
     fi
 
-    # ====== S2: layer 值与文件名前缀一致 ======
+    # ====== S2: layer 值与文件所在目录/文件名前缀一致 ======
     fm_layer=$(extract_field "$filepath" "layer")
-    expected_layer=$(layer_from_filename "$fname")
+    expected_layer=$(layer_from_filepath "$filepath")
     if [ "$fm_layer" = "$expected_layer" ]; then
       add_check "$layer" "$fname" "S2" "true"
     else
-      add_check "$layer" "$fname" "S2" "false" "frontmatter layer 值 '${fm_layer}' 与文件名前缀 '${expected_layer}' 不一致"
+      add_check "$layer" "$fname" "S2" "false" "frontmatter layer 值 '${fm_layer}' 与所在目录/文件名 '${expected_layer}' 不一致"
     fi
 
     # ====== S3: 结论章节存在且有非空内容 ======
@@ -572,7 +594,7 @@ get_layer_file() {
   local first
   first=$(echo "$files" | head -1)
   if [ -n "$first" ]; then
-    echo "$(get_designs_base_dir)/$first"
+    echo "$(get_layer_dir "$l")/$first"
   else
     echo ""
   fi
@@ -584,7 +606,7 @@ merge_layer_section() {
   local l="$1" section="$2"
   local files scan_dir
   files=$(get_layer_files_cached "$l")
-  scan_dir=$(get_designs_base_dir)
+  scan_dir=$(get_layer_dir "$l")
   for fname in $files; do
     local fpath="$scan_dir/$fname"
     [ -f "$fpath" ] || continue
@@ -599,7 +621,7 @@ merge_layer_subsection() {
   local l="$1" subsection="$2"
   local files scan_dir
   files=$(get_layer_files_cached "$l")
-  scan_dir=$(get_designs_base_dir)
+  scan_dir=$(get_layer_dir "$l")
   for fname in $files; do
     local fpath="$scan_dir/$fname"
     [ -f "$fpath" ] || continue
@@ -612,7 +634,7 @@ merge_layer_h4_section() {
   local l="$1" h4_title="$2"
   local files scan_dir
   files=$(get_layer_files_cached "$l")
-  scan_dir=$(get_designs_base_dir)
+  scan_dir=$(get_layer_dir "$l")
   for fname in $files; do
     local fpath="$scan_dir/$fname"
     [ -f "$fpath" ] || continue
@@ -626,7 +648,7 @@ get_domain_export_sigs() {
   local sub_title="$1"
   local files scan_dir
   files=$(get_layer_files_cached "domain")
-  scan_dir=$(get_designs_base_dir)
+  scan_dir=$(get_layer_dir "domain")
   for fname in $files; do
     local fpath="$scan_dir/$fname"
     [ -f "$fpath" ] || continue
@@ -652,7 +674,7 @@ if is_tracked "infr" && is_tracked "domain"; then
     infr_files_list=$(get_layer_files_cached "infr")
     # 合并所有 domain task 的接口签名（新旧模板兼容）
     domain_iface_sigs=$(get_domain_export_sigs "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-    scan_dir=$(get_designs_base_dir)
+    scan_dir=$(get_layer_dir "infr")
     for fname in $infr_files_list; do
       filepath="$scan_dir/$fname"
       [ -f "$filepath" ] || continue
@@ -692,7 +714,7 @@ if is_tracked "application" && is_tracked "domain"; then
     app_files_list=$(get_layer_files_cached "application")
     # 合并所有 domain task 的聚合根与实体 API 签名
     domain_agg_sigs=$(get_domain_export_sigs "聚合根与实体 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-    scan_dir=$(get_designs_base_dir)
+    scan_dir=$(get_layer_dir "application")
     for fname in $app_files_list; do
       filepath="$scan_dir/$fname"
       [ -f "$filepath" ] || continue
@@ -739,7 +761,7 @@ if is_tracked "application" && is_tracked "domain"; then
     app_files_list=$(get_layer_files_cached "application")
     # 合并所有 domain task 的接口签名
     domain_iface_sigs=$(get_domain_export_sigs "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
-    scan_dir=$(get_designs_base_dir)
+    scan_dir=$(get_layer_dir "application")
     for fname in $app_files_list; do
       filepath="$scan_dir/$fname"
       [ -f "$filepath" ] || continue
@@ -799,7 +821,7 @@ $app_svc_sigs_old"
         app_svc_sigs="$app_svc_sigs_old"
       fi
     fi
-    scan_dir=$(get_designs_base_dir)
+    scan_dir=$(get_layer_dir "ohs")
     for fname in $ohs_files_list; do
       filepath="$scan_dir/$fname"
       [ -f "$filepath" ] || continue
@@ -834,7 +856,7 @@ if is_tracked "ohs" && is_tracked "application"; then
     ohs_files_list=$(get_layer_files_cached "ohs")
     # 合并所有 application task 导出契约中的 Command 定义数据行
     app_cmd_rows=$(merge_layer_subsection "application" "Command 定义" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true)
-    scan_dir=$(get_designs_base_dir)
+    scan_dir=$(get_layer_dir "ohs")
     for fname in $ohs_files_list; do
       filepath="$scan_dir/$fname"
       [ -f "$filepath" ] || continue

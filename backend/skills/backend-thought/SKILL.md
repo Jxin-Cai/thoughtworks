@@ -39,12 +39,15 @@ agent:
 ├── workflow-state.yaml               # 层级状态（由 task 状态聚合推导）
 ├── task-workflow-state.yaml          # Task 级工作流状态
 └── backend-designs/
-    └── tasks/                        # 各层 task 设计文档
-        ├── domain-001-order-aggregate.md
-        ├── domain-002-payment-aggregate.md
-        ├── infr-001-order-repository.md
-        ├── application-001-order-management.md
-        └── ohs-001-order-api.md
+    ├── domain/                          # Domain 层 task 设计文档
+    │   ├── 001-order-aggregate.md
+    │   └── 002-payment-aggregate.md
+    ├── infr/                            # Infr 层 task 设计文档
+    │   └── 001-order-repository.md
+    ├── application/                     # Application 层 task 设计文档
+    │   └── 001-order-management.md
+    └── ohs/                             # OHS 层 task 设计文档
+        └── 001-order-api.md
 ```
 
 ---
@@ -120,21 +123,21 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，执行 `backend-workflow-status.sh --check-all` 检查状态
 5. **进入下一 Phase**：当前 Phase 全部 done 后，继续下一个 Phase，重复步骤 3-4
 6. 所有目标 Phase 完成后：
-   - 扫描 `backend-designs/tasks/` 目录，提取每个 task 文件的 frontmatter，初始化 `task-workflow-state.yaml`（见下方）
+   - 扫描 `backend-designs/` 下各层子目录（domain/, infr/, application/, ohs/），提取每个 task 文件的 frontmatter，初始化 `task-workflow-state.yaml`（见下方）
    - 执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
 7. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
 
 ### Task 工作流状态初始化
 
-所有 Thinker 完成后，编排器负责扫描 `backend-designs/tasks/` 下所有 task 文件的 frontmatter，构建 `--init-tasks` 命令的参数。每个 task 文件提取 `task_id`、`layer`、`depends_on`、`description` 字段，文件相对路径作为 `file`。
+所有 Thinker 完成后，编排器负责扫描 `backend-designs/` 下各层子目录中所有 task 文件的 frontmatter，构建 `--init-tasks` 命令的参数。每个 task 文件提取 `task_id`、`layer`、`depends_on`、`description` 字段，文件相对路径（`{layer}/{filename}`）作为 `file`。
 
 ```bash
 # 对每个 task 文件提取 frontmatter 后拼接参数，格式：task_id:layer:depends_on:description:file
 bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init-tasks {idea-name} \
-  "domain-001:domain::Order 聚合:tasks/domain-001-order-aggregate.md" \
-  "infr-001:infr:domain-001:Order 仓储:tasks/infr-001-order-repository.md" \
-  "application-001:application:domain-001:订单管理:tasks/application-001-order-management.md" \
-  "ohs-001:ohs:application-001:订单 API:tasks/ohs-001-order-api.md"
+  "domain-001:domain::Order 聚合:domain/001-order-aggregate.md" \
+  "infr-001:infr:domain-001:Order 仓储:infr/001-order-repository.md" \
+  "application-001:application:domain-001:订单管理:application/001-order-management.md" \
+  "ohs-001:ohs:application-001:订单 API:ohs/001-order-api.md"
 ```
 
 注意：`depends_on` 多个依赖用逗号分隔（如 `domain-001,domain-002`），无依赖用空字符串。
@@ -244,7 +247,7 @@ Agent(
     ## 聚合结构要求
 
     requirement.md 的聚合分析章节列出了所有识别的聚合及其依赖关系。
-    为每个聚合输出独立的 task 文件（`domain-{nnn}-{aggregate-slug}.md`），每个 task 包含该聚合的完整设计。
+    为每个聚合输出独立的 task 文件（`{nnn}-{aggregate-slug}.md`，写入 `backend-designs/domain/` 目录），每个 task 包含该聚合的完整设计。
     小聚合（如共享值对象较多的 2 个聚合）可合并为一个 task，但单个 task 不超过 800 行。
 
     你的设计方案完成后，必须回头逐条验证上述每个工作项都有对应的设计产出。
@@ -285,9 +288,9 @@ Agent(
 
     # OUTPUT
 
-    将设计文档写入：`.thoughtworks/<idea-name>/backend-designs/tasks/` 目录
-    每个 task 一个文件，命名格式：`{layer}-{nnn}-{topic-slug}.md`
-    （主 agent 构建 prompt 时，将 `<idea-name>` 替换为实际值的绝对路径）
+    将设计文档写入：`.thoughtworks/<idea-name>/backend-designs/{layer}/` 目录
+    每个 task 一个文件，命名格式：`{nnn}-{topic-slug}.md`
+    （主 agent 构建 prompt 时，将 `<idea-name>` 和 `{layer}` 替换为实际值的绝对路径）
 
     ## Task 拆分规则
     - domain 层：每个聚合一个 task（小聚合可合并）

@@ -18,7 +18,7 @@
 #       status: coded
 #       depends_on: []
 #       description: "Order 聚合"
-#       file: tasks/domain-001-order-aggregate.md
+#       file: domain/001-order-aggregate.md
 #   execution_order:
 #     parallel_groups:
 #       - group: 1

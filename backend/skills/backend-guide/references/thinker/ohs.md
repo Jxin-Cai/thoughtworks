@@ -7,7 +7,7 @@ OHS 层是最外层。你的产出只交给本层的 Worker 实现。
 ## Task 拆分规则
 
 - 按 API 资源分组拆 task：同一资源的 CRUD 放在一个 task
-- 命名：`ohs-{nnn}-{resource-slug}.md`（如 `ohs-001-order-api.md`）
+- 命名：`{nnn}-{resource-slug}.md`（如 `001-order-api.md`），写入 `backend-designs/ohs/` 目录
 - 每个 task 的 `depends_on` 引用具体的 application task_id
 
 ## 设计步骤

@@ -19,7 +19,7 @@ agent:
 
 **本技能附加铁律：**
 
-1. **一个 task 一个 agent** — 每个 `tasks/impl-*.md` 文件启动独立 worker agent 执行其实现清单，禁止合并多个 task 到一个 agent
+1. **一个 task 一个 agent** — 每个 `frontend-checklist/*.md` 文件启动独立 worker agent 执行其实现清单，禁止合并多个 task 到一个 agent
 2. **禁止跳过 task** — 每个 pending/confirmed 的 impl task 都必须执行
 3. **禁止修改实现清单** — 实现清单由 thought skill 产出，执行阶段不能修改
 4. **禁止未验证就标记 coded** — agent 完成后必须验证文件已创建
@@ -33,12 +33,12 @@ agent:
 - 有参数 → 使用指定的 idea-name
 - 无参数 → 列出所有 idea，让用户选择
 
-验证 `.thoughtworks/<idea-name>/frontend-designs/tasks/` 目录存在且包含 task 设计文件。不存在则提示先运行 `/frontend-thought`。
+验证 `.thoughtworks/<idea-name>/frontend-designs/` 目录存在且包含按层分目录的 task 设计文件（如 `frontend-checklist/` 子目录）。不存在则提示先运行 `/frontend-thought`。
 
 设置变量：
 - `IDEA_DIR` = `.thoughtworks/<idea-name>`
 - `FRONTEND_HELP` = `../frontend-help/`
-- `TASKS_DIR` = `{IDEA_DIR}/frontend-designs/tasks`
+- `DESIGNS_DIR` = `{IDEA_DIR}/frontend-designs`
 
 ---
 

@@ -7,7 +7,7 @@
 ## Task 拆分规则
 
 - 按聚合拆 task：每个聚合的仓储实现独立一个 task
-- 命名：`infr-{nnn}-{aggregate-slug}.md`（如 `infr-001-order-repository.md`）
+- 命名：`{nnn}-{aggregate-slug}.md`（如 `001-order-repository.md`），写入 `backend-designs/infr/` 目录
 - 每个 task 的 `depends_on` 引用对应的 domain task_id
 
 ## 设计步骤

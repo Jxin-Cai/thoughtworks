@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 前端设计文档校验脚本（支持 tasks/ 目录和旧版 *.md 目录）
+# 前端设计文档校验脚本（支持按层分目录和旧版 *.md 目录）
 # 用法: frontend-output-validate.sh <idea-dir>
 #
 # 校验规则：
-# S1: frontmatter 必填字段（tasks/ 模式下增加 task_id）
+# S1: frontmatter 必填字段（按层分目录模式下增加 task_id）
 # S3: 结论章节存在且非空
 # S4: 实现清单表格存在（frontend-checklist 层文件）
 # S6: 依赖契约章节存在
@@ -14,7 +14,8 @@ set -euo pipefail
 
 IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir>}"
 FRONTEND_DESIGNS_DIR="$IDEA_DIR/frontend-designs"
-TASKS_DIR="$FRONTEND_DESIGNS_DIR/tasks"
+# 前端三层目录列表
+LAYER_DIRS="frontend-architecture frontend-components frontend-checklist"
 STATE_FILE="$IDEA_DIR/frontend-workflow-state.yaml"
 
 if [ ! -d "$FRONTEND_DESIGNS_DIR" ]; then
@@ -27,24 +28,26 @@ if [ ! -f "$STATE_FILE" ]; then
   exit 1
 fi
 
-# ── 判断是否使用 tasks/ 目录 ──
-USE_TASKS_DIR=""
-if [ -d "$TASKS_DIR" ]; then
-  task_file_count=$(find "$TASKS_DIR" -maxdepth 1 -name '*.md' 2>/dev/null | head -1)
-  if [ -n "$task_file_count" ]; then
-    USE_TASKS_DIR="1"
+# ── 判断是否使用按层分目录 ──
+USE_LAYER_DIRS=""
+for _ld in $LAYER_DIRS; do
+  if [ -d "$FRONTEND_DESIGNS_DIR/$_ld" ]; then
+    _has_md=$(find "$FRONTEND_DESIGNS_DIR/$_ld" -maxdepth 1 -name '*.md' 2>/dev/null | head -1)
+    if [ -n "$_has_md" ]; then
+      USE_LAYER_DIRS="1"
+      break
+    fi
   fi
-fi
+done
 
-get_designs_base_dir() {
-  if [ -n "$USE_TASKS_DIR" ]; then
-    echo "$TASKS_DIR"
+get_layer_dir() {
+  local l="$1"
+  if [ -n "$USE_LAYER_DIRS" ]; then
+    echo "$FRONTEND_DESIGNS_DIR/$l"
   else
     echo "$FRONTEND_DESIGNS_DIR"
   fi
 }
-
-SCAN_DIR=$(get_designs_base_dir)
 
 # ── JSON 输出辅助 ──
 CHECKS=""
@@ -90,40 +93,63 @@ get_layer_from_frontmatter() {
   extract_frontmatter "$file" | sed -n 's/^layer:[[:space:]]*//p' | head -1
 }
 
-# 从文件名前缀推断层（旧版文件兼容用）
-layer_from_filename() {
-  local fname="$1"
-  case "$fname" in
-    arch-*|frontend-architecture*) echo "frontend-architecture" ;;
-    comp-*|frontend-components*) echo "frontend-components" ;;
-    impl-*|frontend-checklist*) echo "frontend-checklist" ;;
-    *) echo "frontend" ;;
+# 从文件路径推断层（优先检查父目录名，回退到文件名前缀）
+layer_from_filepath() {
+  local fpath="$1"
+  local parent_dir
+  parent_dir=$(basename "$(dirname "$fpath")")
+  case "$parent_dir" in
+    frontend-architecture|frontend-components|frontend-checklist) echo "$parent_dir" ;;
+    *)
+      local fname
+      fname=$(basename "$fpath")
+      case "$fname" in
+        arch-*|frontend-architecture*) echo "frontend-architecture" ;;
+        comp-*|frontend-components*) echo "frontend-components" ;;
+        impl-*|frontend-checklist*) echo "frontend-checklist" ;;
+        *) echo "frontend" ;;
+      esac
+      ;;
   esac
 }
 
 # 获取某层的文件列表
 get_layer_files() {
   local target_layer="$1"
-  for f in "$SCAN_DIR"/*.md; do
-    [ -f "$f" ] || continue
-    local base
-    base=$(basename "$f")
-    local fl
-    fl=$(get_layer_from_frontmatter "$f")
-    [ -z "$fl" ] && fl=$(layer_from_filename "$base")
-    if [ "$fl" = "$target_layer" ]; then
-      echo "$base"
-    fi
-  done
+  local scan_dir
+  scan_dir=$(get_layer_dir "$target_layer")
+  [ -d "$scan_dir" ] || return
+  if [ -n "$USE_LAYER_DIRS" ]; then
+    # 新模式：层目录下所有 .md 都属于该层
+    for f in "$scan_dir"/*.md; do
+      [ -f "$f" ] || continue
+      basename "$f"
+    done
+  else
+    # 旧模式：按 frontmatter 或文件名前缀匹配
+    for f in "$scan_dir"/*.md; do
+      [ -f "$f" ] || continue
+      local base
+      base=$(basename "$f")
+      local fl
+      fl=$(get_layer_from_frontmatter "$f")
+      [ -z "$fl" ] && fl=$(layer_from_filepath "$f")
+      if [ "$fl" = "$target_layer" ]; then
+        echo "$base"
+      fi
+    done
+  fi
 }
 
 # 合并某层所有文件中指定 ### 子章节内容
 merge_layer_subsection() {
   local target_layer="$1" subsection="$2"
+  local scan_dir
+  scan_dir=$(get_layer_dir "$target_layer")
   local files
   files=$(get_layer_files "$target_layer")
   for fname in $files; do
-    local fpath="$SCAN_DIR/$fname"
+    local fpath="$scan_dir/$fname"
     [ -f "$fpath" ] || continue
     awk -v sec="### ${subsection}" '
       $0 == sec || index($0, sec) == 1 { found=1; next }
@@ -135,17 +161,20 @@ merge_layer_subsection() {
 
 # ── 开始校验：遍历所有设计文件 ──
 
-for filepath in "$SCAN_DIR"/*.md; do
+for layer in $LAYER_DIRS; do
+  scan_dir=$(get_layer_dir "$layer")
+  [ -d "$scan_dir" ] || continue
+  for filepath in "$scan_dir"/*.md; do
   [ -f "$filepath" ] || continue
   fname=$(basename "$filepath")
   layer_id=$(get_layer_from_frontmatter "$filepath")
-  [ -z "$layer_id" ] && layer_id=$(layer_from_filename "$fname")
+  [ -z "$layer_id" ] && layer_id=$(layer_from_filepath "$filepath")
 
   # S1: frontmatter 必填字段
   s1_pass=true
   s1_detail=""
   required_fields="layer order status depends_on description"
-  if [ -n "$USE_TASKS_DIR" ]; then
+  if [ -n "$USE_LAYER_DIRS" ]; then
     required_fields="task_id layer order status depends_on description"
   fi
   for field in $required_fields; do
@@ -195,15 +224,17 @@ for filepath in "$SCAN_DIR"/*.md; do
     add_check "$layer_id" "$fname" "S6" "false" "缺少 ## 依赖契约 章节"
   fi
 done
+done
 
 # ── C6: Frontend 依赖契约 > API 端点 ⊆ OHS API 端点 ──
-# 新模式：优先从 OHS 代码扫描 API 端点；回退到 backend-designs/ohs.md 或 tasks/ohs-*.md
+# 新模式：优先从 OHS 代码扫描 API 端点；回退到 backend-designs/ohs/*.md 或旧版 ohs.md
 
 # 收集 architecture 层所有文件的 API 端点依赖
 arch_files=$(get_layer_files "frontend-architecture")
+arch_scan_dir=$(get_layer_dir "frontend-architecture")
 frontend_api_sigs=""
 for fname in $arch_files; do
-  fpath="$SCAN_DIR/$fname"
+  fpath="$arch_scan_dir/$fname"
   [ -f "$fpath" ] || continue
   sigs=$(awk '
     /^### API 端点/ { found=1; next }
@@ -224,10 +255,10 @@ if [ -n "$frontend_api_sigs" ]; then
   # 收集 OHS API 端点签名
   ohs_api_sigs=""
 
-  # 方式1: 从 backend-designs/tasks/ohs-*.md 提取（新模式）
-  BACKEND_TASKS_DIR="$IDEA_DIR/backend-designs/tasks"
-  if [ -d "$BACKEND_TASKS_DIR" ]; then
-    for ohs_file in "$BACKEND_TASKS_DIR"/ohs-*.md; do
+  # 方式1: 从 backend-designs/ohs/*.md 提取（按层分目录模式）
+  BACKEND_OHS_DIR="$IDEA_DIR/backend-designs/ohs"
+  if [ -d "$BACKEND_OHS_DIR" ]; then
+    for ohs_file in "$BACKEND_OHS_DIR"/*.md; do
       [ -f "$ohs_file" ] || continue
       sigs=$(awk '
         /^## API 端点/ { found=1; next }

@@ -42,7 +42,7 @@
 ## Task 拆分规则
 
 - 按聚合拆 task：每个聚合独立一个 task 文件
-- 命名：`domain-{nnn}-{aggregate-slug}.md`（如 `domain-001-order-aggregate.md`）
+- 命名：`{nnn}-{aggregate-slug}.md`（如 `001-order-aggregate.md`），写入 `backend-designs/domain/` 目录
 - 小聚合可合并（如共享值对象较多的 2 个聚合），但单个 task ≤800 行
 - domain task 通常无依赖（`depends_on: []`）
 

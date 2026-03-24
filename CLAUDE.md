@@ -53,11 +53,14 @@ Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件
 ├── .approved                             # 后端设计确认标记
 ├── .supplementary-reviewed               # 后端需求遗漏审查完成标记
 ├── backend-designs/
-│   └── tasks/                            # 后端各层 task 设计文档
-│       ├── domain-001-{aggregate}.md     # 按聚合拆分的 domain task
-│       ├── infr-001-{aggregate}.md       # 按聚合拆分的 infr task
-│       ├── application-001-{usecase}.md  # 按用例组拆分的 application task
-│       └── ohs-001-{resource}.md         # 按资源拆分的 ohs task
+│   ├── domain/                          # 按聚合拆分的 domain task
+│   │   └── 001-{aggregate}.md
+│   ├── infr/                            # 按聚合拆分的 infr task
+│   │   └── 001-{aggregate}.md
+│   ├── application/                     # 按用例组拆分的 application task
+│   │   └── 001-{usecase}.md
+│   └── ohs/                             # 按资源拆分的 ohs task
+│       └── 001-{resource}.md
 ├── frontend-requirement.md               # 前端需求
 ├── frontend-assessment.md                # 前端评估
 ├── frontend-workflow-state.yaml          # 前端层级工作流状态
@@ -66,10 +69,12 @@ Claude Code 通过 `.claude-plugin/marketplace.json` 发现三个可安装插件
 ├── .frontend-supplementary-reviewed      # 前端需求遗漏审查完成标记
 ├── supplementary-tasks.md               # 遗漏需求清单（仅在有遗漏时生成）
 └── frontend-designs/
-    └── tasks/                            # 前端各层 task 设计文档
-        ├── arch-001-{topic}.md           # 架构设计 task
-        ├── comp-001-{topic}.md           # 组件设计 task
-        └── impl-001-{topic}.md           # 实现清单 task
+    ├── frontend-architecture/           # 架构设计 task
+    │   └── 001-{topic}.md
+    ├── frontend-components/             # 组件设计 task
+    │   └── 001-{topic}.md
+    └── frontend-checklist/              # 实现清单 task
+        └── 001-{topic}.md
 ```
 
 每个 task 文件 ≤800 行，frontmatter 含 `task_id` 字段。层级状态从 task 状态聚合推导。

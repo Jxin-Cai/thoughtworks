@@ -40,7 +40,7 @@
 ## Task 拆分规则
 
 - 按用例组拆 task：相关的写/读用例放在一个 task
-- 命名：`application-{nnn}-{usecase-group-slug}.md`（如 `application-001-order-management.md`）
+- 命名：`{nnn}-{usecase-group-slug}.md`（如 `001-order-management.md`），写入 `backend-designs/application/` 目录
 - 每个 task 的 `depends_on` 引用其编排步骤中调用的 domain task_id
 
 ## Frontmatter 格式

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 后端状态查询脚本（支持 tasks/ 目录和旧版 *.md 目录）
+# 后端状态查询脚本（支持按层分目录和旧版 *.md 目录）
 # 用法: backend-status.sh <idea-dir> [--pretty]
 # 输出: 结构化 JSON（默认）或人类可读表格（--pretty）
 
@@ -8,7 +8,8 @@ set -euo pipefail
 IDEA_DIR="${1:?用法: backend-status.sh <idea-dir> [--pretty]}"
 PRETTY="${2:-}"
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
-TASKS_DIR="$BACKEND_DESIGNS_DIR/tasks"
+# 后端四层目录列表（与 workflow.yaml 中的 layer id 一致）
+LAYER_DIRS="domain infr application ohs"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflow.yaml"
@@ -34,13 +35,16 @@ if [ ! -d "$BACKEND_DESIGNS_DIR" ]; then
   exit 0
 fi
 
-# 收集设计文件列表（优先 tasks/ 目录，回退到旧路径）
+# 收集设计文件列表（优先按层分目录，回退到旧路径）
 design_files=""
-if [ -d "$TASKS_DIR" ]; then
-  for f in "$TASKS_DIR"/*.md; do
-    [ -f "$f" ] && design_files="$design_files $f"
-  done
-fi
+for layer_name in $LAYER_DIRS; do
+  layer_path="$BACKEND_DESIGNS_DIR/$layer_name"
+  if [ -d "$layer_path" ]; then
+    for f in "$layer_path"/*.md; do
+      [ -f "$f" ] && design_files="$design_files $f"
+    done
+  fi
+done
 if [ -z "$design_files" ]; then
   for f in "$BACKEND_DESIGNS_DIR"/*.md; do
     [ -f "$f" ] && design_files="$design_files $f"
