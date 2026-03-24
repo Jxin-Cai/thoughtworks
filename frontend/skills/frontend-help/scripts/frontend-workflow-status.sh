@@ -4,7 +4,7 @@
 #   frontend-workflow-status.sh <idea-dir>                          — 查看当前状态
 #   frontend-workflow-status.sh <idea-dir> --init <idea-name> <layer1> [layer2...]  — 初始化
 #   frontend-workflow-status.sh <idea-dir> --set <layer> <status>   — 设置某层状态
-#   frontend-workflow-status.sh <idea-dir> --check-all              — 非阻塞检查是否全部完成
+#   frontend-workflow-status.sh <idea-dir> --check-all [--verbose]   — 非阻塞检查是否全部完成（默认 brief）
 #   frontend-workflow-status.sh <idea-dir> --get-status <layer>     — 获取指定层的纯文本状态值
 #   frontend-workflow-status.sh <idea-dir> --init-tasks <idea-name> <task_spec>... — 初始化 task 级状态文件
 #   frontend-workflow-status.sh <idea-dir> --set-task <task_id> <status>  — 设置 task 状态
@@ -160,11 +160,17 @@ case "$MODE" in
     echo "{\"updated\": true, \"layer\": \"$LAYER\", \"status\": \"$STATUS\"}"
     ;;
 
-  # ── --check-all 模式（非阻塞，含校验）──
+  # ── --check-all 模式（非阻塞，含校验，默认 brief）──
   --check-all)
     if [ ! -f "$STATE_FILE" ]; then
       echo '{"error": "frontend-workflow-state.yaml 不存在"}' >&2
       exit 1
+    fi
+
+    # 解析 --verbose 选项
+    VERBOSE=false
+    if [ "${3:-}" = "--verbose" ]; then
+      VERBOSE=true
     fi
 
     tracked=$(get_tracked_layers)
@@ -181,14 +187,28 @@ case "$MODE" in
     done
 
     if $all_done; then
-      validation_output=""
-      if [ -x "$VALIDATE_SCRIPT" ]; then
-        validation_output=$("$VALIDATE_SCRIPT" "$IDEA_DIR" 2>&1 || true)
-      fi
-      if [ -n "$validation_output" ]; then
-        echo "{\"overall\": \"all_done\", \"validation\": $validation_output}"
+      if [ "$VERBOSE" = "true" ]; then
+        # --verbose: 完整校验输出
+        validation_output=""
+        if [ -x "$VALIDATE_SCRIPT" ]; then
+          validation_output=$("$VALIDATE_SCRIPT" "$IDEA_DIR" 2>&1 || true)
+        fi
+        if [ -n "$validation_output" ]; then
+          echo "{\"overall\": \"all_done\", \"validation\": $validation_output}"
+        else
+          echo "{\"overall\": \"all_done\", \"validation\": {}}"
+        fi
       else
-        echo "{\"overall\": \"all_done\", \"validation\": {}}"
+        # 默认 brief: 调用 validate --summary
+        validation_output=""
+        if [ -x "$VALIDATE_SCRIPT" ]; then
+          validation_output=$("$VALIDATE_SCRIPT" "$IDEA_DIR" --summary 2>&1 || true)
+        fi
+        if [ -n "$validation_output" ]; then
+          echo "{\"overall\": \"all_done\", \"validation\": $validation_output}"
+        else
+          echo "{\"overall\": \"all_done\", \"validation\": {}}"
+        fi
       fi
     elif $has_failed; then
       echo "{\"overall\": \"blocked\"}"
@@ -273,18 +293,7 @@ case "$MODE" in
     fi
 
     sync_layer_status_from_tasks
-    # 构建 layers snapshot
-    tracked=$(get_tracked_layers)
-    snap=""
-    for layer in $tracked; do
-      st=$(get_tracked_status "$layer")
-      if [ -z "$snap" ]; then
-        snap="\"$layer\": \"$st\""
-      else
-        snap="$snap, \"$layer\": \"$st\""
-      fi
-    done
-    echo "{\"synced\": true, \"layers\": { $snap }}"
+    echo "{\"synced\": true}"
     ;;
 
   # ── --next-tasks 模式：获取下一批可执行的 task ──

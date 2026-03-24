@@ -12,7 +12,17 @@
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir>}"
+IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir> [--failures-only] [--summary]}"
+shift
+FAILURES_ONLY=false
+SUMMARY_ONLY=false
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --failures-only) FAILURES_ONLY=true; shift ;;
+    --summary) SUMMARY_ONLY=true; shift ;;
+    *) shift ;;
+  esac
+done
 FRONTEND_DESIGNS_DIR="$IDEA_DIR/frontend-designs"
 # 前端三层目录列表
 LAYER_DIRS="frontend-architecture frontend-components frontend-checklist"
@@ -363,4 +373,21 @@ fi
 ALL_PASS=true
 if echo "$CHECKS" | grep -q '"pass":false'; then ALL_PASS=false; fi
 if [ "$ALL_PASS" = "true" ]; then STATUS="pass"; else STATUS="fail"; fi
-echo "{\"status\":\"$STATUS\",\"checks\":[$CHECKS]}"
+
+if [ "$SUMMARY_ONLY" = "true" ]; then
+  # --summary: 精简摘要
+  total=$(echo "[$CHECKS]" | grep -o '"rule"' | wc -l | tr -d ' ')
+  failed=$(echo "[$CHECKS]" | grep -o '"pass":false' | wc -l | tr -d ' ')
+  failed_rules=""
+  if [ "$failed" -gt 0 ]; then
+    failed_rules=$(echo "[$CHECKS]" | grep -o '"rule":"[^"]*","pass":false' | sed 's/"rule":"//;s/","pass":false//' | sort -u | awk '{printf "\"%s\",", $0}' | sed 's/,$//')
+  fi
+  echo "{\"status\":\"$STATUS\",\"total\":$total,\"failed\":$failed,\"failed_rules\":[$failed_rules]}"
+elif [ "$FAILURES_ONLY" = "true" ]; then
+  # --failures-only: 只输出失败的 checks
+  failed_checks=$(echo "$CHECKS" | tr '}' '\n' | grep '"pass":false' | sed 's/^,//' | awk '{printf "%s}", $0}' | sed 's/}$/}\n/' | paste -sd',' -)
+  [ -z "$failed_checks" ] && failed_checks=""
+  echo "{\"status\":\"$STATUS\",\"checks\":[$failed_checks]}"
+else
+  echo "{\"status\":\"$STATUS\",\"checks\":[$CHECKS]}"
+fi

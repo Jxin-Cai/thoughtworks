@@ -107,11 +107,11 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 **重要：使用自定义 agent 类型（而非 general-purpose）**
 
 所有层共用同一个通用 thinker agent（`agent-ddd-thinker`），其 frontmatter 配置了：
-- **skills**：`[backend-spec, backend-guide]`，自动注入编码规范和层级设计指令
+- **skills**：`[backend-help]`
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 
-主 agent 统一使用 `tw-backend:agent-ddd-thinker` 作为 `subagent_type`。层级差异通过 CONTEXT 中的 `target_layer` 字段传递，agent 启动后通过 `backend-guide` skill 路由加载对应层级的设计指令。动态 prompt 只需包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个动态区块。
+主 agent 统一使用 `tw-backend:agent-ddd-thinker` 作为 `subagent_type`。编排器负责预读设计指令和编码规范文件，并内联到 prompt 的 INSTRUCTIONS 区块中。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。动态 prompt 包含 INSTRUCTIONS、MISSION、TEMPLATE、CONTEXT、OUTPUT 五个区块。
 
 ### 执行方式（主 agent DAG 编排）
 
@@ -224,6 +224,17 @@ TASK_EOF
 
 **无上游依赖时**（如 domain 层）：省略上游相关子区块。
 
+### 编排器预读指令
+
+在构建每个层的 prompt 之前，编排器需要用 Read 工具预读以下文件并将内容内联到 INSTRUCTIONS 区块中：
+
+1. **设计指令 — 公共部分**：`backend/skills/backend-guide/references/thinker/common.md`
+2. **设计指令 — 层级部分**：`backend/skills/backend-guide/references/thinker/{layer}.md`
+3. **编码规范 — 公共部分**：`backend/skills/backend-spec/references/{BACKEND_LANG}/common.md`
+4. **编码规范 — 层级部分**：`backend/skills/backend-spec/references/{BACKEND_LANG}/{spec_layer}.md`
+   - `{spec_layer}` 映射：domain→domain, infr→infrastructure, application→application, ohs→ohs
+5. **数据库规范**（仅 infr 层追加）：`backend/skills/backend-spec/references/{BACKEND_LANG}/database.md`
+
 ### 构建 subagent prompt
 
 对每个需要的层，从 `workflow.yaml` 中读取该层的 `thinker-ref`（获取 agent name）和 `design-template`（指向 `assets/{layer}-design.md`）路径，然后按以下结构组装 prompt：
@@ -236,6 +247,23 @@ Agent(
   max_turns: 20,
   description: "{Layer} 层思考",
   prompt: "
+    # INSTRUCTIONS（设计指令 + 编码规范 — 编排器预读内联）
+
+    ## 层级设计指令
+    {Read backend-guide/references/thinker/common.md 的内容}
+    ---
+    {Read backend-guide/references/thinker/{layer}.md 的内容}
+
+    ## 编码规范
+    {Read backend-spec/references/{BACKEND_LANG}/common.md 的内容}
+    ---
+    {Read backend-spec/references/{BACKEND_LANG}/{spec_layer}.md 的内容}
+    {infr 层额外追加：}
+    ---
+    {Read backend-spec/references/{BACKEND_LANG}/database.md 的内容}
+
+    ---
+
     # MISSION（工作目标 — 结论先行，先理解你要做什么）
 
     {主 agent 根据 assessment.md 中该层的评估结论，用 2-4 句话总结该层的核心工作目标}
@@ -315,7 +343,7 @@ Agent(
 2. **具体工作项** — 从评估结论中提炼出 numbered list，每项是一个可验证的工作目标（如"设计 Order 聚合根，包含创建、修改状态、计算总价三个核心业务方法"）
 3. **验证锚点** — 这些工作项将成为 thinker 反思循环中逐条验证的基准
 
-注意：自定义 agent 的 `skills: [backend-spec]` 字段会自动将编码规范注入到 subagent 上下文中，无需主 agent 手动内联。
+注意：设计指令和编码规范已由编排器预读内联到 INSTRUCTIONS 区块中，agent 无需额外调用 skill 加载。
 
 ### 产出验证
 
@@ -323,7 +351,7 @@ Agent(
 
 根据 `validation.status` 判断：
 - `pass` — 全部通过，进入 Step 4
-- `fail` — 查看 `validation.checks` 中 `pass: false` 的条目，只重启对应层的 thinker subagent。**每层最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户是手动修复还是跳过该层
+- `fail` — 执行 `backend-workflow-status.sh --check-all --verbose` 获取完整失败详情，查看 `validation.checks` 中 `pass: false` 的条目，只重启对应层的 thinker subagent。**每层最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户是手动修复还是跳过该层
 
 重启 thinker 时，在 prompt 开头追加：
 

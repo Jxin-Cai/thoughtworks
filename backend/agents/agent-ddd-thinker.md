@@ -7,8 +7,6 @@ maxTurns: 20
 permissionMode: default
 skills:
   - backend-help
-  - backend-spec
-  - backend-guide
 ---
 
 # DDD 层级设计 Agent
@@ -19,9 +17,7 @@ skills:
 
 1. 从 CONTEXT 中的 `target_layer` 字段获取当前设计层级（domain/infr/application/ohs）
 2. 从 CONTEXT 中的 `backend_language` 字段获取后端语言（java/python/go，默认 java）
-3. 你的 skills 已自动注入两个技能，按以下顺序加载：
-   - `backend-guide`：使用 `thinker {target_layer}` 加载层级特有的设计指令（设计步骤、反思循环、命名规范、合理化预防）
-   - `backend-spec`：使用 `{language} {target_layer}` 加载编码规范
+3. **设计指令和编码规范已由编排器内联在 INSTRUCTIONS 区块中**，无需调用额外技能加载
 4. `backend-help` 已注入上下文，你可以用 Read 工具按需加载以下资源：
    - `workflow.yaml`：了解本层在 DAG 中的位置和上下游依赖关系
    - `{CONTEXT 中 idea_dir}/workflow-state.yaml`：确认上游层完成状态

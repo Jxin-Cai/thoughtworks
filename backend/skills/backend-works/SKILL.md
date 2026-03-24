@@ -74,10 +74,10 @@ agent:
 2. 读取 task 状态：
 
 ```bash
-bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks code
 ```
 
-3. 解析返回结果，确定可执行的 task 列表（依赖已满足、状态为 pending 或 confirmed 的 task）
+3. 解析返回结果，确定可执行的 task 列表（依赖已满足、状态为 confirmed 的 task）
 
 4. 如果 `--layers` 或 `--tasks` 参数存在，过滤只保留指定范围内的 task
 
@@ -90,24 +90,22 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks
 
 ## Step 3: 按 task 依赖执行
 
-根据 `task-workflow-state.yaml` 中的 task 依赖关系执行。无依赖或依赖已满足的 task 可并行启动。
+根据 `task-workflow-state.yaml` 中的 task 依赖关系执行。`--next-tasks code` 返回所有依赖已满足的 confirmed task，可并行启动。
 
 初始化 session 追踪变量：`session_completed = []`（记录本次 session 完成的 task）
 
 ### 执行循环
 
-1. 查询可执行 task（`--next-tasks`），获取依赖已满足的 pending/confirmed task 列表
-2. 对可执行 task，按层分组。同层内按 task_id 排序串行，不同层的 task 可并行
+1. 查询可执行 task：
+   ```bash
+   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks code
+   ```
+   获取所有依赖已满足的 confirmed task 列表
+2. 对可执行 task 列表，所有 task 可并行启动（放在同一条消息中多个 Agent 调用）
 3. **subagent 启动前准备**：对每个将要执行的 task，运行：
    ```bash
    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set-task {task_id} coding
    bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --sync-layer-status
-   ```
-   然后写入任务文件（供 SubagentStop hook 收敛状态，文件名含时间戳避免并发冲突）：
-   ```bash
-   cat > {IDEA_DIR}/.current-task-{task_id}-$(date +%s).json << 'TASK_EOF'
-   {"role":"worker","task_id":"{task_id}","layer":"{layer}","idea_dir":"{IDEA_DIR}","stack":"backend"}
-   TASK_EOF
    ```
 4. 启动 worker agent（见下方 prompt 骨架）
 5. agent 完成后验证产出（见验证流程）
@@ -118,19 +116,30 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks
    ```
 7. 将 task 的 frontmatter status 更新为 `done`（用 Edit 工具修改 task 文件的 `status:` 字段）
 8. 将 task 加入 `session_completed`，输出进度
-9. 重新查询 `--next-tasks`，如果有新的可执行 task，返回步骤 2 继续
+9. 重新查询 `--next-tasks code`，如果有新的可执行 task（前一批完成后解锁了下游依赖），返回步骤 2 继续
 
 ### 并行执行规则
 
-- 不同层的 task 可同时启动（放在同一条消息中多个 Agent 调用）
-- 同层内的 task 串行执行（按 task_id 排序）
-- 例如：`domain-001` 和 `domain-002` 串行；`infr-001` 和 `application-001` 可并行
+- `--next-tasks code` 返回的所有 task 均可并行启动（依赖已由脚本检查）
+- 同层或跨层的 task 只要依赖满足都可并行
+- 例如：`domain-001` 和 `domain-002` 无互相依赖 → 并行；`infr-001` 依赖 `domain-001` → 等 `domain-001` coded 后才出现在 next-tasks 中
 
 ### Worker agent prompt 骨架
 
-所有层统一使用 `tw-backend:agent-ddd-worker` 作为 `subagent_type`。层级差异通过 CONTEXT 中的 `target_layer` 字段传递，agent 启动后通过 `backend-guide` skill 路由加载对应层级的编码指令。
+所有层统一使用 `tw-backend:agent-ddd-worker` 作为 `subagent_type`。编排器负责预读编码指令和编码规范文件，并内联到 prompt 的 INSTRUCTIONS 区块中。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
 
-`skills: [backend-spec, backend-guide]` 已配置自动注入编码规范和层级编码指令。动态 prompt 只需包含 TASK、CONTEXT、OUTPUT 三个动态区块：
+#### 编排器预读指令
+
+在构建每个 task 的 worker prompt 之前，编排器需要用 Read 工具预读以下文件并将内容内联到 INSTRUCTIONS 区块中：
+
+1. **编码指令 — 公共部分**：`backend/skills/backend-guide/references/worker/common.md`
+2. **编码指令 — 层级部分**：`backend/skills/backend-guide/references/worker/{layer}.md`
+3. **编码规范 — 公共部分**：`backend/skills/backend-spec/references/{BACKEND_LANG}/common.md`
+4. **编码规范 — 层级部分**：`backend/skills/backend-spec/references/{BACKEND_LANG}/{spec_layer}.md`
+   - `{spec_layer}` 映射：domain→domain, infr→infrastructure, application→application, ohs→ohs
+5. **数据库规范**（仅 infr 层追加）：`backend/skills/backend-spec/references/{BACKEND_LANG}/database.md`
+
+注意：同一层的多个 task 共享相同的 INSTRUCTIONS 内容，编排器可以只预读一次，复用给同层的所有 worker prompt。
 
 ```
 Agent(
@@ -138,6 +147,23 @@ Agent(
   max_turns: 15,
   description: "{layer}: {task frontmatter description}",
   prompt: "
+    # INSTRUCTIONS（编码指令 + 编码规范 — 编排器预读内联）
+
+    ## 层级编码指令
+    {Read backend-guide/references/worker/common.md 的内容}
+    ---
+    {Read backend-guide/references/worker/{layer}.md 的内容}
+
+    ## 编码规范
+    {Read backend-spec/references/{BACKEND_LANG}/common.md 的内容}
+    ---
+    {Read backend-spec/references/{BACKEND_LANG}/{spec_layer}.md 的内容}
+    {infr 层额外追加：}
+    ---
+    {Read backend-spec/references/{BACKEND_LANG}/database.md 的内容}
+
+    ---
+
     # TASK（实现清单）
 
     根据以下实现清单，逐项创建/修改代码文件：
@@ -261,7 +287,7 @@ agent 完成后，**验证产出**：
 
 ```bash
 bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --sync-layer-status
-bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
+bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR} --brief
 ```
 
 根据返回结果输出：
@@ -311,6 +337,6 @@ bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR}
 
 `/backend-works` 支持断点续传：
 - 每个 task 完成后立即更新 task 状态和 frontmatter status
-- 下次运行时通过 `--next-tasks` 获取可执行 task，从第一个 pending/confirmed task 继续
+- 下次运行时通过 `--next-tasks code` 获取可执行 task，从第一个 confirmed task 继续
 - 已 coded 的 task 不会重复执行
 - task 级粒度断点：即使同层有多个 task，已完成的不会重复

@@ -7,8 +7,6 @@ maxTurns: 15
 permissionMode: acceptEdits
 skills:
   - frontend-help
-  - frontend-spec
-  - frontend-guide
   - ui-ux-pro-max
 ---
 
@@ -18,14 +16,11 @@ skills:
 
 ## 启动后第一步
 
-1. 你的 skills 已自动注入编码指令和规范技能：
-   - `frontend-guide`：使用 `worker frontend` 加载前端编码指令
-   - `frontend-spec`：按项目技术栈关键词加载编码规范
+1. **编码指令和编码规范已由编排器内联在 INSTRUCTIONS 区块中**，无需调用额外技能加载
 2. `frontend-help` 已注入上下文，你可以使用以下资源：
    - 用 Bash 运行 `frontend-status.sh {IDEA_DIR}` 了解整体进度
-   - 完成编码后用 Bash 运行 `frontend-workflow-status.sh {IDEA_DIR} --set-task {task_id} coded` 标记 task 完成
    - 遇到无法解决的问题时用 Bash 运行 `frontend-workflow-status.sh {IDEA_DIR} --set-task {task_id} failed` 标记失败
-   - 标记 task 状态后运行 `frontend-workflow-status.sh {IDEA_DIR} --sync-layer-status` 同步层级状态
+   - **coded 状态由编排器在验证产出后写入，禁止自行标记 coded**
 3. **UI/UX 设计能力**：如果 `ui-ux-pro-max` 技能的使用指引已注入到你的上下文中（即该技能已安装），则在编码开始前完全按照该技能的工作流操作。如果该技能未注入则跳过此步骤。
 
 ## 角色约束

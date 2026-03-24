@@ -53,10 +53,10 @@ agent:
 读取 task 状态：
 
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks
+bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks code
 ```
 
-确定可执行的 impl task 列表（依赖已满足、状态为 pending 或 confirmed 的 task）。
+确定可执行的 impl task 列表（依赖已满足、状态为 confirmed 的 task）。
 
 **注意**：只有 `frontend-checklist` 层的 task（即 `impl-*.md`）需要 Worker 执行。`frontend-architecture` 和 `frontend-components` 层的 task（`arch-*.md`、`comp-*.md`）是纯设计文档，不启动 Worker。
 
@@ -81,18 +81,16 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks
 
 ### 执行循环
 
-1. 查询可执行 task（`--next-tasks`），过滤出 `frontend-checklist` 层的 impl task
-2. 对可执行的 impl task，按 task_id 排序串行执行
+1. 查询可执行 task：
+   ```bash
+   bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks code
+   ```
+   过滤出 `frontend-checklist` 层的 impl task
+2. 对可执行的 impl task，所有 task 可并行启动（放在同一条消息中多个 Agent 调用）
 3. **subagent 启动前准备**：对每个将要执行的 task，运行：
    ```bash
    bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set-task {task_id} coding
    bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --sync-layer-status
-   ```
-   然后写入任务文件（供 SubagentStop hook 收敛状态）：
-   ```bash
-   cat > {IDEA_DIR}/.current-task-{task_id}-$(date +%s).json << 'TASK_EOF'
-   {"role":"worker","task_id":"{task_id}","layer":"frontend-checklist","idea_dir":"{IDEA_DIR}","stack":"frontend"}
-   TASK_EOF
    ```
 4. 读取 task 文件的 frontmatter，将 status 更新为 `in_progress`
 5. 启动 worker agent（见下方 prompt 骨架）
@@ -104,9 +102,21 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks
    ```
 8. 将 task 的 frontmatter status 更新为 `done`
 9. 将 task 加入 `session_completed`，输出进度
-10. 重新查询 `--next-tasks`，如有新的可执行 task 则继续
+10. 重新查询 `--next-tasks code`，如有新的可执行 impl task（前一批完成后解锁了下游依赖）则继续
 
 ### Worker agent prompt 骨架
+
+编排器负责预读编码指令和编码规范文件，并内联到 prompt 的 INSTRUCTIONS 区块中。
+
+#### 编排器预读指令
+
+在构建 worker prompt 之前，编排器需要用 Read 工具预读以下文件：
+
+1. **编码指令 — 公共部分**：`frontend/skills/frontend-guide/references/worker/common.md`
+2. **编码规范 — 公共部分**：`frontend/skills/frontend-spec/references/common.md`
+3. **编码规范 — 技术栈部分**：按需加载 `frontend/skills/frontend-spec/references/react-ts/` 下的文件（components.md、api-client.md、state.md、routing.md）
+
+注意：所有前端 worker task 共享相同的 INSTRUCTIONS 内容，编排器只需预读一次。
 
 ```
 Agent(
@@ -114,6 +124,18 @@ Agent(
   max_turns: 15,
   description: "Frontend: {task frontmatter description}",
   prompt: "
+    # INSTRUCTIONS（编码指令 + 编码规范 — 编排器预读内联）
+
+    ## 前端编码指令
+    {Read frontend-guide/references/worker/common.md 的内容}
+
+    ## 编码规范
+    {Read frontend-spec/references/common.md 的内容}
+    ---
+    {Read frontend-spec/references/react-ts/ 下按需的文件内容}
+
+    ---
+
     # TASK
 
     根据以下实现清单，逐项创建前端代码文件：
@@ -211,7 +233,7 @@ agent 完成后，验证产出：
 
 ```bash
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --sync-layer-status
-bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
+bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR} --brief
 ```
 
 输出实现摘要和产出文件列表。
@@ -226,5 +248,5 @@ bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR}
 
 `/frontend-works` 支持断点续传：
 - 每个 task 完成后立即更新 task 状态和 frontmatter status
-- 下次运行时通过 `--next-tasks` 获取可执行 task，从第一个 pending/confirmed impl task 继续
+- 下次运行时通过 `--next-tasks code` 获取可执行 task，从第一个 confirmed impl task 继续
 - 已 coded 的 task 不会重复执行

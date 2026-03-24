@@ -7,8 +7,6 @@ maxTurns: 20
 permissionMode: default
 skills:
   - frontend-help
-  - frontend-spec
-  - frontend-guide
 ---
 
 # 前端设计 Agent
@@ -18,9 +16,7 @@ skills:
 ## 启动后第一步
 
 1. 从 CONTEXT 中的 `target_layer` 字段获取当前设计层级（architecture/components/checklist）
-2. 你的 skills 已自动注入两个技能，按以下顺序加载：
-   - `frontend-guide`：使用 `thinker {target_layer}` 加载层级特有的设计指令（设计步骤、反思循环、合理化预防）
-   - `frontend-spec`：按项目技术栈关键词加载编码规范
+2. **设计指令和编码规范已由编排器内联在 INSTRUCTIONS 区块中**，无需调用额外技能加载
 3. `frontend-help` 已注入上下文，你可以用 Read 工具按需加载以下资源：
    - `workflow.yaml`：了解本层在 DAG 中的位置和上下游依赖关系
    - `{CONTEXT 中 idea_dir}/frontend-workflow-state.yaml`：确认上游层完成状态

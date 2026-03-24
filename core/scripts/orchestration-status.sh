@@ -92,13 +92,12 @@ emit_result() {
   echo "stack: $STACK"
   echo "reason: \"$reason\""
 
-  # completed_steps
-  echo "completed_steps:"
-  if [ -n "$COMPLETED_STEPS" ]; then
-    for s in $COMPLETED_STEPS; do
-      echo "  - $s"
-    done
-  fi
+  # completed_steps_count（精简输出，编排器只需 resume_step 和 phase_detail）
+  local count=0
+  for s in $COMPLETED_STEPS; do
+    count=$((count + 1))
+  done
+  echo "completed_steps_count: $count"
 
   # phase_detail（仅 phase-loop 时输出）
   if [ -n "$current_phase" ]; then

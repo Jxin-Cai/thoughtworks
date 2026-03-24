@@ -11,9 +11,9 @@
 #
 # 文件名中的 timestamp 用于避免并发 session 的文件冲突。
 #
-# 本脚本在 subagent 结束后读取所有匹配的任务文件，逐个标记状态：
-#   thinker (designing → designed)
-#   worker  (coding → coded)
+# 本脚本在 subagent 结束后读取所有匹配的任务文件：
+#   thinker: 标记状态 (designing → designed)
+#   worker:  只清理任务文件（coded 状态由编排器在验证产出后写入）
 #
 # 如果无任务文件（非 DDD 流程调用），静默退出。
 # 超过 30 分钟的残留任务文件视为过期，清理而非处理。
@@ -87,8 +87,9 @@ while IFS= read -r TASK_FILE; do
     TARGET_STATUS="designed"
     EXPECTED_CURRENT="designing"
   elif [ "$ROLE" = "worker" ]; then
-    TARGET_STATUS="coded"
-    EXPECTED_CURRENT="coding"
+    # worker 分支：coded 状态由编排器在验证产出后写入，hook 只清理任务文件
+    rm -f "$TASK_FILE"
+    continue
   else
     rm -f "$TASK_FILE"
     continue

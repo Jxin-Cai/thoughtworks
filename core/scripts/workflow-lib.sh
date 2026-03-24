@@ -232,11 +232,12 @@ get_task_description() {
   _get_task_field "$1" "description"
 }
 
-# 更新 task 状态
+# 更新 task 状态（带锁，防止并发写入竞态）
 update_task_status() {
   local task_id="$1" new_status="$2"
   if [ ! -f "$TASK_STATE_FILE" ]; then return 1; fi
   # 使用 awk 精确替换指定 task 的 status 字段
+  local tmp_file="${TASK_STATE_FILE}.tmp.$$"
   awk -v tid="$task_id" -v ns="$new_status" '
     /^tasks:/ { in_tasks=1 }
     /^[^ ]/ && !/^tasks:/ { in_tasks=0 }
@@ -246,8 +247,29 @@ update_task_status() {
       sub(/status:.*/, "status: "ns)
     }
     { print }
-  ' "$TASK_STATE_FILE" > "${TASK_STATE_FILE}.tmp.$$"
-  mv "${TASK_STATE_FILE}.tmp.$$" "$TASK_STATE_FILE"
+  ' "$TASK_STATE_FILE" > "$tmp_file"
+  if command -v flock >/dev/null 2>&1; then
+    (
+      flock -x 200
+      mv "$tmp_file" "$TASK_STATE_FILE"
+    ) 200>"${TASK_STATE_FILE}.lock"
+  else
+    # macOS fallback: mkdir 原子锁
+    local lock_dir="${TASK_STATE_FILE}.lockdir"
+    local max_wait=30
+    local waited=0
+    while ! mkdir "$lock_dir" 2>/dev/null; do
+      sleep 0.1
+      waited=$((waited + 1))
+      if [ "$waited" -ge "$max_wait" ]; then
+        rm -rf "$lock_dir"
+        mkdir "$lock_dir" 2>/dev/null || true
+        break
+      fi
+    done
+    mv "$tmp_file" "$TASK_STATE_FILE"
+    rmdir "$lock_dir" 2>/dev/null || true
+  fi
 }
 
 # 获取指定 layer 的所有 task id

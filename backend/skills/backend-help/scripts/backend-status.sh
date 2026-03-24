@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # 后端状态查询脚本（支持按层分目录和旧版 *.md 目录）
-# 用法: backend-status.sh <idea-dir> [--pretty]
-# 输出: 结构化 JSON（默认）或人类可读表格（--pretty）
+# 用法: backend-status.sh <idea-dir> [--pretty|--brief]
+# 输出: 结构化 JSON（默认）或人类可读表格（--pretty）或精简 JSON（--brief）
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: backend-status.sh <idea-dir> [--pretty]}"
+IDEA_DIR="${1:?用法: backend-status.sh <idea-dir> [--pretty|--brief]}"
 PRETTY="${2:-}"
 BACKEND_DESIGNS_DIR="$IDEA_DIR/backend-designs"
 # 后端四层目录列表（与 workflow.yaml 中的 layer id 一致）
@@ -306,6 +306,9 @@ if [ "$PRETTY" = "--pretty" ]; then
     echo "Next:  $(echo "$next_thoughts" | sed 's/"//g;s/,/, /g')"
   fi
   echo ""
+elif [ "$PRETTY" = "--brief" ]; then
+  # --brief: 精简 JSON，省略完整 layers/thoughts
+  echo "{\"idea\":\"$IDEA_NAME\",\"state\":\"$state\",\"overall\":{\"total\":$overall_total,\"done\":$overall_done,\"pending\":$overall_pending,\"failed\":$overall_failed},\"next_thoughts\":[$next_thoughts]}"
 else
   echo "$json"
 fi

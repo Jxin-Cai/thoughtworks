@@ -5,12 +5,16 @@
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: backend-output-validate.sh <idea-dir> [--layer <layer>]}"
+IDEA_DIR="${1:?用法: backend-output-validate.sh <idea-dir> [--layer <layer>] [--failures-only] [--summary]}"
 shift
 FILTER_LAYER=""
+FAILURES_ONLY=false
+SUMMARY_ONLY=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --layer) FILTER_LAYER="$2"; shift 2 ;;
+    --failures-only) FAILURES_ONLY=true; shift ;;
+    --summary) SUMMARY_ONLY=true; shift ;;
     *) shift ;;
   esac
 done
@@ -906,4 +910,20 @@ else
   STATUS="fail"
 fi
 
-echo "{\"status\":\"$STATUS\",\"checks\":[$CHECKS]}"
+if [ "$SUMMARY_ONLY" = "true" ]; then
+  # --summary: 精简摘要
+  total=$(echo "[$CHECKS]" | grep -o '"rule"' | wc -l | tr -d ' ')
+  failed=$(echo "[$CHECKS]" | grep -o '"pass":false' | wc -l | tr -d ' ')
+  failed_rules=""
+  if [ "$failed" -gt 0 ]; then
+    failed_rules=$(echo "[$CHECKS]" | grep -o '"rule":"[^"]*","pass":false' | sed 's/"rule":"//;s/","pass":false//' | sort -u | awk '{printf "\"%s\",", $0}' | sed 's/,$//')
+  fi
+  echo "{\"status\":\"$STATUS\",\"total\":$total,\"failed\":$failed,\"failed_rules\":[$failed_rules]}"
+elif [ "$FAILURES_ONLY" = "true" ]; then
+  # --failures-only: 只输出失败的 checks
+  failed_checks=$(echo "$CHECKS" | tr '}' '\n' | grep '"pass":false' | sed 's/^,//' | awk '{printf "%s}", $0}' | sed 's/}$/}\n/' | paste -sd',' -)
+  [ -z "$failed_checks" ] && failed_checks=""
+  echo "{\"status\":\"$STATUS\",\"checks\":[$failed_checks]}"
+else
+  echo "{\"status\":\"$STATUS\",\"checks\":[$CHECKS]}"
+fi

@@ -14,11 +14,11 @@ agent:
 本 skill 专注于前端设计编排：接收 Decision-Maker 的指令 → 按 Phase 串行派发 Thinker subagent → 校验产出。
 
 所有层共用同一个通用 thinker agent（`agent-frontend-thinker`），其 frontmatter 配置了：
-- **skills**：`[frontend-spec, frontend-guide]`，自动注入编码规范和层级设计指令
+- **skills**：`[frontend-help]`
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 
-主 agent 统一使用 `tw-frontend:agent-frontend-thinker` 作为 `subagent_type`。层级差异通过 CONTEXT 中的 `target_layer` 字段传递，agent 启动后通过 `frontend-guide` skill 路由加载对应层级的设计指令。
+主 agent 统一使用 `tw-frontend:agent-frontend-thinker` 作为 `subagent_type`。编排器负责预读设计指令和编码规范文件，并内联到 prompt 的 INSTRUCTIONS 区块中。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
 
 ---
 
@@ -136,6 +136,19 @@ cat > {IDEA_DIR}/.current-task-{layer-id}-$(date +%s).json << 'TASK_EOF'
 TASK_EOF
 ```
 
+### 编排器预读指令
+
+在构建每个层的 prompt 之前，编排器需要用 Read 工具预读以下文件并将内容内联到 INSTRUCTIONS 区块中：
+
+1. **设计指令 — 公共部分**：`frontend/skills/frontend-guide/references/thinker/common.md`
+2. **设计指令 — 层级部分**：`frontend/skills/frontend-guide/references/thinker/{layer_short}.md`
+   - `{layer_short}` 映射：frontend-architecture→architecture, frontend-components→components, frontend-checklist→checklist
+3. **编码规范 — 公共部分**：`frontend/skills/frontend-spec/references/common.md`
+4. **编码规范 — 技术栈部分**（按需加载 react-ts/ 下相关文件）：
+   - architecture 层：`frontend/skills/frontend-spec/references/react-ts/state.md` + `routing.md`
+   - components 层：`frontend/skills/frontend-spec/references/react-ts/components.md`
+   - checklist 层：`frontend/skills/frontend-spec/references/react-ts/api-client.md`（如涉及 API 调用）
+
 ### 通用 subagent prompt 骨架
 
 所有层的 prompt 都使用以下骨架，CONTEXT 部分按层级差异动态构建：
@@ -146,6 +159,20 @@ Agent(
   max_turns: 20,
   description: "Frontend {layer-id} 设计",
   prompt: "
+    # INSTRUCTIONS（设计指令 + 编码规范 — 编排器预读内联）
+
+    ## 层级设计指令
+    {Read frontend-guide/references/thinker/common.md 的内容}
+    ---
+    {Read frontend-guide/references/thinker/{layer_short}.md 的内容}
+
+    ## 编码规范
+    {Read frontend-spec/references/common.md 的内容}
+    ---
+    {Read frontend-spec/references/react-ts/ 下按层级需要的文件内容}
+
+    ---
+
     # MISSION
     {根据 frontend-assessment.md 总结前端工作目标}
 
@@ -286,7 +313,7 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init-tasks
 bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --check-all
 ```
 
-如果校验不通过，根据失败的规则判断需要重新执行哪个 Phase 的 Thinker。
+如果校验不通过（`validation.status` 为 `fail`），执行 `--check-all --verbose` 获取完整失败详情，根据失败的规则判断需要重新执行哪个 Phase 的 Thinker。
 
 ---
 

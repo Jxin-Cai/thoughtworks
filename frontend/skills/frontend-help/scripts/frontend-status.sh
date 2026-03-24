@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # 前端设计文档状态查询脚本（支持按层分目录和旧版 *.md 目录）
-# 用法: frontend-status.sh <idea-dir> [--pretty]
+# 用法: frontend-status.sh <idea-dir> [--pretty|--brief]
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: frontend-status.sh <idea-dir> [--pretty]}"
+IDEA_DIR="${1:?用法: frontend-status.sh <idea-dir> [--pretty|--brief]}"
 PRETTY="${2:-}"
 FRONTEND_DESIGNS_DIR="$IDEA_DIR/frontend-designs"
 # 前端三层目录列表（与 workflow.yaml 中的 layer id 一致）
@@ -179,6 +179,9 @@ if [ "$PRETTY" = "--pretty" ]; then
   echo ""
   echo "State: $state"
   echo ""
+elif [ "$PRETTY" = "--brief" ]; then
+  # --brief: 精简 JSON，省略完整 layers/thoughts
+  echo "{\"idea\":\"$IDEA_NAME\",\"state\":\"$state\",\"overall\":{\"total\":$overall_total,\"done\":$overall_done,\"pending\":$overall_pending,\"failed\":$overall_failed}}"
 else
   echo "$json"
 fi
