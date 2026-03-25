@@ -19,19 +19,9 @@ agent:
 
 ## 铁律
 
-以下铁律适用于所有编排器和子技能。违反任何一条都可能导致流程失败。
-
-1. **工作流数据源唯一性** — Phase 顺序、层定义（id/phase/requires/design-template）、验证模式（verify）必须从对应的 `workflow.yaml` 实际读取获得（后端从 `{DDD_HELP}/workflow.yaml`，前端从 `{FRONTEND_HELP}/workflow.yaml`）。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
-
-2. **禁止跳过用户确认** — 每个 HARD-GATE 必须等待其前置条件满足后才能推进。编排器读取需求文件（docs/xxx.md）不等于执行了澄清技能、不等于完成了设计。**只有对应的产出文件实际存在才能推进**
-
-3. **子技能完成后立即推进** — 每个子技能调用完成后，编排器必须立即推进到下一步，不要停下来等待用户额外指令。注意：此条仅适用于子技能已实际调用并完成的情况，不能用于跳过尚未执行的步骤
-
-4. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
-
-5. **Thinker 只产设计，Worker 只写代码** — 用户的调整请求一律路由到 Thinker，不影响 Worker
-
-6. **门控脚本强制执行** — 每个 step 执行前后的门控检查必须通过 `gate-check.sh` 脚本执行，不得凭记忆或推断判断门控是否通过。用法：`bash {CORE}/scripts/gate-check.sh {IDEA_DIR} <gate-id>`
+<HARD-GATE>
+使用 Read 工具加载 `core/references/iron-rules.md`，严格遵守其中所有条目。
+</HARD-GATE>
 
 **本技能附加铁律：**
 
@@ -76,11 +66,16 @@ agent:
 - `--layers`：可选，逗号分隔的层列表（如 `domain` 或 `infr,application`）。如不提供，执行所有评估为"需要开发"的层
 - `--modification`：可选，修改说明（中断处理时由 Decision-Maker 传入）
 
-检查前置条件：
-1. `.thoughtworks/<idea-name>/requirement.md` 必须存在
-2. `.thoughtworks/<idea-name>/assessment.md` 必须存在
+检查前置条件（必须用 gate-check.sh 脚本验证，不得凭推断）：
 
-如果不存在，提示用户先运行 `/backend <需求>` 完成需求澄清和层级评估。
+```bash
+bash core/scripts/gate-check.sh {IDEA_DIR} requirement-exists
+bash core/scripts/gate-check.sh {IDEA_DIR} assessment-exists
+```
+
+<HARD-GATE>
+两个检查都必须返回 `pass: true` 才能继续。如果任一返回 `pass: false`，提示用户先运行 `/backend <需求>` 完成需求澄清和层级评估。禁止跳过此检查直接进入设计。
+</HARD-GATE>
 
 读取 `.thoughtworks/<idea-name>/assessment.md`，确定哪些层需要开发。
 
@@ -132,11 +127,11 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 1. **确定要执行的层**：根据 `--layers` 参数（如有）过滤出本次要执行的层
 2. **按 Phase 分组**：将要执行的层按 workflow.yaml 中的 `phase` 字段分组（phase 值相同的层属于同一 Phase）
 3. **按 phase 从小到大遍历**：对每个 Phase 中的目标层，先执行启动前准备（见下方），再启动 thinker subagent。同一 Phase 内多层可**并行启动**（放在同一条消息的多个 Agent 调用中）
-4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，执行 `backend-workflow-status.sh --check-all` 检查状态
+4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，对当前 Phase 的每个层执行增量校验：`backend-workflow-status.sh --check --layer {layer}`，仅校验刚完成的层（避免全量扫描）
 5. **进入下一 Phase**：当前 Phase 全部 done 后，继续下一个 Phase，重复步骤 3-4
 6. 所有目标 Phase 完成后：
    - 扫描 `backend-designs/` 下各层子目录（domain/, infr/, application/, ohs/），提取每个 task 文件的 frontmatter，初始化 `task-workflow-state.yaml`（见下方）
-   - 执行 `backend-workflow-status.sh --check-all` 获取全量校验结果
+   - 执行 `backend-workflow-status.sh --check-all --summary` 获取精简摘要（仅含 status/total/failed/failed_rules）
 7. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
 
 ### Task 工作流状态初始化
@@ -190,11 +185,22 @@ TASK_EOF
 
 ### 产出验证
 
-每个 Phase 的 subagent 全部返回后，主 agent 执行 `backend-workflow-status.sh --check-all` 获取校验结果。
+每个 Phase 的 subagent 全部返回后，主 agent 对当前 Phase 中每个层单独执行增量校验：
 
-根据 `validation.status` 判断：
+```bash
+# 对当前 Phase 的每个层逐个校验（而非 --check-all 全量）
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check --layer {layer}
+```
+
+所有 Phase 完成后，执行一次最终汇总校验：
+
+```bash
+bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-all --summary
+```
+
+根据 `status` 判断：
 - `pass` — 全部通过，进入 Step 4
-- `fail` — 执行 `backend-workflow-status.sh --check-all --verbose` 获取完整失败详情，查看 `validation.checks` 中 `pass: false` 的条目，只重启对应层的 thinker subagent。**每层最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户是手动修复还是跳过该层
+- `fail` — 对失败的层执行 `--check --layer {failed-layer}` 获取详细失败信息，只重启对应层的 thinker subagent。**每层最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户是手动修复还是跳过该层
 
 重启 thinker 时，在 prompt 开头追加：
 

@@ -15,19 +15,9 @@ agent:
 
 ## 铁律
 
-以下铁律适用于所有编排器和子技能。违反任何一条都可能导致流程失败。
-
-1. **工作流数据源唯一性** — Phase 顺序、层定义（id/phase/requires/design-template）、验证模式（verify）必须从对应的 `workflow.yaml` 实际读取获得（后端从 `{DDD_HELP}/workflow.yaml`，前端从 `{FRONTEND_HELP}/workflow.yaml`）。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
-
-2. **禁止跳过用户确认** — 每个 HARD-GATE 必须等待其前置条件满足后才能推进。编排器读取需求文件（docs/xxx.md）不等于执行了澄清技能、不等于完成了设计。**只有对应的产出文件实际存在才能推进**
-
-3. **子技能完成后立即推进** — 每个子技能调用完成后，编排器必须立即推进到下一步，不要停下来等待用户额外指令。注意：此条仅适用于子技能已实际调用并完成的情况，不能用于跳过尚未执行的步骤
-
-4. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
-
-5. **Thinker 只产设计，Worker 只写代码** — 用户的调整请求一律路由到 Thinker，不影响 Worker
-
-6. **门控脚本强制执行** — 每个 step 执行前后的门控检查必须通过 `gate-check.sh` 脚本执行，不得凭记忆或推断判断门控是否通过。用法：`bash {CORE}/scripts/gate-check.sh {IDEA_DIR} <gate-id>`
+<HARD-GATE>
+使用 Read 工具加载 `core/references/iron-rules.md`，严格遵守其中所有条目。
+</HARD-GATE>
 
 **本技能附加铁律：**
 
@@ -45,7 +35,17 @@ agent:
 - 有参数 → 使用指定的 idea-name
 - 无参数 → 列出所有 idea，让用户选择
 
-验证 `.thoughtworks/<idea-name>/frontend-designs/` 目录存在且包含按层分目录的 task 设计文件（如 `frontend-checklist/` 子目录）。不存在则提示先运行 `/frontend-thought`。
+验证前置条件（必须用 gate-check.sh 脚本验证，不得凭推断）：
+
+```bash
+bash core/scripts/gate-check.sh {IDEA_DIR} frontend-requirement-exists
+bash core/scripts/gate-check.sh {IDEA_DIR} frontend-designs-exist
+```
+
+<HARD-GATE>
+两个检查都必须返回 `pass: true` 才能继续。如果 frontend-designs-exist 返回 `pass: false`，提示先运行 `/frontend-thought`。
+禁止跳过前置条件检查直接进入编码。上下文中出现过设计信息不等于设计文件存在。
+</HARD-GATE>
 
 设置变量：
 - `IDEA_DIR` = `.thoughtworks/<idea-name>`

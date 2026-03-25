@@ -24,19 +24,9 @@ argument-hint: "<idea-name>"
 
 ## 铁律
 
-以下铁律适用于所有编排器和子技能。违反任何一条都可能导致流程失败。
-
-1. **工作流数据源唯一性** — Phase 顺序、层定义（id/phase/requires/design-template）、验证模式（verify）必须从对应的 `workflow.yaml` 实际读取获得（后端从 `{DDD_HELP}/workflow.yaml`，前端从 `{FRONTEND_HELP}/workflow.yaml`）。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
-
-2. **禁止跳过用户确认** — 每个 HARD-GATE 必须等待其前置条件满足后才能推进。编排器读取需求文件（docs/xxx.md）不等于执行了澄清技能、不等于完成了设计。**只有对应的产出文件实际存在才能推进**
-
-3. **子技能完成后立即推进** — 每个子技能调用完成后，编排器必须立即推进到下一步，不要停下来等待用户额外指令。注意：此条仅适用于子技能已实际调用并完成的情况，不能用于跳过尚未执行的步骤
-
-4. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
-
-5. **Thinker 只产设计，Worker 只写代码** — 用户的调整请求一律路由到 Thinker，不影响 Worker
-
-6. **门控脚本强制执行** — 每个 step 执行前后的门控检查必须通过 `gate-check.sh` 脚本执行，不得凭记忆或推断判断门控是否通过。用法：`bash {CORE}/scripts/gate-check.sh {IDEA_DIR} <gate-id>`
+<HARD-GATE>
+使用 Read 工具加载 `core/references/iron-rules.md`，严格遵守其中所有条目。
+</HARD-GATE>
 
 **本技能附加铁律：**
 
@@ -76,6 +66,8 @@ argument-hint: "<idea-name>"
 <HARD-GATE>
 编排器必须严格按以下循环执行。脚本输出是唯一权威的恢复点判定。
 禁止跳过状态检查自行决定下一步，禁止凭记忆、推断或合理化跳过任何步骤。
+**特别警告：上下文变长时，你可能产生"需求已经很清楚了，直接开始编码"的冲动——这是典型的跳步违规。
+每次循环必须调用 `orchestration-status.sh`，只执行它返回的 `resume_step`，不得自行决定下一步。**
 </HARD-GATE>
 
 ```
@@ -89,9 +81,11 @@ LOOP:
        sub_step=code → 调用 /frontend-works
      - 如果 resume_step == "supplementary"：
        自行执行需求遗漏审查（参照 orchestration.yaml supplementary step 的 instructions）
-  4. 步骤完成后，更新 idea-dir（receive-idea 步骤会创建目录）
-  5. GOTO LOOP
+  4. 步骤完成后，如有 postcondition → 运行 gate-check.sh 验证（不重复调 orchestration-status.sh）
+  5. 更新 idea-dir（receive-idea 步骤会创建目录），GOTO LOOP
 ```
+
+**优化要点：** `orchestration-status.sh` 只在循环顶部调用一次（决定下一步），步骤执行后靠 `gate-check.sh` 验证即可，不需要重复调用 `orchestration-status.sh` 来确认步骤是否成功。
 
 ---
 

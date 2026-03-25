@@ -73,25 +73,15 @@ emit_result() {
   local sub_step="${4:-}"
   local layers="${5:-}"
 
+  # 精简输出：只输出 resume_step + 必要字段，减少上下文窗口占用
   echo "resume_step: $resume_step"
-  echo "idea_dir: $IDEA_DIR"
-  echo "stack: $STACK"
   echo "reason: \"$reason\""
-
-  local count=0
-  for s in $COMPLETED_STEPS; do
-    count=$((count + 1))
-  done
-  echo "completed_steps_count: $count"
 
   if [ -n "$current_phase" ]; then
     echo "phase_detail:"
     echo "  current_phase: $current_phase"
     echo "  sub_step: $sub_step"
-    echo "  layers:"
-    for l in $layers; do
-      echo "    - $l"
-    done
+    echo "  layers: $(echo $layers | tr ' ' ',')"
   fi
 }
 
