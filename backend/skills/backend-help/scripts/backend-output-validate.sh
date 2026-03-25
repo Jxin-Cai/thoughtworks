@@ -5,15 +5,13 @@
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: backend-output-validate.sh <idea-dir> [--layer <layer>] [--failures-only] [--summary]}"
+IDEA_DIR="${1:?用法: backend-output-validate.sh <idea-dir> [--layer <layer>] [--summary]}"
 shift
 FILTER_LAYER=""
-FAILURES_ONLY=false
 SUMMARY_ONLY=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --layer) FILTER_LAYER="$2"; shift 2 ;;
-    --failures-only) FAILURES_ONLY=true; shift ;;
     --summary) SUMMARY_ONLY=true; shift ;;
     *) shift ;;
   esac
@@ -68,19 +66,25 @@ if [ -n "$FILTER_LAYER" ]; then
   TRACKED_LAYERS="$FILTER_LAYER"
 fi
 
-# ── JSON 输出辅助 ──
+# ── JSON 输出辅助（默认只记录失败，减少输出体积）──
 CHECKS=""
+TOTAL_COUNT=0
+FAIL_COUNT=0
 add_check() {
   local layer="$1" file="$2" rule="$3" pass="$4" detail="${5:-}"
-  local entry="{\"layer\":\"$layer\",\"file\":\"$file\",\"rule\":\"$rule\",\"pass\":$pass"
-  if [ "$pass" = "false" ] && [ -n "$detail" ]; then
-    entry="$entry,\"detail\":\"$detail\""
-  fi
-  entry="$entry}"
-  if [ -z "$CHECKS" ]; then
-    CHECKS="$entry"
-  else
-    CHECKS="$CHECKS,$entry"
+  TOTAL_COUNT=$((TOTAL_COUNT + 1))
+  if [ "$pass" = "false" ]; then
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+    local entry="{\"layer\":\"$layer\",\"file\":\"$file\",\"rule\":\"$rule\",\"pass\":false"
+    if [ -n "$detail" ]; then
+      entry="$entry,\"detail\":\"$detail\""
+    fi
+    entry="$entry}"
+    if [ -z "$CHECKS" ]; then
+      CHECKS="$entry"
+    else
+      CHECKS="$CHECKS,$entry"
+    fi
   fi
 }
 
@@ -670,14 +674,21 @@ get_domain_export_sigs() {
   done
 }
 
+# ── 预缓存 domain 导出签名（C1/C2/C3 共享）──
+CACHED_DOMAIN_IFACE_SIGS=""
+CACHED_DOMAIN_AGG_SIGS=""
+if is_tracked "domain"; then
+  CACHED_DOMAIN_IFACE_SIGS=$(get_domain_export_sigs "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+  CACHED_DOMAIN_AGG_SIGS=$(get_domain_export_sigs "聚合根与实体 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+fi
+
 # C1: Infr 依赖契约 > 仓储实现契约/Repository 实现 的方法签名 ⊆ Domain 导出契约 > 接口签名
 if is_tracked "infr" && is_tracked "domain"; then
   if [ -n "$FILTER_LAYER" ] && [ "$FILTER_LAYER" != "infr" ]; then
     : # 跳过
   else
     infr_files_list=$(get_layer_files_cached "infr")
-    # 合并所有 domain task 的接口签名（新旧模板兼容）
-    domain_iface_sigs=$(get_domain_export_sigs "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+    domain_iface_sigs="$CACHED_DOMAIN_IFACE_SIGS"
     scan_dir=$(get_layer_dir "infr")
     for fname in $infr_files_list; do
       filepath="$scan_dir/$fname"
@@ -716,8 +727,7 @@ if is_tracked "application" && is_tracked "domain"; then
     : # 跳过
   else
     app_files_list=$(get_layer_files_cached "application")
-    # 合并所有 domain task 的聚合根与实体 API 签名
-    domain_agg_sigs=$(get_domain_export_sigs "聚合根与实体 API" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+    domain_agg_sigs="$CACHED_DOMAIN_AGG_SIGS"
     scan_dir=$(get_layer_dir "application")
     for fname in $app_files_list; do
       filepath="$scan_dir/$fname"
@@ -763,8 +773,7 @@ if is_tracked "application" && is_tracked "domain"; then
     : # 跳过
   else
     app_files_list=$(get_layer_files_cached "application")
-    # 合并所有 domain task 的接口签名
-    domain_iface_sigs=$(get_domain_export_sigs "接口签名" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | extract_col2 || true)
+    domain_iface_sigs="$CACHED_DOMAIN_IFACE_SIGS"
     scan_dir=$(get_layer_dir "application")
     for fname in $app_files_list; do
       filepath="$scan_dir/$fname"
@@ -899,31 +908,20 @@ fi
 
 # ── 计算最终状态并输出 ──
 
-ALL_PASS=true
-if echo "$CHECKS" | grep -q '"pass":false'; then
-  ALL_PASS=false
-fi
-
-if [ "$ALL_PASS" = "true" ]; then
+if [ "$FAIL_COUNT" -eq 0 ]; then
   STATUS="pass"
 else
   STATUS="fail"
 fi
 
 if [ "$SUMMARY_ONLY" = "true" ]; then
-  # --summary: 精简摘要
-  total=$(echo "[$CHECKS]" | grep -o '"rule"' | wc -l | tr -d ' ')
-  failed=$(echo "[$CHECKS]" | grep -o '"pass":false' | wc -l | tr -d ' ')
+  # --summary: 精简摘要（直接用计数器，无需 grep）
   failed_rules=""
-  if [ "$failed" -gt 0 ]; then
-    failed_rules=$(echo "[$CHECKS]" | grep -o '"rule":"[^"]*","pass":false' | sed 's/"rule":"//;s/","pass":false//' | sort -u | awk '{printf "\"%s\",", $0}' | sed 's/,$//')
+  if [ "$FAIL_COUNT" -gt 0 ]; then
+    failed_rules=$(echo "$CHECKS" | grep -o '"rule":"[^"]*"' | sed 's/"rule":"//;s/"$//' | sort -u | awk '{printf "\"%s\",", $0}' | sed 's/,$//')
   fi
-  echo "{\"status\":\"$STATUS\",\"total\":$total,\"failed\":$failed,\"failed_rules\":[$failed_rules]}"
-elif [ "$FAILURES_ONLY" = "true" ]; then
-  # --failures-only: 只输出失败的 checks
-  failed_checks=$(echo "$CHECKS" | tr '}' '\n' | grep '"pass":false' | sed 's/^,//' | awk '{printf "%s}", $0}' | sed 's/}$/}\n/' | paste -sd',' -)
-  [ -z "$failed_checks" ] && failed_checks=""
-  echo "{\"status\":\"$STATUS\",\"checks\":[$failed_checks]}"
+  echo "{\"status\":\"$STATUS\",\"total\":$TOTAL_COUNT,\"failed\":$FAIL_COUNT,\"failed_rules\":[$failed_rules]}"
 else
-  echo "{\"status\":\"$STATUS\",\"checks\":[$CHECKS]}"
+  # 默认和 --failures-only 等价：CHECKS 已只含失败项
+  echo "{\"status\":\"$STATUS\",\"total\":$TOTAL_COUNT,\"failed\":$FAIL_COUNT,\"checks\":[$CHECKS]}"
 fi

@@ -18,7 +18,7 @@ agent:
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 
-主 agent 统一使用 `tw-frontend:agent-frontend-thinker` 作为 `subagent_type`。编排器负责预读设计指令和编码规范文件，并内联到 prompt 的 INSTRUCTIONS 区块中。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
+主 agent 统一使用 `tw-frontend:agent-frontend-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/frontend-guide` 和 `/frontend-spec` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
 
 ---
 
@@ -136,138 +136,11 @@ cat > {IDEA_DIR}/.current-task-{layer-id}-$(date +%s).json << 'TASK_EOF'
 TASK_EOF
 ```
 
-### 编排器预读指令
-
-在构建每个层的 prompt 之前，编排器需要用 Read 工具预读以下文件并将内容内联到 INSTRUCTIONS 区块中：
-
-1. **设计指令 — 公共部分**：`frontend/skills/frontend-guide/references/thinker/common.md`
-2. **设计指令 — 层级部分**：`frontend/skills/frontend-guide/references/thinker/{layer_short}.md`
-   - `{layer_short}` 映射：frontend-architecture→architecture, frontend-components→components, frontend-checklist→checklist
-3. **编码规范 — 公共部分**：`frontend/skills/frontend-spec/references/common.md`
-4. **编码规范 — 技术栈部分**（按需加载 react-ts/ 下相关文件）：
-   - architecture 层：`frontend/skills/frontend-spec/references/react-ts/state.md` + `routing.md`
-   - components 层：`frontend/skills/frontend-spec/references/react-ts/components.md`
-   - checklist 层：`frontend/skills/frontend-spec/references/react-ts/api-client.md`（如涉及 API 调用）
-
 ### 通用 subagent prompt 骨架
 
-所有层的 prompt 都使用以下骨架，CONTEXT 部分按层级差异动态构建：
+使用 Read 工具加载 `references/thinker-prompt-skeleton.md`，按其模板和 CONTEXT 差异规则为每个层组装 prompt。
 
-```
-Agent(
-  subagent_type: "tw-frontend:agent-frontend-thinker",
-  max_turns: 20,
-  description: "Frontend {layer-id} 设计",
-  prompt: "
-    # INSTRUCTIONS（设计指令 + 编码规范 — 编排器预读内联）
-
-    ## 层级设计指令
-    {Read frontend-guide/references/thinker/common.md 的内容}
-    ---
-    {Read frontend-guide/references/thinker/{layer_short}.md 的内容}
-
-    ## 编码规范
-    {Read frontend-spec/references/common.md 的内容}
-    ---
-    {Read frontend-spec/references/react-ts/ 下按层级需要的文件内容}
-
-    ---
-
-    # MISSION
-    {根据 frontend-assessment.md 总结前端工作目标}
-
-    ---
-
-    # TEMPLATE
-    使用 Read 工具加载设计文档模板：`{workflow.yaml 中该层 design-template 的绝对路径}`
-    严格按照模板结构输出设计文档。
-
-    ---
-
-    # CONTEXT
-    ## 目标层级
-    target_layer: {layer-id}
-
-    {按层级差异规则构建 CONTEXT — 见下方}
-
-    ## 前端需求
-    使用 Read 工具加载：`{IDEA_DIR}/frontend-requirement.md`
-
-    ---
-
-    # OUTPUT
-    将设计文档写入：`{IDEA_DIR}/frontend-designs/{layer-id}/` 目录
-    每个 task 一个文件，命名格式：`{nnn}-{topic-slug}.md`
-
-    ## Task 拆分规则
-    - frontend-architecture 层：按 Entity/Feature 拆 task（如 `001-entity-order.md`, `002-feature-create-order.md`），小需求可合为一个 task
-    - frontend-components 层：按组件组拆 task（如 `001-order-components.md`）
-    - frontend-checklist 层：按 FSD slice 拆 task（如 `001-order-checklist.md`），小需求可合为一个 task
-    - 单个 task 文件不超过 800 行
-    - 每个 task 的 frontmatter 必须包含 task_id、layer、order、status、depends_on、description
-
-    ## frontmatter 要求
-    - layer: {layer-id}
-    - order: {workflow.yaml 中的 phase 值}
-    - status: pending
-    - depends_on: {具体的上游 task_id 列表}
-    - description: 一句话描述
-
-    {如果该层是 workflow.yaml 中最后一个 Phase 的层，追加：}
-    ## 实现清单要求
-    设计文档必须包含实现清单表格，列出所有需要创建的文件路径、关键实现点和对应章节。
-  "
-)
-```
-
-### 层级 CONTEXT 差异规则
-
-根据 workflow.yaml 中每个层的 `requires` 和 `phase` 字段，按以下规则构建该层 CONTEXT 中的上游依赖区块：
-
-**无上游依赖（requires 为空，即第一个 Phase）：**
-
-```
-## OHS 层已有代码
-
-你需要根据 MISSION 中的工作目标，使用 Glob 和 Grep 工具从已有代码中按需扫描所需的 API 端点。
-
-### 扫描指引
-- 根据后端语言（从 `{IDEA_DIR}/requirement.md` 的 `## 技术选型` 确认）扫描对应路径：
-  - Java: `**/ohs/**/*Controller.java`（@RequestMapping/@GetMapping/@PostMapping 注解）
-  - Python: `**/ohs/**/*_router.py`（FastAPI router 装饰器 @router.get/@router.post）
-  - Go: `**/ohs/**/*_handler.go`（gin handler 函数和路由注册）
-- 关注 Request/Response DTO 类的字段定义
-
-### 扫描原则
-1. 需求驱动 — 只扫描前端需求涉及的 API 端点
-2. 签名提取 — 读取 Controller 方法签名和 DTO 字段
-3. 来源标注 — 依赖契约子表标题标注（来自已有代码），每行说明列附注源文件路径
-
-{如果 UI_STYLE_GUIDANCE 存在：}
-{UI_STYLE_GUIDANCE}
-
-{如果 UI_UX_GUIDANCE 存在：}
-{UI_UX_GUIDANCE}
-```
-
-**有上游依赖（requires 非空）：**
-
-对 requires 中列出的每个上游层，添加：
-
-```
-## 上游设计（{upstream-layer-id} — 必读）
-使用 Read 工具加载上游层设计文档，扫描 `{IDEA_DIR}/frontend-designs/{upstream-layer-id}/` 目录下所有 task 文件。
-重点关注 `## 导出契约` 区，作为本层设计的上游依据。
-```
-
-如果 requires 中直接或间接依赖了 OHS 层（即上游链追溯到第一个 Phase），追加：
-
-```
-## OHS 层设计文档
-如需参考 OHS 层完整设计（API 端点、DTO 字段），使用 Read 工具加载：`{ohs.md 的绝对路径}`
-```
-
-**上一个 Thinker 完成后，不再提取导出契约内联，下游 Thinker 通过 Read 工具按需加载。**
+从 `workflow.yaml` 中读取该层的 `thinker-ref` 和 `design-template` 路径。
 
 ### 重试机制
 

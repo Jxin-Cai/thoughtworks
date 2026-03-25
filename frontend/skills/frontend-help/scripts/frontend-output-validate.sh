@@ -12,13 +12,11 @@
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir> [--failures-only] [--summary]}"
+IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir> [--summary]}"
 shift
-FAILURES_ONLY=false
 SUMMARY_ONLY=false
 while [ $# -gt 0 ]; do
   case "$1" in
-    --failures-only) FAILURES_ONLY=true; shift ;;
     --summary) SUMMARY_ONLY=true; shift ;;
     *) shift ;;
   esac
@@ -59,16 +57,22 @@ get_layer_dir() {
   fi
 }
 
-# ── JSON 输出辅助 ──
+# ── JSON 输出辅助（默认只记录失败，减少输出体积）──
 CHECKS=""
+TOTAL_COUNT=0
+FAIL_COUNT=0
 add_check() {
   local layer="$1" file="$2" rule="$3" pass="$4" detail="${5:-}"
-  local entry="{\"layer\":\"$layer\",\"file\":\"$file\",\"rule\":\"$rule\",\"pass\":$pass"
-  if [ "$pass" = "false" ] && [ -n "$detail" ]; then
-    entry="$entry,\"detail\":\"$detail\""
+  TOTAL_COUNT=$((TOTAL_COUNT + 1))
+  if [ "$pass" = "false" ]; then
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+    local entry="{\"layer\":\"$layer\",\"file\":\"$file\",\"rule\":\"$rule\",\"pass\":false"
+    if [ -n "$detail" ]; then
+      entry="$entry,\"detail\":\"$detail\""
+    fi
+    entry="$entry}"
+    if [ -z "$CHECKS" ]; then CHECKS="$entry"; else CHECKS="$CHECKS,$entry"; fi
   fi
-  entry="$entry}"
-  if [ -z "$CHECKS" ]; then CHECKS="$entry"; else CHECKS="$CHECKS,$entry"; fi
 }
 
 # ── 辅助函数 ──
@@ -370,24 +374,21 @@ if [ -n "$comp_files" ] && [ -n "$arch_files" ]; then
 fi
 
 # ── 计算最终状态并输出 ──
-ALL_PASS=true
-if echo "$CHECKS" | grep -q '"pass":false'; then ALL_PASS=false; fi
-if [ "$ALL_PASS" = "true" ]; then STATUS="pass"; else STATUS="fail"; fi
+
+if [ "$FAIL_COUNT" -eq 0 ]; then
+  STATUS="pass"
+else
+  STATUS="fail"
+fi
 
 if [ "$SUMMARY_ONLY" = "true" ]; then
-  # --summary: 精简摘要
-  total=$(echo "[$CHECKS]" | grep -o '"rule"' | wc -l | tr -d ' ')
-  failed=$(echo "[$CHECKS]" | grep -o '"pass":false' | wc -l | tr -d ' ')
+  # --summary: 精简摘要（直接用计数器，无需 grep）
   failed_rules=""
-  if [ "$failed" -gt 0 ]; then
-    failed_rules=$(echo "[$CHECKS]" | grep -o '"rule":"[^"]*","pass":false' | sed 's/"rule":"//;s/","pass":false//' | sort -u | awk '{printf "\"%s\",", $0}' | sed 's/,$//')
+  if [ "$FAIL_COUNT" -gt 0 ]; then
+    failed_rules=$(echo "$CHECKS" | grep -o '"rule":"[^"]*"' | sed 's/"rule":"//;s/"$//' | sort -u | awk '{printf "\"%s\",", $0}' | sed 's/,$//')
   fi
-  echo "{\"status\":\"$STATUS\",\"total\":$total,\"failed\":$failed,\"failed_rules\":[$failed_rules]}"
-elif [ "$FAILURES_ONLY" = "true" ]; then
-  # --failures-only: 只输出失败的 checks
-  failed_checks=$(echo "$CHECKS" | tr '}' '\n' | grep '"pass":false' | sed 's/^,//' | awk '{printf "%s}", $0}' | sed 's/}$/}\n/' | paste -sd',' -)
-  [ -z "$failed_checks" ] && failed_checks=""
-  echo "{\"status\":\"$STATUS\",\"checks\":[$failed_checks]}"
+  echo "{\"status\":\"$STATUS\",\"total\":$TOTAL_COUNT,\"failed\":$FAIL_COUNT,\"failed_rules\":[$failed_rules]}"
 else
-  echo "{\"status\":\"$STATUS\",\"checks\":[$CHECKS]}"
+  # 默认输出：CHECKS 已只含失败项
+  echo "{\"status\":\"$STATUS\",\"total\":$TOTAL_COUNT,\"failed\":$FAIL_COUNT,\"checks\":[$CHECKS]}"
 fi

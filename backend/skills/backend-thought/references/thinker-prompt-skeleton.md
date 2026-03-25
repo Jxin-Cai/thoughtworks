@@ -1,0 +1,83 @@
+# Thinker Subagent Prompt 骨架
+
+编排器为每个层构建 subagent prompt 时使用以下结构。
+
+## Prompt 模板
+
+```
+Agent(
+  subagent_type: "tw-backend:agent-ddd-thinker",
+  max_turns: 20,
+  description: "{Layer} 层思考",
+  prompt: "
+    # MISSION（工作目标 — 结论先行，先理解你要做什么）
+
+    {主 agent 根据 assessment.md 中该层的评估结论，用 2-4 句话总结该层的核心工作目标}
+
+    具体包括：
+    {主 agent 根据评估结论列出的该层需要完成的具体工作项，每项一行}
+
+    {仅 domain 层追加以下内容：}
+    ## 聚合结构要求
+
+    requirement.md 的聚合分析章节列出了所有识别的聚合及其依赖关系。
+    为每个聚合输出独立的 task 文件（`{nnn}-{aggregate-slug}.md`，写入 `backend-designs/domain/` 目录），每个 task 包含该聚合的完整设计。
+    小聚合（如共享值对象较多的 2 个聚合）可合并为一个 task，但单个 task 不超过 800 行。
+
+    你的设计方案完成后，必须回头逐条验证上述每个工作项都有对应的设计产出。
+
+    ---
+
+    # TEMPLATE（产出骨架 — 写入文件的结构）
+
+    使用 Read 工具加载设计文档模板：`{design-template 的绝对路径}`
+    严格按照模板结构输出设计文档。
+
+    ---
+
+    # CONTEXT（输入文档 — 读取作为上下文）
+
+    ## 目标层级
+    target_layer: {layer}
+
+    ## 后端语言
+    backend_language: {BACKEND_LANG}
+
+    {对每个上游层，按 upstream-scan-guide.md 的情况 A 或 B 生成对应子区块}
+
+    {无上游依赖时（如 domain 层）：省略上游相关子区块}
+
+    ## 需求
+    使用 Read 工具加载需求文档：`{IDEA_DIR}/requirement.md`
+
+    ---
+
+    # OUTPUT
+
+    将设计文档写入：`.thoughtworks/<idea-name>/backend-designs/{layer}/` 目录
+    每个 task 一个文件，命名格式：`{nnn}-{topic-slug}.md`
+
+    ## Task 拆分规则
+    - domain 层：每个聚合一个 task（小聚合可合并）
+    - infr 层：每个聚合的仓储实现一个 task
+    - application 层：每个用例组一个 task
+    - ohs 层：每个 API 资源组一个 task
+    - 单个 task 文件不超过 800 行
+    - 每个 task 的 frontmatter 必须包含 task_id、layer、order、status、depends_on、description
+
+    使用 Write 工具写入。
+
+    重要：TEMPLATE 是你的产出结构，MISSION / CONTEXT 是你的参考约束，不要将它们复制到产出文件中。
+  "
+)
+```
+
+## MISSION 区块填充规则
+
+主 agent 在组装 prompt 时，需要从 `assessment.md` 的该层评估部分提取信息，生成结论先行的工作目标描述：
+
+1. **总结句** — 用 2-4 句话说明这一层要做什么、为什么要做
+2. **具体工作项** — 从评估结论中提炼出 numbered list，每项是一个可验证的工作目标
+3. **验证锚点** — 这些工作项将成为 thinker 反思循环中逐条验证的基准
+
+注意：设计指令和编码规范由 agent 启动时自行通过 `/backend-guide` 和 `/backend-spec` 加载，编排器无需预读内联。

@@ -91,113 +91,35 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks
    ```bash
    bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set-task {task_id} coding
    bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --sync-layer-status
+   cat > {IDEA_DIR}/.current-task-{task_id}-$(date +%s).json << 'TASK_EOF'
+   {"role":"worker","task_id":"{task_id}","layer":"frontend-checklist","idea_dir":"{IDEA_DIR}","stack":"frontend"}
+   TASK_EOF
    ```
-4. 读取 task 文件的 frontmatter，将 status 更新为 `in_progress`
-5. 启动 worker agent（见下方 prompt 骨架）
-6. agent 完成后验证产出
-7. 验证通过后更新 task 状态：
+4. 启动 worker agent（见下方 prompt 骨架）。Worker agent 内部负责：验证产出、标记 coded、更新 frontmatter
+5. agent 返回后，编排器只检查终态：
    ```bash
-   bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set-task {task_id} coded
-   bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --sync-layer-status
+   bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --get-task-status {task_id}
    ```
-8. 将 task 的 frontmatter status 更新为 `done`
-9. 将 task 加入 `session_completed`，输出进度
-10. 重新查询 `--next-tasks code`，如有新的可执行 impl task（前一批完成后解锁了下游依赖）则继续
+   - 状态为 `coded` → 加入 `session_completed`，输出进度
+   - 状态为 `failed` → 触发暂停机制
+   - 状态仍为 `coding` → 视为失败，触发暂停机制
+6. 重新查询 `--next-tasks code`，如有新的可执行 impl task（前一批完成后解锁了下游依赖）则继续
 
 ### Worker agent prompt 骨架
 
-编排器负责预读编码指令和编码规范文件，并内联到 prompt 的 INSTRUCTIONS 区块中。
+agent 启动后自行通过 `/frontend-guide` 和 `/frontend-spec` 加载编码指令和编码规范。
 
-#### 编排器预读指令
+使用 Read 工具加载 `references/worker-prompt-skeleton.md`，按其模板为每个 task 组装 prompt。
 
-在构建 worker prompt 之前，编排器需要用 Read 工具预读以下文件：
+### 验证流程（由 Worker agent 内部执行）
 
-1. **编码指令 — 公共部分**：`frontend/skills/frontend-guide/references/worker/common.md`
-2. **编码规范 — 公共部分**：`frontend/skills/frontend-spec/references/common.md`
-3. **编码规范 — 技术栈部分**：按需加载 `frontend/skills/frontend-spec/references/react-ts/` 下的文件（components.md、api-client.md、state.md、routing.md）
-
-注意：所有前端 worker task 共享相同的 INSTRUCTIONS 内容，编排器只需预读一次。
-
-```
-Agent(
-  subagent_type: "tw-frontend:agent-frontend-worker",
-  max_turns: 15,
-  description: "Frontend: {task frontmatter description}",
-  prompt: "
-    # INSTRUCTIONS（编码指令 + 编码规范 — 编排器预读内联）
-
-    ## 前端编码指令
-    {Read frontend-guide/references/worker/common.md 的内容}
-
-    ## 编码规范
-    {Read frontend-spec/references/common.md 的内容}
-    ---
-    {Read frontend-spec/references/react-ts/ 下按需的文件内容}
-
-    ---
-
-    # TASK
-
-    根据以下实现清单，逐项创建前端代码文件：
-
-    {task 文件末尾的实现清单表格}
-
-    ---
-
-    # CONTEXT
-
-    ## 本 task 设计
-    使用 Read 工具加载本 task 实现清单文档：`{当前 task 文件的绝对路径}`
-    重点关注实现清单表格中每个文件的创建路径、关键实现点和对应组件设计。
-
-    ## 上游 task 设计（只读参考）
-    {列出 task frontmatter depends_on 中引用的上游 task 文件绝对路径列表，格式如下：}
-    如需参考上游设计（架构设计、组件设计），使用 Read 工具按需加载：
-    - `{上游 task 文件绝对路径 1}`
-    - `{上游 task 文件绝对路径 2}`
-
-    ## OHS 层已有代码（只读参考）
-    如需参考后端 API 接口定义，使用 Glob/Grep 工具扫描已有 OHS 代码：
-    - Java: `**/ohs/**/*Controller.java`
-    - Python: `**/ohs/**/*_router.py`
-    - Go: `**/ohs/**/*_handler.go`
-
-    ## UI/UX 需求上下文
-
-    {UI_UX_CONTEXT}
-
-    ---
-
-    # OUTPUT
-
-    在项目中创建前端代码文件。
-    保持代码变更最小化，只实现当前实现清单涉及的文件。
-  "
-)
-```
-
-### 验证流程
-
-agent 完成后，验证产出：
+Worker agent 完成编码后，在 agent 内部执行验证和状态更新：
 1. 从 `workflow.yaml` 读取 `frontend-checklist` 层 `verify` 下的 glob 模式列表
-2. 对每个 verify pattern 用 Glob 执行检查，确认关键产物已创建
-3. 如 task 的实现清单已提供明确文件路径，可额外按文件路径做补充校验
-4. 如果关键产物未创建，重新启动该 task 的 worker agent，在 prompt 开头追加：
+2. 对每个 verify pattern 用 Glob 验证关键产物已创建
+3. 验证通过 → agent 执行状态标记（coded）和 frontmatter 更新
+4. 验证失败 → agent 标记 failed 并报告问题
 
-```
----
-
-# PREVIOUS ATTEMPT FAILURE
-
-上次实现验证发现以下文件未创建：
-{未创建的文件路径列表}
-
-请确保本次执行后这些文件存在。
-
----
-```
-
-**每个 task 最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户。
+编排器只读取终态（coded/failed），不参与验证过程。**每个 task 最多重试 2 次**，超过后暂停。
 
 ### 进度输出
 

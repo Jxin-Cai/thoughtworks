@@ -111,7 +111,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 
-主 agent 统一使用 `tw-backend:agent-ddd-thinker` 作为 `subagent_type`。编排器负责预读设计指令和编码规范文件，并内联到 prompt 的 INSTRUCTIONS 区块中。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。动态 prompt 包含 INSTRUCTIONS、MISSION、TEMPLATE、CONTEXT、OUTPUT 五个区块。
+主 agent 统一使用 `tw-backend:agent-ddd-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/backend-guide` 和 `/backend-spec` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。动态 prompt 包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个区块。
 
 ### 执行方式（主 agent DAG 编排）
 
@@ -168,182 +168,13 @@ TASK_EOF
 
 ### CONTEXT 区块构建规则（上游依赖来源判定）
 
-对于当前层的每个上游依赖（`workflow.yaml` 中 `requires` 列出的层），按以下规则判定：
-
-**情况 A：上游层代码已实现（本 Phase 之前的 Phase 已执行 Worker）**
-即上游层的 Worker 已完成编码，代码存在于项目中。
-→ 在 CONTEXT 中生成 `## 上游已实现代码` 子区块，指引 Thinker 扫描已有代码获取依赖接口列表：
-
-```
-## 上游已实现代码（{upstream-layer} 层）
-
-{upstream-layer} 层的代码已经实现，你需要通过扫描已有代码来获取你需要依赖的接口列表。
-
-### 扫描指引
-- 建议扫描的包路径模式（按需选用，扩展名根据 BACKEND_LANG：Java→`.java`，Python→`.py`，Go→`.go`）：
-  - 聚合根/实体：`**/domain/**/model/*.{ext}`
-  - 仓储接口：`**/domain/**/repository/*.{ext}`
-  - 领域事件：`**/domain/**/event/*.{ext}`
-  - 防腐层接口：`**/domain/**/acl/*.{ext}`
-  - 领域服务：`**/domain/**/service/*.{ext}`
-  - 应用服务：`**/application/**/*ApplicationService.{ext}`（Python/Go 中可能命名不同，按包名搜索）
-  - Command：`**/application/**/*Command.{ext}`（Python/Go 中可能命名不同，按包名搜索）
-
-### 扫描原则
-1. **需求驱动** — 只扫描 MISSION 工作目标中涉及的类和方法，不做全量扫描
-2. **签名提取** — 对找到的类，用 Read 工具读取其公有方法签名和关键字段
-3. **来源标注** — 依赖契约子表标题标注（来自已有代码），每行说明列附注源文件路径
-```
-
-**情况 B：上游层被评估为"不需要"且无已实现代码**
-即 `assessment.md` 中该上游层标记为"不需要"，但项目中可能有历史代码。
-→ 使用与情况 A 相同的 `## 上游已有代码` 子区块模板，但补充说明该层在本次需求中不需要新开发：
-
-```
-## 上游已有代码（{upstream-layer} 层 — 无当前设计文档）
-
-{upstream-layer} 层在本次需求中不需要新开发，已有实现存在于代码库中。
-你需要根据 MISSION 中的工作目标，使用 Glob 和 Grep 工具从已有代码中**按需扫描**所需的上游能力。
-
-### 扫描指引
-- assessment.md 中关于该层的说明："{从 assessment.md 提取该层的说明}"
-- 建议扫描的包路径模式（按需选用，扩展名根据 BACKEND_LANG：Java→`.java`，Python→`.py`，Go→`.go`）：
-  - 聚合根/实体：`**/domain/**/model/*.{ext}`
-  - 仓储接口：`**/domain/**/repository/*.{ext}`
-  - 领域事件：`**/domain/**/event/*.{ext}`
-  - 防腐层接口：`**/domain/**/acl/*.{ext}`
-  - 领域服务：`**/domain/**/service/*.{ext}`
-  - 应用服务：`**/application/**/*ApplicationService.{ext}`
-  - Command：`**/application/**/*Command.{ext}`
-
-### 扫描原则
-1. **需求驱动** — 只扫描 MISSION 工作目标中涉及的类和方法，不做全量扫描
-2. **签名提取** — 对找到的类，用 Read 工具读取其公有方法签名和关键字段
-3. **来源标注** — 依赖契约子表标题标注（来自已有代码），每行说明列附注源文件路径
-```
-
-**无上游依赖时**（如 domain 层）：省略上游相关子区块。
-
-### 编排器预读指令
-
-在构建每个层的 prompt 之前，编排器需要用 Read 工具预读以下文件并将内容内联到 INSTRUCTIONS 区块中：
-
-1. **设计指令 — 公共部分**：`backend/skills/backend-guide/references/thinker/common.md`
-2. **设计指令 — 层级部分**：`backend/skills/backend-guide/references/thinker/{layer}.md`
-3. **编码规范 — 公共部分**：`backend/skills/backend-spec/references/{BACKEND_LANG}/common.md`
-4. **编码规范 — 层级部分**：`backend/skills/backend-spec/references/{BACKEND_LANG}/{spec_layer}.md`
-   - `{spec_layer}` 映射：domain→domain, infr→infrastructure, application→application, ohs→ohs
-5. **数据库规范**（仅 infr 层追加）：`backend/skills/backend-spec/references/{BACKEND_LANG}/database.md`
+对于当前层的每个上游依赖（`workflow.yaml` 中 `requires` 列出的层），使用 Read 工具加载 `references/upstream-scan-guide.md`，按情况 A 或 B 生成对应的 CONTEXT 子区块。无上游依赖时（如 domain 层）省略。
 
 ### 构建 subagent prompt
 
-对每个需要的层，从 `workflow.yaml` 中读取该层的 `thinker-ref`（获取 agent name）和 `design-template`（指向 `assets/{layer}-design.md`）路径，然后按以下结构组装 prompt：
+使用 Read 工具加载 `references/thinker-prompt-skeleton.md`，按其模板为每个层组装 prompt。
 
-**所有层统一使用同一个 agent：**
-
-```
-Agent(
-  subagent_type: "tw-backend:agent-ddd-thinker",
-  max_turns: 20,
-  description: "{Layer} 层思考",
-  prompt: "
-    # INSTRUCTIONS（设计指令 + 编码规范 — 编排器预读内联）
-
-    ## 层级设计指令
-    {Read backend-guide/references/thinker/common.md 的内容}
-    ---
-    {Read backend-guide/references/thinker/{layer}.md 的内容}
-
-    ## 编码规范
-    {Read backend-spec/references/{BACKEND_LANG}/common.md 的内容}
-    ---
-    {Read backend-spec/references/{BACKEND_LANG}/{spec_layer}.md 的内容}
-    {infr 层额外追加：}
-    ---
-    {Read backend-spec/references/{BACKEND_LANG}/database.md 的内容}
-
-    ---
-
-    # MISSION（工作目标 — 结论先行，先理解你要做什么）
-
-    {主 agent 根据 assessment.md 中该层的评估结论，用 2-4 句话总结该层的核心工作目标}
-
-    具体包括：
-    {主 agent 根据评估结论列出的该层需要完成的具体工作项，每项一行}
-
-    {仅 domain 层追加以下内容：}
-    ## 聚合结构要求
-
-    requirement.md 的聚合分析章节列出了所有识别的聚合及其依赖关系。
-    为每个聚合输出独立的 task 文件（`{nnn}-{aggregate-slug}.md`，写入 `backend-designs/domain/` 目录），每个 task 包含该聚合的完整设计。
-    小聚合（如共享值对象较多的 2 个聚合）可合并为一个 task，但单个 task 不超过 800 行。
-
-    你的设计方案完成后，必须回头逐条验证上述每个工作项都有对应的设计产出。
-
-    ---
-
-    # TEMPLATE（产出骨架 — 写入文件的结构）
-
-    使用 Read 工具加载设计文档模板：`{design-template 的绝对路径}`
-    严格按照模板结构输出设计文档。
-
-    ---
-
-    # CONTEXT（输入文档 — 读取作为上下文）
-
-    ## 目标层级
-    target_layer: {layer}
-
-    ## 后端语言
-    backend_language: {BACKEND_LANG}
-
-    {对每个上游层，按 CONTEXT 区块构建规则的情况 A 或 B 生成对应子区块：}
-
-    {情况 A — 上游层代码已实现时：}
-    ## 上游已实现代码（{upstream-layer} 层）
-    {按 CONTEXT 区块构建规则情况 A 的模板生成，包含扫描指引和扫描原则}
-
-    {情况 B — 上游层被评估为"不需要"时：}
-    ## 上游已有代码（{upstream-layer} 层 — 无当前设计文档）
-    {按 CONTEXT 区块构建规则情况 B 的模板生成，包含扫描指引和扫描原则}
-
-    {无上游依赖时（如 domain 层）：省略上游相关子区块}
-
-    ## 需求
-    使用 Read 工具加载需求文档：`{IDEA_DIR}/requirement.md`
-
-    ---
-
-    # OUTPUT
-
-    将设计文档写入：`.thoughtworks/<idea-name>/backend-designs/{layer}/` 目录
-    每个 task 一个文件，命名格式：`{nnn}-{topic-slug}.md`
-    （主 agent 构建 prompt 时，将 `<idea-name>` 和 `{layer}` 替换为实际值的绝对路径）
-
-    ## Task 拆分规则
-    - domain 层：每个聚合一个 task（小聚合可合并）
-    - infr 层：每个聚合的仓储实现一个 task
-    - application 层：每个用例组一个 task
-    - ohs 层：每个 API 资源组一个 task
-    - 单个 task 文件不超过 800 行
-    - 每个 task 的 frontmatter 必须包含 task_id、layer、order、status、depends_on、description
-
-    使用 Write 工具写入。
-
-    重要：TEMPLATE 是你的产出结构，MISSION / CONTEXT 是你的参考约束，不要将它们复制到产出文件中。
-  "
-)
-```
-
-### MISSION 区块填充规则
-
-主 agent 在组装 prompt 时，需要从 `assessment.md` 的该层评估部分提取信息，生成结论先行的工作目标描述：
-
-1. **总结句** — 用 2-4 句话说明这一层要做什么、为什么要做
-2. **具体工作项** — 从评估结论中提炼出 numbered list，每项是一个可验证的工作目标（如"设计 Order 聚合根，包含创建、修改状态、计算总价三个核心业务方法"）
-3. **验证锚点** — 这些工作项将成为 thinker 反思循环中逐条验证的基准
-
-注意：设计指令和编码规范已由编排器预读内联到 INSTRUCTIONS 区块中，agent 无需额外调用 skill 加载。
+从 `workflow.yaml` 中读取该层的 `thinker-ref`（获取 agent name）和 `design-template`（指向 `assets/{layer}-design.md`）路径。
 
 ### 产出验证
 

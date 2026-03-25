@@ -83,21 +83,21 @@ LOOP:
      | resume_step             | 执行动作 |
      |------------------------|---------|
      | receive-requirement     | 接收需求（self），创建 idea-dir |
-     | backend-clarify         | /clarify backend {payload} |
-     | frontend-clarify        | /clarify frontend {idea-name} |
+     | backend:clarify         | /clarify backend {payload} |
+     | frontend:clarify        | /clarify frontend {idea-name} |
      | branch                  | /branch {idea-name} |
-     | backend-assessment      | 自行执行后端层级评估（参照 backend orchestration.yaml assessment step） |
-     | backend-phase-loop      | 根据 phase_detail 执行后端设计/确认/编码 |
-     | backend-mark-approved   | touch {IDEA_DIR}/.approved |
-     | frontend-assessment     | 自行执行前端评估（参照 frontend orchestration.yaml assessment step） |
-     | frontend-design         | /frontend-thought {idea-name} |
-     | frontend-confirm-layers | 标记各层 confirmed + touch .frontend-approved |
-     | frontend-code           | /frontend-works {idea-name} |
-     | frontend-mark-approved  | touch {IDEA_DIR}/.frontend-approved |
+     | backend:assessment      | 自行执行后端层级评估（参照 backend orchestration.yaml assessment step） |
+     | backend:phase-loop      | 根据 phase_detail 执行后端设计/确认/编码 |
+     | backend:mark-approved   | touch {IDEA_DIR}/.approved |
+     | frontend:assessment     | 自行执行前端评估（参照 frontend orchestration.yaml assessment step） |
+     | frontend:design         | /frontend-thought {idea-name} |
+     | frontend:confirm-layers | 标记各层 confirmed + touch .frontend-approved |
+     | frontend:code           | /frontend-works {idea-name} |
+     | frontend:mark-approved  | touch {IDEA_DIR}/.frontend-approved |
      | supplementary           | 自行执行需求遗漏审查（参照 backend/frontend orchestration.yaml supplementary step） |
      | merge                   | /merge {idea-name} |
 
-     - backend-phase-loop 的 phase_detail：
+     - backend:phase-loop 的 phase_detail：
        sub_step=design → /backend-thought
        sub_step=confirm → bash backend-workflow-status.sh --set {layer} confirmed
        sub_step=code → /backend-works
