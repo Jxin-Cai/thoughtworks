@@ -43,6 +43,7 @@ CORE_LIB="$(cd "$(dirname "$0")" && pwd)/../../../../core/scripts/workflow-lib.s
 source "$CORE_LIB"
 
 # 提取所有 tracked layer 名称（status 为 done 或 coded 的层）
+# 当 --layer 明确指定时，也接受 confirmed/coding 状态的层
 parse_tracked_layers() {
   local all_layers
   all_layers=$(get_tracked_layers)
@@ -51,14 +52,25 @@ parse_tracked_layers() {
     st=$(get_tracked_status "$layer")
     case "$st" in
       done|coded) echo "$layer" ;;
+      confirmed|coding)
+        # 仅当 --layer 明确指定该层时才接受
+        if [ -n "$FILTER_LAYER" ] && [ "$FILTER_LAYER" = "$layer" ]; then
+          echo "$layer"
+        fi
+        ;;
     esac
   done
 }
 
 TRACKED_LAYERS=$(parse_tracked_layers)
 
-# 如果指定了 --layer，只校验该层
+# 如果指定了 --layer，校验层名合法性并过滤
 if [ -n "$FILTER_LAYER" ]; then
+  case "$FILTER_LAYER" in
+    domain|infr|application|ohs) ;;
+    *) echo "{\"status\":\"fail\",\"checks\":[{\"layer\":\"$FILTER_LAYER\",\"file\":\"\",\"rule\":\"INIT\",\"pass\":false,\"detail\":\"无效层名: $FILTER_LAYER，可选: domain|infr|application|ohs\"}]}"
+       exit 1 ;;
+  esac
   if ! echo "$TRACKED_LAYERS" | grep -qx "$FILTER_LAYER"; then
     echo "{\"status\":\"pass\",\"checks\":[{\"layer\":\"$FILTER_LAYER\",\"file\":\"\",\"rule\":\"INIT\",\"pass\":true,\"detail\":\"该层不在 tracked_layers 中或未完成，跳过校验\"}]}"
     exit 0

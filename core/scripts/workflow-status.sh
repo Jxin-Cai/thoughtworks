@@ -15,7 +15,7 @@
 #   --init <idea-name> <layer1> [layer2...]    — 初始化状态文件
 #   --set <layer> <status>                     — 设置某层状态
 #   --check-upstream <layer>                   — 非阻塞检查上游是否 ready（仅 backend）
-#   --check-all [--verbose]                    — 非阻塞检查是否全部完成（含校验）
+#   --check-all [--verbose] [--layer <layer>]   — 非阻塞检查是否全部完成（含校验）
 #   --get-status <layer>                       — 获取指定层的纯文本状态值
 #   --init-tasks <idea-name> <task_spec>...    — 初始化 task 级状态文件
 #   --set-task <task_id> <status>              — 设置 task 状态
@@ -301,9 +301,15 @@ case "$MODE" in
     fi
 
     VERBOSE=false
-    if [ "${3:-}" = "--verbose" ]; then
-      VERBOSE=true
-    fi
+    CHECK_LAYER=""
+    shift 2  # 跳过 idea-dir 和 --check-all
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --verbose) VERBOSE=true; shift ;;
+        --layer) CHECK_LAYER="$2"; shift 2 ;;
+        *) shift ;;
+      esac
+    done
 
     tracked=$(get_tracked_layers)
     all_done=true
@@ -321,10 +327,14 @@ case "$MODE" in
     if $all_done; then
       validation_output=""
       if [ -x "$VALIDATE_SCRIPT" ]; then
+        validate_args=""
+        if [ -n "$CHECK_LAYER" ]; then
+          validate_args="--layer $CHECK_LAYER"
+        fi
         if [ "$VERBOSE" = "true" ]; then
-          validation_output=$("$VALIDATE_SCRIPT" "$IDEA_DIR" 2>&1 || true)
+          validation_output=$("$VALIDATE_SCRIPT" "$IDEA_DIR" $validate_args 2>&1 || true)
         else
-          validation_output=$("$VALIDATE_SCRIPT" "$IDEA_DIR" --summary 2>&1 || true)
+          validation_output=$("$VALIDATE_SCRIPT" "$IDEA_DIR" $validate_args --summary 2>&1 || true)
         fi
       fi
       if [ -n "$validation_output" ]; then

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 前端设计文档校验脚本（支持按层分目录和旧版 *.md 目录）
-# 用法: frontend-output-validate.sh <idea-dir>
+# 用法: frontend-output-validate.sh <idea-dir> [--layer <layer>] [--summary]
 #
 # 校验规则：
 # S1: frontmatter 必填字段（按层分目录模式下增加 task_id）
@@ -12,11 +12,13 @@
 
 set -euo pipefail
 
-IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir> [--summary]}"
+IDEA_DIR="${1:?用法: frontend-output-validate.sh <idea-dir> [--layer <layer>] [--summary]}"
 shift
+FILTER_LAYER=""
 SUMMARY_ONLY=false
 while [ $# -gt 0 ]; do
   case "$1" in
+    --layer) FILTER_LAYER="$2"; shift 2 ;;
     --summary) SUMMARY_ONLY=true; shift ;;
     *) shift ;;
   esac
@@ -173,6 +175,16 @@ merge_layer_subsection() {
   done
 }
 
+# ── --layer 过滤 ──
+if [ -n "$FILTER_LAYER" ]; then
+  case "$FILTER_LAYER" in
+    frontend-architecture|frontend-components|frontend-checklist) ;;
+    *) echo "{\"status\":\"fail\",\"checks\":[{\"layer\":\"$FILTER_LAYER\",\"file\":\"\",\"rule\":\"INIT\",\"pass\":false,\"detail\":\"无效层名: $FILTER_LAYER，可选: frontend-architecture|frontend-components|frontend-checklist\"}]}"
+       exit 1 ;;
+  esac
+  LAYER_DIRS="$FILTER_LAYER"
+fi
+
 # ── 开始校验：遍历所有设计文件 ──
 
 for layer in $LAYER_DIRS; do
@@ -242,6 +254,8 @@ done
 
 # ── C6: Frontend 依赖契约 > API 端点 ⊆ OHS API 端点 ──
 # 新模式：优先从 OHS 代码扫描 API 端点；回退到 backend-designs/ohs/*.md 或旧版 ohs.md
+# --layer 过滤：仅当指定 frontend-architecture 或未指定 --layer 时执行
+if [ -z "$FILTER_LAYER" ] || [ "$FILTER_LAYER" = "frontend-architecture" ]; then
 
 # 收集 architecture 层所有文件的 API 端点依赖
 arch_files=$(get_layer_files "frontend-architecture")
@@ -325,7 +339,11 @@ $sigs"
   fi
 fi
 
+fi # --layer 过滤 C6
+
 # ── C7: frontend-components 依赖契约 ⊆ frontend-architecture 导出契约 ──
+# --layer 过滤：仅当指定 frontend-components 或未指定 --layer 时执行
+if [ -z "$FILTER_LAYER" ] || [ "$FILTER_LAYER" = "frontend-components" ]; then
 
 # 合并所有 architecture 文件的导出契约
 arch_entities=$(merge_layer_subsection "frontend-architecture" "Entity 列表" | grep '^|' | grep -v '^|[[:space:]]*[-—]' | tail -n +2 | awk -F'|' '{ if (NF >= 2) { val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); if (val != "") print val } }' || true)
@@ -372,6 +390,8 @@ if [ -n "$comp_files" ] && [ -n "$arch_files" ]; then
     add_check "frontend-components" "$comp_file_for_report" "C7" "false" "$c7_detail"
   fi
 fi
+
+fi # --layer 过滤 C7
 
 # ── 计算最终状态并输出 ──
 
