@@ -107,7 +107,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 **重要：使用自定义 agent 类型（而非 general-purpose）**
 
 所有层共用同一个通用 thinker agent（`agent-ddd-thinker`），其 frontmatter 配置了：
-- **skills**：`[backend-help]`
+- **skills**：`[backend-help, backend-guide, backend-spec]`
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 

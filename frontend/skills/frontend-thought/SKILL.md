@@ -14,7 +14,7 @@ agent:
 本 skill 专注于前端设计编排：接收 Decision-Maker 的指令 → 按 Phase 串行派发 Thinker subagent → 校验产出。
 
 所有层共用同一个通用 thinker agent（`agent-frontend-thinker`），其 frontmatter 配置了：
-- **skills**：`[frontend-help]`
+- **skills**：`[frontend-help, frontend-guide, frontend-spec]`
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 

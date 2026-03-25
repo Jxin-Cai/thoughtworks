@@ -98,7 +98,7 @@ emit_result() {
 # ── 共享层检查函数 ──
 
 # 检查后端层状态，返回 0 表示全部完成，返回 1 表示有未完成（已 emit_result）
-# 参数: $1=step_prefix (""=backend单独, "backend-"=all模式)
+# 参数: $1=step_prefix (""=backend单独, "backend:"=all模式)
 _check_backend_layers() {
   local step_prefix="${1:-}"
   STATE_FILE="$IDEA_DIR/workflow-state.yaml"
@@ -153,7 +153,7 @@ _check_backend_layers() {
 }
 
 # 检查前端层状态，返回 0 表示全部完成，返回 1 表示有未完成（已 emit_result）
-# 参数: $1=step_prefix (""=frontend单独, "frontend-"=all模式)
+# 参数: $1=step_prefix (""=frontend单独, "frontend:"=all模式)
 _check_frontend_layers() {
   local step_prefix="${1:-}"
   STATE_FILE="$IDEA_DIR/frontend-workflow-state.yaml"
