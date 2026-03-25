@@ -16,11 +16,11 @@ const apiClient = axios.create({
 
 ## 文件组织（FSD 三层）
 
-| FSD 层 | 位置 | 职责 | 示例 |
-|--------|------|------|------|
-| Shared | `src/shared/api/` | API 客户端实例、拦截器、通用请求封装 | `client.ts`、`interceptors.ts` |
-| Entity | `src/entities/{entity}/api/` | 实体 CRUD 接口 | `entities/user/api/userApi.ts` |
-| Feature | `src/features/{feature}/api/` | 场景专属接口（组合多个实体操作） | `features/order-create/api/createOrder.ts` |
+| FSD 层 | 位置 | 职责 |
+|--------|------|------|
+| Shared | `src/shared/api/` | API 客户端实例、拦截器、通用请求封装 |
+| Entity | `src/entities/{entity}/api/` | 实体 CRUD 接口 |
+| Feature | `src/features/{feature}/api/` | 场景专属接口（组合多个实体操作） |
 
 - 类型定义放在各 slice 内 `model/types.ts`，不再集中到 `src/types/`
 - 拦截器文件位于 `src/shared/api/interceptors.ts`

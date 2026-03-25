@@ -109,16 +109,16 @@ features/order-create/
 
 ## 命名约定
 
-| 类别 | 风格 | 示例 |
-|---|---|---|
-| 组件 | PascalCase | `UserProfile.tsx` |
-| hooks | useCamelCase | `useUserList.ts` |
-| API 函数 | camelCase | `getUserById` |
-| 类型 / 接口 | PascalCase | `UserResponse` |
-| 常量 | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
-| 文件（非组件） | camelCase | `formatDate.ts` |
-| slice 目录 | kebab-case | `order-create/`、`user-profile/` |
-| segment 目录 | 固定名称 | `ui/`、`model/`、`api/`、`lib/` |
+| 类别 | 风格 |
+|---|---|
+| 组件 | PascalCase |
+| hooks | useCamelCase |
+| API 函数 | camelCase |
+| 类型 / 接口 | PascalCase |
+| 常量 | UPPER_SNAKE_CASE |
+| 文件（非组件） | camelCase |
+| slice 目录 | kebab-case |
+| segment 目录 | 固定名称 |
 
 ## TypeScript 要求
 

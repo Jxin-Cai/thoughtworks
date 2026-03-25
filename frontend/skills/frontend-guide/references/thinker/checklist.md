@@ -24,14 +24,14 @@
 
 ## 命名规范
 
-| 类型 | 命名规则 | 示例 |
-|------|---------|------|
-| 页面组件 | `{Business}Page` | `OrderListPage` |
-| Feature 组件 | `{Feature}{Function}` | `OrderCreateForm` |
-| Entity 组件 | `{Entity}{Display}` | `OrderCard` |
-| API 函数 | `{action}{Business}` | `createOrder` |
-| Slice 目录 | kebab-case | `order-create/` |
-| Segment 目录 | 固定名称 | `ui/`、`model/`、`api/`、`lib/` |
+| 类型 | 命名规则 |
+|------|---------|
+| 页面组件 | `{Business}Page` |
+| Feature 组件 | `{Feature}{Function}` |
+| Entity 组件 | `{Entity}{Display}` |
+| API 函数 | `{action}{Business}` |
+| Slice 目录 | kebab-case |
+| Segment 目录 | 固定名称 |
 
 ## Frontmatter 格式
 

@@ -47,34 +47,6 @@
 - 禁止入参或返回值使用 PO、DTO
 - 每个方法必须用 Javadoc 描述实现逻辑的预期行为，包括：做什么、关键约束、异常场景
 
-示例：
-
-```java
-public interface OrderRepository {
-
-    /**
-     * 保存订单聚合根。
-     * 若订单不存在则新增，若已存在则更新全部字段及其关联的订单项。
-     * 保存时需同步持久化订单项集合，保证聚合一致性。
-     */
-    void save(Order order);
-
-    /**
-     * 根据订单ID查询订单聚合根。
-     * 需同时加载订单项集合，返回完整的聚合。
-     * 若订单不存在返回 Optional.empty()。
-     */
-    Optional<Order> findById(OrderId orderId);
-
-    /**
-     * 移除订单聚合根。
-     * 需级联移除关联的订单项。
-     * 若订单不存在则静默忽略。
-     */
-    void remove(OrderId orderId);
-}
-```
-
 ## 事件发布接口规范（event/）
 
 一个事件目录下按聚合划分，每个聚合对应一个 EventPublisher 接口。
@@ -82,58 +54,12 @@ public interface OrderRepository {
 - 入参：只能是领域事件对象
 - 每个方法必须用 Javadoc 描述事件的业务含义、触发时机、消费方预期行为
 
-示例：
-
-```java
-public interface OrderEventPublisher {
-
-    /**
-     * 发布订单已创建事件。
-     * 在订单聚合根完成创建并持久化后调用。
-     * 消费方预期：库存服务扣减库存，通知服务发送下单确认。
-     */
-    void publishOrderCreated(OrderCreatedEvent event);
-
-    /**
-     * 发布订单已取消事件。
-     * 在订单状态变更为已取消并持久化后调用。
-     * 消费方预期：库存服务释放库存，支付服务发起退款。
-     */
-    void publishOrderCancelled(OrderCancelledEvent event);
-}
-```
-
 ## 防腐层接口规范（acl/{外部领域名}/）
 
 按外部领域划分目录，每个外部领域对应一个 ACL 接口，隔离外部领域概念对本领域的侵入。
 
 - 入参和返回值：只能使用本领域的模型或基本类型，禁止引入外部领域的类
 - 每个方法必须用 Javadoc 描述：调用外部领域的什么能力、期望的行为、失败时的处理策略
-
-示例：
-
-```java
-/**
- * 库存领域防腐层。
- * 隔离库存领域的概念，将其转换为订单领域可理解的接口。
- */
-public interface InventoryAclService {
-
-    /**
-     * 检查商品是否有足够库存。
-     * 调用库存领域查询指定商品的可用库存数量，与请求数量比较。
-     * 若库存服务不可用，应抛出异常而非默认返回 true。
-     */
-    boolean checkStock(ProductId productId, int quantity);
-
-    /**
-     * 预扣库存。
-     * 调用库存领域对指定商品执行预扣操作，返回预扣凭证。
-     * 预扣失败（库存不足或服务异常）应抛出业务异常。
-     */
-    String reserveStock(ProductId productId, int quantity);
-}
-```
 
 ## 命名
 

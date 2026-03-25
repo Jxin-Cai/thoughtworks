@@ -29,15 +29,15 @@
 
 ## 命名规范
 
-| 类型 | 命名规则 | 示例 |
-|------|---------|------|
-| 聚合根/实体 | `{业务概念名}` | `Order` |
-| 值对象 | `{业务概念名}` | `Money`, `Address` |
-| 领域服务 | `{业务名}{动作}Service` | `OrderPricingService` |
-| 仓储接口 | `{聚合根名}Repository` | `OrderRepository` |
-| 领域事件 | `{聚合根名}{动作过去式}Event` | `OrderCreatedEvent` |
-| 事件发布接口 | `{聚合根名}EventPublisher` | `OrderEventPublisher` |
-| 防腐层接口 | `{外部领域名}AclService` | `InventoryAclService` |
+| 类型 | 命名规则 |
+|------|---------|
+| 聚合根/实体 | `{业务概念名}` |
+| 值对象 | `{业务概念名}` |
+| 领域服务 | `{业务名}{动作}Service` |
+| 仓储接口 | `{聚合根名}Repository` |
+| 领域事件 | `{聚合根名}{动作过去式}Event` |
+| 事件发布接口 | `{聚合根名}EventPublisher` |
+| 防腐层接口 | `{外部领域名}AclService` |
 
 ## Task 拆分规则
 

@@ -31,13 +31,13 @@ interface UserProfileProps {
 
 ## 组件分层（FSD）
 
-| FSD 层 | 目录 | 职责 | 示例 |
-|--------|------|------|------|
-| Pages | `src/pages/` | 路由入口，组合 Features 和 Widgets，处理路由参数 | `OrderListPage` |
-| Widgets | `src/widgets/` | 跨页面共享的独立 UI 区块（可选层） | `HeaderNavigation`、`SidebarMenu` |
-| Features | `src/features/{feature}/ui/` | 用户场景驱动的功能组件（含交互逻辑） | `OrderCreateForm`、`OrderFilter` |
-| Entities | `src/entities/{entity}/ui/` | 业务实体的 UI 表达（纯展示为主） | `OrderCard`、`UserAvatar` |
-| Shared | `src/shared/ui/` | 通用原子组件（与业务无关） | `Button`、`Modal`、`Table` |
+| FSD 层 | 目录 | 职责 |
+|--------|------|------|
+| Pages | `src/pages/` | 路由入口，组合 Features 和 Widgets，处理路由参数 |
+| Widgets | `src/widgets/` | 跨页面共享的独立 UI 区块（可选层） |
+| Features | `src/features/{feature}/ui/` | 用户场景驱动的功能组件（含交互逻辑） |
+| Entities | `src/entities/{entity}/ui/` | 业务实体的 UI 表达（纯展示为主） |
+| Shared | `src/shared/ui/` | 通用原子组件（与业务无关） |
 
 ### 层级职责边界
 

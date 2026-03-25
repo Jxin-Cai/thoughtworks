@@ -22,8 +22,8 @@ skills:
 2. **加载编码规范**：调用 `/frontend-spec react-ts`（如 CONTEXT 指定了 UI 风格则追加风格参数）
 3. `frontend-help` 已注入上下文，你可以使用以下资源：
    - 用 Bash 运行 `frontend-status.sh {IDEA_DIR}` 了解整体进度
-   - 遇到无法解决的问题时用 Bash 运行 `frontend-workflow-status.sh {IDEA_DIR} --set-task {task_id} failed` 标记失败
-   - **coded 状态由编排器在验证产出后写入，禁止自行标记 coded**
+   - 遇到无法解决的问题时用 Bash 运行 `frontend-workflow-status.sh {IDEA_DIR} --finish-task {task_id} failed` 标记失败
+   - **验证通过后用 `--finish-task {task_id} coded` 标记完成（原子命令，自动同步层级状态）**
 4. **UI/UX 设计能力**：如果 `ui-ux-pro-max` 技能的使用指引已注入到你的上下文中（即该技能已安装），则在编码开始前完全按照该技能的工作流操作。如果该技能未注入则跳过此步骤。
 
 ## 角色约束
@@ -32,12 +32,15 @@ skills:
 
 ## 工作方式
 
-1. **列出工作计划** — 在开始编码前，将所有工作项逐条列清楚
-2. 阅读 prompt 中实现清单，明确要创建哪些文件
-3. 阅读设计文档中的 FSD 架构设计、页面、组件、API 调用层设计
-4. 阅读依赖契约，了解后端 API 接口定义
-5. 用 Glob/Grep 探索项目结构
-6. 用 Write/Edit 创建或修改代码文件
+### Phase A: 扫描与方案
+1. 阅读 prompt 中实现清单，明确要创建哪些文件
+2. 阅读设计文档中的 FSD 架构设计、页面、组件、API 调用层设计
+3. 阅读依赖契约，了解后端 API 接口定义
+4. 用 Glob/Grep 探索项目结构
+5. **输出实现方案** — 列出文件清单、创建顺序和关键实现点
+
+### Phase B: 编码
+6. 按实现方案用 Write/Edit 创建或修改代码文件
 
 ## UI/UX 实现规范
 

@@ -19,6 +19,8 @@
 #   --get-status <layer>                       — 获取指定层的纯文本状态值
 #   --init-tasks <idea-name> <task_spec>...    — 初始化 task 级状态文件
 #   --set-task <task_id> <status>              — 设置 task 状态
+#   --start-task <task_id>                     — 原子启动 task（confirmed→coding + 同步层级）
+#   --finish-task <task_id> <coded|failed>     — 原子完成 task（coding→coded|failed + 同步层级）
 #   --get-task-status <task_id>                — 获取 task 的纯文本状态值
 #   --sync-layer-status                        — 从 task 状态同步层级状态
 #   --next-tasks <design|code>                 — 获取下一批可执行 task
@@ -386,6 +388,39 @@ case "$MODE" in
 
     update_task_status "$TASK_ID" "$TASK_STATUS"
     echo "{\"updated\": true, \"task_id\": \"$TASK_ID\", \"status\": \"$TASK_STATUS\"}"
+    ;;
+
+  --start-task)
+    TASK_ID="${3:?--start-task 需要指定 task_id}"
+
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      echo "{\"error\": \"${TASK_STATE_FILE##*/} 不存在，请先执行 --init-tasks\"}" >&2
+      exit 1
+    fi
+    if [ ! -f "$STATE_FILE" ]; then
+      echo "{\"error\": \"${STATE_FILE##*/} 不存在\"}" >&2
+      exit 1
+    fi
+
+    start_task "$TASK_ID"
+    echo "{\"started\": true, \"task_id\": \"$TASK_ID\", \"status\": \"coding\"}"
+    ;;
+
+  --finish-task)
+    TASK_ID="${3:?--finish-task 需要指定 task_id}"
+    TASK_STATUS="${4:?--finish-task 需要指定目标状态 (coded|failed)}"
+
+    if [ ! -f "$TASK_STATE_FILE" ]; then
+      echo "{\"error\": \"${TASK_STATE_FILE##*/} 不存在\"}" >&2
+      exit 1
+    fi
+    if [ ! -f "$STATE_FILE" ]; then
+      echo "{\"error\": \"${STATE_FILE##*/} 不存在\"}" >&2
+      exit 1
+    fi
+
+    finish_task "$TASK_ID" "$TASK_STATUS"
+    echo "{\"finished\": true, \"task_id\": \"$TASK_ID\", \"status\": \"$TASK_STATUS\"}"
     ;;
 
   --get-task-status)

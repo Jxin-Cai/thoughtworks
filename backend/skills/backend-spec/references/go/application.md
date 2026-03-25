@@ -30,49 +30,11 @@
 - 事务方法内不做 RPC 调用、消息发送等耗时 I/O（避免大事务）
 - Repository 接口可接受 `context.Context` 传递事务上下文，或通过构造函数注入 `*gorm.DB` 在事务中替换
 
-示例：
-
-```go
-func (s *OrderApplicationService) CreateOrder(ctx context.Context, cmd CreateOrderCommand) error {
-    return s.db.Transaction(func(tx *gorm.DB) error {
-        // 使用事务内的 repository
-        orderRepo := s.orderRepoFactory(tx)
-
-        order, err := domain.NewOrder(domain.NewOrderID(), cmd.CustomerID)
-        if err != nil {
-            return err
-        }
-
-        for _, item := range cmd.Items {
-            if err := order.AddItem(item.ProductID, item.Quantity); err != nil {
-                return err
-            }
-        }
-
-        return orderRepo.Save(ctx, order)
-    })
-}
-```
-
 ## Command 对象
 
 - Command 是纯数据结构（struct），承载业务用例的输入参数
 - 禁止在 Command 中包含业务逻辑
 - Command 创建后不可变（所有字段 exported，不提供修改方法）
-
-示例：
-
-```go
-type CreateOrderCommand struct {
-    CustomerID string
-    Items      []CreateOrderItemCommand
-}
-
-type CreateOrderItemCommand struct {
-    ProductID string
-    Quantity  int
-}
-```
 
 ## 命名
 

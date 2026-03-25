@@ -26,11 +26,11 @@ OHS 层是最外层。你的产出只交给本层的 Worker 实现。
 
 ## 命名规范
 
-| 类型 | 命名规则 | 示例 |
-|------|---------|------|
-| Controller | `{业务名}Controller` | `OrderController` |
-| Request DTO | `{操作名}Request` | `CreateOrderRequest` |
-| Response DTO | `{操作名}Response` | `OrderDetailResponse` |
+| 类型 | 命名规则 |
+|------|---------|
+| Controller | `{业务名}Controller` |
+| Request DTO | `{操作名}Request` |
+| Response DTO | `{操作名}Response` |
 
 ## Frontmatter 格式
 
@@ -58,7 +58,7 @@ description: "{一句话描述本 task 内容}"
 
 ### 步骤 2: 上游契约一致性验证
 
-- 使用 Read 工具重新读取说明列中标注的源文件路径，验证依赖契约中记录的方法签名和 Command 类名确实存在
+- 仅在验证失败时按需读取说明列标注的源文件中的相关方法签名段落，不要全文重读。确认依赖契约中记录的方法签名和 Command 类名确实存在
 - 如果发现签名不匹配，立即修正依赖契约
 - 每个 API 端点是否对应一个 ApplicationService 方法？禁止端点没有对应的后端方法
 

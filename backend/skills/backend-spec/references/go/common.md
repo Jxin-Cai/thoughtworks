@@ -48,51 +48,12 @@
 - 依赖声明为接口类型，便于测试替换
 - 构造函数中对必要依赖做 nil 检查，不满足时 panic 明确报错
 
-示例：
-
-```go
-type OrderApplicationService struct {
-    orderRepo   domain.OrderRepository
-    eventPub    domain.OrderEventPublisher
-}
-
-func NewOrderApplicationService(
-    orderRepo domain.OrderRepository,
-    eventPub  domain.OrderEventPublisher,
-) *OrderApplicationService {
-    if orderRepo == nil {
-        panic("orderRepo must not be nil")
-    }
-    return &OrderApplicationService{
-        orderRepo: orderRepo,
-        eventPub:  eventPub,
-    }
-}
-```
-
 ### 异常处理
 
 - 定义统一业务错误类型 `BusinessError`，实现 `error` 接口，携带错误码（Code）和消息（Message）
 - 在 Gin middleware 中统一捕获 `BusinessError` 和未知错误，转换为标准响应格式
 - 禁止吞掉错误（`_ = someFunc()`）；非预期错误必须记录完整堆栈
 - 使用 `fmt.Errorf("xxx: %w", err)` 包装错误链，保留原始错误上下文
-
-示例：
-
-```go
-type BusinessError struct {
-    Code    int    `json:"code"`
-    Message string `json:"message"`
-}
-
-func (e *BusinessError) Error() string {
-    return e.Message
-}
-
-func NewBusinessError(code int, message string) *BusinessError {
-    return &BusinessError{Code: code, Message: message}
-}
-```
 
 ### 配置管理
 
@@ -130,40 +91,6 @@ func NewBusinessError(code int, message string) *BusinessError {
 - 命名：`Test{功能}_When{条件}_Should{预期}`
 - 结构：Arrange-Act-Assert（对应 Given-When-Then）
 - 优先使用表驱动测试（Table-Driven Tests）覆盖多种输入场景
-
-示例：
-
-```go
-func TestOrder_WhenQuantityExceedsStock_ShouldReturnError(t *testing.T) {
-    // Arrange
-    order := domain.NewOrder(orderID, customerID)
-
-    // Act
-    err := order.AddItem(productID, 999)
-
-    // Assert
-    assert.Error(t, err)
-    assert.Contains(t, err.Error(), "insufficient stock")
-}
-
-func TestCalculateDiscount(t *testing.T) {
-    tests := []struct {
-        name     string
-        amount   int
-        expected int
-    }{
-        {"no discount under 100", 50, 0},
-        {"10% discount over 100", 200, 20},
-        {"20% discount over 500", 600, 120},
-    }
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            result := domain.CalculateDiscount(tt.amount)
-            assert.Equal(t, tt.expected, result)
-        })
-    }
-}
-```
 
 ### 代码质量规范
 

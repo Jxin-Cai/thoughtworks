@@ -412,3 +412,37 @@ init_task_state() {
 has_task_state() {
   [ -f "$TASK_STATE_FILE" ]
 }
+
+# ── 原子 task 命令 ──
+# 将状态转换 + 层级同步合并为一步，减少调用方代码
+
+# 启动 task：confirmed → coding + 同步层级状态
+start_task() {
+  local task_id="$1"
+  local current
+  current=$(get_task_status "$task_id")
+  if [ "$current" != "confirmed" ]; then
+    echo "{\"error\": \"start_task: $task_id 当前状态为 $current，期望 confirmed\"}" >&2
+    return 1
+  fi
+  update_task_status "$task_id" "coding"
+  sync_layer_status_from_tasks
+}
+
+# 完成 task：coding → coded|failed + 同步层级状态
+finish_task() {
+  local task_id="$1"
+  local target_status="${2:?finish_task 需要指定目标状态 (coded|failed)}"
+  case "$target_status" in
+    coded|failed) ;;
+    *) echo "{\"error\": \"finish_task: 无效目标状态 $target_status，可选 coded|failed\"}" >&2; return 1 ;;
+  esac
+  local current
+  current=$(get_task_status "$task_id")
+  if [ "$current" != "coding" ]; then
+    echo "{\"error\": \"finish_task: $task_id 当前状态为 $current，期望 coding\"}" >&2
+    return 1
+  fi
+  update_task_status "$task_id" "$target_status"
+  sync_layer_status_from_tasks
+}

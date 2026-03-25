@@ -15,7 +15,19 @@ agent:
 
 ## 铁律
 
-使用 Read 工具加载通用铁律：`core/references/iron-rules.md`
+以下铁律适用于所有编排器和子技能。违反任何一条都可能导致流程失败。
+
+1. **工作流数据源唯一性** — Phase 顺序、层定义（id/phase/requires/design-template）、验证模式（verify）必须从对应的 `workflow.yaml` 实际读取获得（后端从 `{DDD_HELP}/workflow.yaml`，前端从 `{FRONTEND_HELP}/workflow.yaml`）。禁止凭 SKILL.md 文本、记忆或推断确定这些信息。每次技能启动都必须重新用 Read 工具读取 workflow.yaml
+
+2. **禁止跳过用户确认** — 每个 HARD-GATE 必须等待其前置条件满足后才能推进。编排器读取需求文件（docs/xxx.md）不等于执行了澄清技能、不等于完成了设计。**只有对应的产出文件实际存在才能推进**
+
+3. **子技能完成后立即推进** — 每个子技能调用完成后，编排器必须立即推进到下一步，不要停下来等待用户额外指令。注意：此条仅适用于子技能已实际调用并完成的情况，不能用于跳过尚未执行的步骤
+
+4. **确认由子技能负责** — 设计确认（AskUserQuestion）在 thought 子技能内部完成，编排器不重复确认
+
+5. **Thinker 只产设计，Worker 只写代码** — 用户的调整请求一律路由到 Thinker，不影响 Worker
+
+6. **门控脚本强制执行** — 每个 step 执行前后的门控检查必须通过 `gate-check.sh` 脚本执行，不得凭记忆或推断判断门控是否通过。用法：`bash {CORE}/scripts/gate-check.sh {IDEA_DIR} <gate-id>`
 
 **本技能附加铁律：**
 
@@ -27,7 +39,20 @@ agent:
 
 ## 合理化预防
 
-使用 Read 工具加载合理化预防：`core/references/rationalization-prevention.md`
+以下是常见的自我合理化模式。当你发现自己在想这些念头时，立刻停下来遵循铁律。
+
+| 你可能会想 | 现实 |
+|-----------|------|
+| "用户已经给了需求文件，不用再澄清" | 需求文件（docs/xxx.md）只是原始输入，不等于澄清完成。澄清技能会扫描项目上下文、与用户提问、做聚合分析，这些步骤不可替代。**唯一判据：`gate-check.sh` 确认 requirement.md 存在** |
+| "需求描述很详细，可以跳过澄清" | 无论需求多详细，聚合分析和用户确认是必须步骤。禁止以需求清晰为由跳过 |
+| "我已经读取了需求文件，理解了需求，可以直接开始设计/编码" | 读取文件 ≠ 澄清完成。你的「理解」不能替代澄清技能的项目扫描、用户提问、聚合分析 |
+| "评估结果很明显，直接开始设计" | 必须写入 assessment.md 并初始化 workflow-state.yaml |
+| "设计看起来没问题，直接开始编码" | 必须等用户确认，用户可能有不同看法 |
+| "修改太小了，直接改设计文件" | 修改必须走 thinker 流程，保证契约一致性 |
+| "只改了一层，不需要级联" | 必须检查下游依赖，层间契约可能已经不一致 |
+| "用户说继续就行" | 分辨"继续当前步骤"和"跳过确认"的区别 |
+| "Phase 顺序我已经知道了，不用再读 workflow.yaml" | workflow.yaml 是唯一数据源，每次启动都必须用 Read 工具重新读取，不得凭记忆 |
+| "SKILL.md 里已经写了 Phase 顺序" | SKILL.md 的文本是编排逻辑说明，不是数据源。Phase 顺序、层定义的数据源只有 workflow.yaml |
 
 **本技能附加预防：**
 
@@ -104,8 +129,7 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks code
 2. 对可执行 task 列表，所有 task 可并行启动（放在同一条消息中多个 Agent 调用）
 3. **subagent 启动前准备**：对每个将要执行的 task，运行：
    ```bash
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set-task {task_id} coding
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --sync-layer-status
+   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --start-task {task_id}
    cat > {IDEA_DIR}/.current-task-{task_id}-$(date +%s).json << 'TASK_EOF'
    {"role":"worker","task_id":"{task_id}","layer":"{layer}","idea_dir":"{IDEA_DIR}","stack":"backend"}
    TASK_EOF
@@ -139,11 +163,10 @@ Worker agent 完成编码后，在 agent 内部执行验证和状态更新：
 2. 对每个 verify pattern 用 Glob 执行检查，确认本层关键产物已创建
 3. 验证通过后，agent 执行：
    ```bash
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set-task {task_id} coded
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --sync-layer-status
+   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --finish-task {task_id} coded
    ```
    并用 Edit 工具将 task 文件的 frontmatter `status:` 字段更新为 `done`
-4. 验证失败时，agent 标记 `--set-task {task_id} failed` 并报告问题
+4. 验证失败时，agent 执行 `--finish-task {task_id} failed` 并报告问题
 
 编排器只读取终态（coded/failed），不参与验证过程。**每个 task 最多重试 2 次**，超过后触发暂停机制。
 

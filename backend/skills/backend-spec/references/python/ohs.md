@@ -21,35 +21,6 @@
 - 分页查询返回：`{"code": 0, "message": "ok", "data": {"list": [...], "total": 100, "page_num": 1, "page_size": 20}}`
 - Router 不写 try-except，交由全局异常处理器兜底
 
-示例：
-
-```python
-from fastapi import APIRouter, Depends
-
-router = APIRouter(prefix="/api/orders", tags=["订单"])
-
-@router.post("", summary="创建订单")
-async def create_order(
-    request: CreateOrderRequest,
-    service: Annotated[OrderApplicationService, Depends(get_order_service)],
-) -> ApiResponse[CreateOrderResponse]:
-    command = CreateOrderCommand(
-        product_id=request.product_id,
-        quantity=request.quantity,
-        price=request.price,
-    )
-    order = service.create_order(command)
-    return ApiResponse.success(CreateOrderResponse.from_domain(order))
-
-@router.get("/{order_id}", summary="查询订单")
-async def get_order(
-    order_id: str,
-    service: Annotated[OrderApplicationService, Depends(get_order_service)],
-) -> ApiResponse[OrderDetailResponse]:
-    order = service.get_order(order_id)
-    return ApiResponse.success(OrderDetailResponse.from_domain(order))
-```
-
 ## 统一响应包装
 
 - 项目必须有一个公共 `ApiResponse`（或同等语义类），包含 `code`、`message`、`data` 三个字段

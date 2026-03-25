@@ -30,51 +30,11 @@
 - 事务方法内不做 RPC 调用、消息发送等耗时 I/O（避免大事务）
 - 禁止在 Router、领域服务、仓储实现上管理事务
 
-示例：
-
-```python
-class OrderApplicationService:
-    def __init__(
-        self,
-        order_repository: OrderRepository,
-        inventory_acl: InventoryAclService,
-        session: Session,
-    ) -> None:
-        self._order_repository = order_repository
-        self._inventory_acl = inventory_acl
-        self._session = session
-
-    def create_order(self, command: CreateOrderCommand) -> Order:
-        """创建订单用例。"""
-        self._inventory_acl.check_stock(command.product_id, command.quantity)
-        order = Order.create(
-            product_id=command.product_id,
-            quantity=command.quantity,
-            price=command.price,
-        )
-        with self._session.begin():
-            self._order_repository.save(order)
-        return order
-```
-
 ## Command 对象
 
 - 使用 Pydantic `BaseModel` 或 `@dataclass` 定义，字段不可变
 - 命名：`{操作名}Command`
 - Command 只携带执行用例所需的输入数据，不包含业务逻辑
-
-示例：
-
-```python
-from pydantic import BaseModel, Field
-
-class CreateOrderCommand(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    product_id: str = Field(..., description="商品ID")
-    quantity: int = Field(..., ge=1, description="数量")
-    price: Decimal = Field(..., gt=0, description="单价")
-```
 
 ## 命名
 

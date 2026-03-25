@@ -25,26 +25,6 @@ Infrastructure 层必须实现全局异常处理，拦截 OHS 层（Router）抛
 - 捕获 `Exception` 作为兜底，返回统一的系统错误响应，并记录完整堆栈日志
 - **其他层（Application、OHS）禁止用 try-except 做异常兜底**，异常自然上抛由此全局处理器统一处理
 
-示例：
-
-```python
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
-async def business_exception_handler(request: Request, exc: BusinessException) -> JSONResponse:
-    return JSONResponse(
-        status_code=200,
-        content={"code": exc.code, "message": exc.message, "data": None},
-    )
-
-async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.error("unhandled_exception", exc_info=exc, path=request.url.path)
-    return JSONResponse(
-        status_code=500,
-        content={"code": 500, "message": "系统内部错误", "data": None},
-    )
-```
-
 ## 禁止
 
 - 包含任何业务逻辑
