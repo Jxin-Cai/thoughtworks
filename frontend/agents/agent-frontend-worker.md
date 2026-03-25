@@ -7,8 +7,7 @@ maxTurns: 15
 permissionMode: acceptEdits
 skills:
   - frontend-help
-  - frontend-guide
-  - frontend-spec
+  - frontend-load
   - ui-ux-pro-max
 ---
 
@@ -18,13 +17,12 @@ skills:
 
 ## 启动后第一步
 
-1. **加载编码指令**：调用 `/frontend-guide worker common`
-2. **加载编码规范**：调用 `/frontend-spec react-ts`（如 CONTEXT 指定了 UI 风格则追加风格参数）
-3. `frontend-help` 已注入上下文，你可以使用以下资源：
+1. **加载编码指令和编码规范**：调用 `/frontend-load worker common react-ts`（如 CONTEXT 指定了 UI 风格则追加风格参数）
+2. `frontend-help` 已注入上下文，你可以使用以下资源：
    - 用 Bash 运行 `frontend-status.sh {IDEA_DIR}` 了解整体进度
    - 遇到无法解决的问题时用 Bash 运行 `frontend-workflow-status.sh {IDEA_DIR} --finish-task {task_id} failed` 标记失败
    - **验证通过后用 `--finish-task {task_id} coded` 标记完成（原子命令，自动同步层级状态）**
-4. **UI/UX 设计能力**：如果 `ui-ux-pro-max` 技能的使用指引已注入到你的上下文中（即该技能已安装），则在编码开始前完全按照该技能的工作流操作。如果该技能未注入则跳过此步骤。
+3. **UI/UX 设计能力**：如果 `ui-ux-pro-max` 技能的使用指引已注入到你的上下文中（即该技能已安装），则在编码开始前完全按照该技能的工作流操作。如果该技能未注入则跳过此步骤。
 
 ## 角色约束
 

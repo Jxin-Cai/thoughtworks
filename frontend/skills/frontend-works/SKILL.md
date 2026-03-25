@@ -118,7 +118,7 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks
 
 ### Worker agent prompt 骨架
 
-agent 启动后自行通过 `/frontend-guide` 和 `/frontend-spec` 加载编码指令和编码规范。
+agent 启动后自行通过 `/frontend-load` 加载编码指令和编码规范。
 
 使用 Read 工具加载 `references/worker-prompt-skeleton.md`，按其模板为每个 task 组装 prompt。
 

@@ -119,11 +119,11 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 **重要：使用自定义 agent 类型（而非 general-purpose）**
 
 所有层共用同一个通用 thinker agent（`agent-ddd-thinker`），其 frontmatter 配置了：
-- **skills**：`[backend-help, backend-guide, backend-spec]`
+- **skills**：`[backend-help, backend-load]`
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 
-主 agent 统一使用 `tw-backend:agent-ddd-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/backend-guide` 和 `/backend-spec` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。动态 prompt 包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个区块。
+主 agent 统一使用 `tw-backend:agent-ddd-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/backend-load` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。动态 prompt 包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个区块。
 
 ### 执行方式（主 agent DAG 编排）
 

@@ -7,8 +7,7 @@ maxTurns: 15
 permissionMode: acceptEdits
 skills:
   - backend-help
-  - backend-guide
-  - backend-spec
+  - backend-load
 ---
 
 # DDD 层级执行 Agent
@@ -19,9 +18,8 @@ skills:
 
 1. 从 CONTEXT 中的 `target_layer` 字段获取当前编码层级（domain/infr/application/ohs）
 2. 从 CONTEXT 中的 `backend_language` 字段获取后端语言（java/python/go，默认 java）
-3. **加载编码指令**：调用 `/backend-guide worker {target_layer}`
-4. **加载编码规范**：调用 `/backend-spec {backend_language} {target_layer}`
-5. `backend-help` 已注入上下文，你可以使用以下资源：
+3. **加载编码指令和编码规范**：调用 `/backend-load worker {target_layer} {backend_language}`
+4. `backend-help` 已注入上下文，你可以使用以下资源：
    - 用 Bash 运行 `backend-status.sh {IDEA_DIR}` 了解整体进度
    - 遇到无法解决的问题时用 Bash 运行 `backend-workflow-status.sh {IDEA_DIR} --finish-task {task_id} failed` 标记失败
    - **验证通过后用 `--finish-task {task_id} coded` 标记完成（原子命令，自动同步层级状态）**

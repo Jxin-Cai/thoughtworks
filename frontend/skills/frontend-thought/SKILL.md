@@ -14,11 +14,11 @@ agent:
 本 skill 专注于前端设计编排：接收 Decision-Maker 的指令 → 按 Phase 串行派发 Thinker subagent → 校验产出。
 
 所有层共用同一个通用 thinker agent（`agent-frontend-thinker`），其 frontmatter 配置了：
-- **skills**：`[frontend-help, frontend-guide, frontend-spec]`
+- **skills**：`[frontend-help, frontend-load]`
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 
-主 agent 统一使用 `tw-frontend:agent-frontend-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/frontend-guide` 和 `/frontend-spec` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
+主 agent 统一使用 `tw-frontend:agent-frontend-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/frontend-load` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
 
 ---
 

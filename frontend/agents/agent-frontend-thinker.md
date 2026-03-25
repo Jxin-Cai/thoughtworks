@@ -7,8 +7,7 @@ maxTurns: 20
 permissionMode: default
 skills:
   - frontend-help
-  - frontend-guide
-  - frontend-spec
+  - frontend-load
 ---
 
 # 前端设计 Agent
@@ -18,9 +17,8 @@ skills:
 ## 启动后第一步
 
 1. 从 CONTEXT 中的 `target_layer` 字段获取当前设计层级（architecture/components/checklist）
-2. **加载设计指令**：调用 `/frontend-guide thinker {target_layer}`
-3. **加载编码规范**：调用 `/frontend-spec react-ts`（如 CONTEXT 指定了 UI 风格则追加风格参数）
-4. `frontend-help` 已注入上下文，你可以用 Read 工具按需加载以下资源：
+2. **加载设计指令和编码规范**：调用 `/frontend-load thinker {target_layer} react-ts`（如 CONTEXT 指定了 UI 风格则追加风格参数）
+3. `frontend-help` 已注入上下文，你可以用 Read 工具按需加载以下资源：
    - `workflow.yaml`：了解本层在 DAG 中的位置和上下游依赖关系
    - `{CONTEXT 中 idea_dir}/frontend-workflow-state.yaml`：确认上游层完成状态
 

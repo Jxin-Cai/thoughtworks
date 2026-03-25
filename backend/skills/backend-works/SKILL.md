@@ -152,7 +152,7 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks code
 
 ### Worker agent prompt 骨架
 
-所有层统一使用 `tw-backend:agent-ddd-worker` 作为 `subagent_type`。agent 启动后自行通过 `/backend-guide` 和 `/backend-spec` 加载编码指令和编码规范。
+所有层统一使用 `tw-backend:agent-ddd-worker` 作为 `subagent_type`。agent 启动后自行通过 `/backend-load` 加载编码指令和编码规范。
 
 使用 Read 工具加载 `references/worker-prompt-skeleton.md`，按其模板为每个 task 组装 prompt。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
 
