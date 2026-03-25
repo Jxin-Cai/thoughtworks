@@ -232,6 +232,39 @@ get_task_description() {
   _get_task_field "$1" "description"
 }
 
+# ── Task 级状态转换合法性校验 ──
+# 与层级 validate_transition 对齐，防止跳步
+validate_task_transition() {
+  local task_id="$1" new_status="$2"
+  local current_status
+  current_status=$(get_task_status "$task_id")
+
+  # task 不存在或无状态时放行（init 场景）
+  if [ -z "$current_status" ]; then
+    return 0
+  fi
+
+  local valid=false
+  case "${current_status}:${new_status}" in
+    pending:designing)     valid=true ;;
+    designing:designed)    valid=true ;;
+    designed:confirmed)    valid=true ;;
+    confirmed:coding)      valid=true ;;
+    coding:coded)          valid=true ;;
+    designing:failed)      valid=true ;;
+    coding:failed)         valid=true ;;
+    failed:pending)        valid=true ;;
+    *:failed)              valid=true ;;  # 任何状态 → failed 允许（异常恢复）
+    *:pending)             valid=true ;;  # 任何状态 → pending 允许（重置）
+  esac
+
+  if [ "$valid" = "false" ]; then
+    echo "{\"error\": \"非法 task 状态转换: $task_id $current_status → $new_status\"}" >&2
+    return 1
+  fi
+  return 0
+}
+
 # 更新 task 状态（带锁，防止并发写入竞态）
 update_task_status() {
   local task_id="$1" new_status="$2"

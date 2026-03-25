@@ -77,6 +77,14 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks
 - 有 failed task → 列出 failed task，用 AskUserQuestion 提供选项
 - 有可执行 task → 继续执行
 
+<HARD-GATE>
+在进入编码循环前，必须执行工作流完整性校验：
+```bash
+bash core/scripts/gate-check.sh {IDEA_DIR} task-workflow-integrity frontend
+```
+必须返回 `pass: true`。如果返回 `pass: false`，说明有 task 处于 coding/coded 状态但对应设计文件不存在，这是流程违规，必须停止并报告。
+</HARD-GATE>
+
 ---
 
 ## Step 2.5: UI/UX 需求提取

@@ -396,7 +396,13 @@ case "$MODE" in
       exit 1
     fi
 
+    # 状态机校验：防止跳步（如 pending→coding 绕过 designing→designed→confirmed）
+    if ! validate_task_transition "$TASK_ID" "$TASK_STATUS"; then
+      exit 1
+    fi
+
     update_task_status "$TASK_ID" "$TASK_STATUS"
+    sync_layer_status_from_tasks
     echo "{\"updated\": true, \"task_id\": \"$TASK_ID\", \"status\": \"$TASK_STATUS\"}"
     ;;
 

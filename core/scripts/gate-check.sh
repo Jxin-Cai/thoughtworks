@@ -218,6 +218,61 @@ case "$GATE_ID" in
     fi
     ;;
 
+  # Task 工作流完整性检查：验证 task 状态与前置产出一致
+  # 用法: gate-check.sh <idea-dir> task-workflow-integrity <stack>
+  # 检查：有 coding/coded 状态的 task 时，对应设计文件必须存在
+  task-workflow-integrity)
+    CHECK_STACK="${1:-backend}"
+    case "$CHECK_STACK" in
+      backend)
+        TASK_STATE="$IDEA_DIR/task-workflow-state.yaml"
+        DESIGNS_DIR="$IDEA_DIR/backend-designs"
+        ;;
+      frontend)
+        TASK_STATE="$IDEA_DIR/frontend-task-workflow-state.yaml"
+        DESIGNS_DIR="$IDEA_DIR/frontend-designs"
+        ;;
+      *)
+        gate_fail "无效 stack: $CHECK_STACK，可选: backend|frontend"
+        ;;
+    esac
+
+    if [ ! -f "$TASK_STATE" ]; then
+      gate_fail "task 状态文件不存在: $(basename "$TASK_STATE")"
+    fi
+
+    # 检查是否有 coding/coded 的 task 缺少对应设计文件
+    violations=""
+    while IFS= read -r line; do
+      # 匹配 task_id 行（缩进 2 空格的顶层 key）
+      if echo "$line" | grep -qE '^  [a-zA-Z].*:$'; then
+        current_task=$(echo "$line" | sed 's/^[[:space:]]*//;s/:$//')
+        current_status=""
+        current_file=""
+      elif echo "$line" | grep -qE '^    status:'; then
+        current_status=$(echo "$line" | sed 's/^.*status:[[:space:]]*//')
+      elif echo "$line" | grep -qE '^    file:'; then
+        current_file=$(echo "$line" | sed 's/^.*file:[[:space:]]*//')
+        # 当 status 为 coding/coded 时，验证设计文件存在
+        if [ -n "$current_status" ] && [ -n "$current_file" ]; then
+          case "$current_status" in
+            coding|coded)
+              if [ ! -f "$DESIGNS_DIR/$current_file" ]; then
+                violations="$violations task=$current_task(status=$current_status,file=$current_file 不存在);"
+              fi
+              ;;
+          esac
+        fi
+      fi
+    done < "$TASK_STATE"
+
+    if [ -n "$violations" ]; then
+      gate_fail "工作流完整性违规: $violations"
+    else
+      gate_pass
+    fi
+    ;;
+
   # 清理残留的 .current-task 文件（超过 30 分钟的视为残留）
   stale-tasks)
     cleaned=0
