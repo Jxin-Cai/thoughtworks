@@ -99,18 +99,18 @@ steps:
     postcondition:
       check: frontend-supplementary-reviewed
 
-  - id: summary
-    description: 完成汇总
-    action:
-      type: self
-      instructions: "向用户展示实现摘要、各层完成状态、产出文件总列表"
-
   - id: merge
     description: 合并分支
     action:
       type: skill
       name: merge
       args: "{idea-name}"
+
+  - id: summary
+    description: 完成汇总
+    action:
+      type: self
+      instructions: "向用户展示实现摘要、各层完成状态、产出文件总列表"
 
 # resume-table 已由 core/scripts/orchestration-status.mjs 程序化实现
 # 以下表格仅作为逻辑文档保留

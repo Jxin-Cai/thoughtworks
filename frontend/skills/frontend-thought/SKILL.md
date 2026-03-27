@@ -63,10 +63,11 @@ agent:
 
 ```bash
 node core/scripts/gate-check.mjs {IDEA_DIR} frontend-requirement-exists
+node core/scripts/gate-check.mjs {IDEA_DIR} frontend-assessment-exists
 ```
 
 <HARD-GATE>
-检查必须返回 `pass: true` 才能继续。如果返回 `pass: false`，提示用户先运行需求澄清。禁止跳过此检查直接进入设计。
+两个检查都必须返回 `pass: true` 才能继续。如果返回 `pass: false`，提示用户先运行需求澄清和评估。禁止跳过此检查直接进入设计。
 </HARD-GATE>
 
 项目中已有 OHS 层代码（Thinker 将从已有代码扫描 API 端点）。

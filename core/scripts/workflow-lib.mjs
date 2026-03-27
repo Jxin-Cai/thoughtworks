@@ -103,10 +103,18 @@ export function isTracked(stateFile, layer) {
 
 export function updateLayerStatus(stateFile, targetLayer, newStatus) {
   if (!existsSync(stateFile)) return;
-  let content = readFileSync(stateFile, 'utf-8');
-  const re = new RegExp(`^(  ${targetLayer}:)\\s*.*$`, 'm');
-  content = content.replace(re, `$1 ${newStatus}`);
-  writeFileSync(stateFile, content, 'utf-8');
+  const lockDir = `${stateFile}.lockdir`;
+  acquireLock(lockDir);
+  try {
+    let content = readFileSync(stateFile, 'utf-8');
+    const re = new RegExp(`^(  ${targetLayer}:)\\s*.*$`, 'm');
+    content = content.replace(re, `$1 ${newStatus}`);
+    const tmpFile = `${stateFile}.tmp.${process.pid}`;
+    writeFileSync(tmpFile, content, 'utf-8');
+    renameSync(tmpFile, stateFile);
+  } finally {
+    releaseLock(lockDir);
+  }
 }
 
 export function initState(stateFile, idea, layers) {

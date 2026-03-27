@@ -127,7 +127,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 1. **确定要执行的层**：根据 `--layers` 参数（如有）过滤出本次要执行的层
 2. **按 Phase 分组**：将要执行的层按 workflow.yaml 中的 `phase` 字段分组（phase 值相同的层属于同一 Phase）
 3. **按 phase 从小到大遍历**：对每个 Phase 中的目标层，先执行启动前准备（见下方），再启动 thinker subagent。同一 Phase 内多层可**并行启动**（放在同一条消息的多个 Agent 调用中）
-4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，对当前 Phase 的每个层执行增量校验：`backend-workflow-status.mjs --check --layer {layer}`，仅校验刚完成的层（避免全量扫描）
+4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，对当前 Phase 的每个层执行增量校验：`backend-output-validate.mjs {IDEA_DIR} --layer {layer}`，仅校验刚完成的层（避免全量扫描）
 5. **进入下一 Phase**：当前 Phase 全部 done 后，继续下一个 Phase，重复步骤 3-4
 6. 所有目标 Phase 完成后：
    - 扫描 `backend-designs/` 下各层子目录（domain/, infr/, application/, ohs/），提取每个 task 文件的 frontmatter，初始化 `task-workflow-state.yaml`（见下方）
@@ -189,7 +189,7 @@ TASK_EOF
 
 ```bash
 # 对当前 Phase 的每个层逐个校验（而非 --check-all 全量）
-node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --check --layer {layer}
+node {DDD_HELP}/scripts/backend-output-validate.mjs {IDEA_DIR} --layer {layer}
 ```
 
 所有 Phase 完成后，执行一次最终汇总校验：
@@ -200,7 +200,7 @@ node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --check-all --sum
 
 根据 `status` 判断：
 - `pass` — 全部通过，进入 Step 4
-- `fail` — 对失败的层执行 `--check --layer {failed-layer}` 获取详细失败信息，只重启对应层的 thinker subagent。**每层最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户是手动修复还是跳过该层
+- `fail` — 对失败的层执行 `backend-output-validate.mjs {IDEA_DIR} --layer {failed-layer}` 获取详细失败信息，只重启对应层的 thinker subagent。**每层最多重试 2 次**，超过后暂停并用 AskUserQuestion 询问用户是手动修复还是跳过该层
 
 重启 thinker 时，在 prompt 开头追加：
 

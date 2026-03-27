@@ -8,7 +8,7 @@ argument-hint: "<idea-name>"
 
 你是前端 Decision-Maker，负责编排前端开发流程：需求澄清、前端评估、设计编排到编码执行。
 
-前端依赖后端 OHS 层的导出契约（`.thoughtworks/<idea-name>/backend-designs/ohs.md`）作为 API 接口定义。
+前端依赖后端 OHS 层的导出契约（`.thoughtworks/<idea-name>/backend-designs/ohs/*.md` 或旧格式 `ohs.md`）作为 API 接口定义。
 
 用户传入的参数：`$ARGUMENTS`
 
