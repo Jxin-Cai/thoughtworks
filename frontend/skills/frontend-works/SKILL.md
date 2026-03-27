@@ -35,11 +35,11 @@ agent:
 - 有参数 → 使用指定的 idea-name
 - 无参数 → 列出所有 idea，让用户选择
 
-验证前置条件（必须用 gate-check.sh 脚本验证，不得凭推断）：
+验证前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-bash core/scripts/gate-check.sh {IDEA_DIR} frontend-requirement-exists
-bash core/scripts/gate-check.sh {IDEA_DIR} frontend-designs-exist
+node core/scripts/gate-check.mjs {IDEA_DIR} frontend-requirement-exists
+node core/scripts/gate-check.mjs {IDEA_DIR} frontend-designs-exist
 ```
 
 <HARD-GATE>
@@ -65,7 +65,7 @@ bash core/scripts/gate-check.sh {IDEA_DIR} frontend-designs-exist
 读取 task 状态：
 
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks code
+node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --next-tasks code
 ```
 
 确定可执行的 impl task 列表（依赖已满足、状态为 confirmed 的 task）。
@@ -80,7 +80,7 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks
 <HARD-GATE>
 在进入编码循环前，必须执行工作流完整性校验：
 ```bash
-bash core/scripts/gate-check.sh {IDEA_DIR} task-workflow-integrity frontend
+node core/scripts/gate-check.mjs {IDEA_DIR} task-workflow-integrity frontend
 ```
 必须返回 `pass: true`。如果返回 `pass: false`，说明有 task 处于 coding/coded 状态但对应设计文件不存在，这是流程违规，必须停止并报告。
 </HARD-GATE>
@@ -103,13 +103,13 @@ bash core/scripts/gate-check.sh {IDEA_DIR} task-workflow-integrity frontend
 
 1. 查询可执行 task：
    ```bash
-   bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --next-tasks code
+   node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --next-tasks code
    ```
    过滤出 `frontend-checklist` 层的 impl task
 2. 对可执行的 impl task，所有 task 可并行启动（放在同一条消息中多个 Agent 调用）
 3. **subagent 启动前准备**：对每个将要执行的 task，运行：
    ```bash
-   bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --start-task {task_id}
+   node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --start-task {task_id}
    cat > {IDEA_DIR}/.current-task-{task_id}-$(date +%s).json << 'TASK_EOF'
    {"role":"worker","task_id":"{task_id}","layer":"frontend-checklist","idea_dir":"{IDEA_DIR}","stack":"frontend"}
    TASK_EOF
@@ -117,7 +117,7 @@ bash core/scripts/gate-check.sh {IDEA_DIR} task-workflow-integrity frontend
 4. 启动 worker agent（见下方 prompt 骨架）。Worker agent 内部负责：验证产出、标记 coded、更新 frontmatter
 5. agent 返回后，编排器只检查终态：
    ```bash
-   bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --get-task-status {task_id}
+   node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --get-task-status {task_id}
    ```
    - 状态为 `coded` → 加入 `session_completed`，输出进度
    - 状态为 `failed` → 触发暂停机制
@@ -173,8 +173,8 @@ Worker agent 完成编码后，在 agent 内部执行验证和状态更新：
 所有 impl task 执行完毕后：
 
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --sync-layer-status
-bash {FRONTEND_HELP}/scripts/frontend-status.sh {IDEA_DIR} --brief
+node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --sync-layer-status
+node {FRONTEND_HELP}/scripts/frontend-status.mjs {IDEA_DIR} --brief
 ```
 
 输出实现摘要和产出文件列表。

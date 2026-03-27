@@ -58,10 +58,10 @@ Agent(
     1. 从 workflow.yaml 读取本层 verify.{BACKEND_LANG} 下的 glob 模式
     2. 对每个 pattern 用 Glob 验证关键产物已创建
     3. 验证通过 → 执行：
-       bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --finish-task {task_id} coded
+       node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --finish-task {task_id} coded
        并用 Edit 将 task 文件 frontmatter 的 status 更新为 done
     4. 验证失败 → 执行：
-       bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --finish-task {task_id} failed
+       node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --finish-task {task_id} failed
        并报告缺失的产物列表
   "
 )

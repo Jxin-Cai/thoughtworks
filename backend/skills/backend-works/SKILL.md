@@ -54,12 +54,12 @@ agent:
 - `--layers`：可选，逗号分隔的层列表（如 `domain` 或 `infr,application`）。只执行指定层的 task
 - `--tasks`：可选，逗号分隔的 task_id 列表（如 `domain-001` 或 `infr-001,application-001`）。只执行指定 task
 
-验证前置条件（必须用 gate-check.sh 脚本验证，不得凭推断）：
+验证前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-bash core/scripts/gate-check.sh {IDEA_DIR} requirement-exists
-bash core/scripts/gate-check.sh {IDEA_DIR} assessment-exists
-bash core/scripts/gate-check.sh {IDEA_DIR} designs-exist
+node core/scripts/gate-check.mjs {IDEA_DIR} requirement-exists
+node core/scripts/gate-check.mjs {IDEA_DIR} assessment-exists
+node core/scripts/gate-check.mjs {IDEA_DIR} designs-exist
 ```
 
 <HARD-GATE>
@@ -87,7 +87,7 @@ bash core/scripts/gate-check.sh {IDEA_DIR} designs-exist
 2. 读取 task 状态：
 
 ```bash
-bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks code
+node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --next-tasks code
 ```
 
 3. 解析返回结果，确定可执行的 task 列表（依赖已满足、状态为 confirmed 的 task）
@@ -102,7 +102,7 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks code
 <HARD-GATE>
 在进入编码循环前，必须执行工作流完整性校验：
 ```bash
-bash core/scripts/gate-check.sh {IDEA_DIR} task-workflow-integrity backend
+node core/scripts/gate-check.mjs {IDEA_DIR} task-workflow-integrity backend
 ```
 必须返回 `pass: true`。如果返回 `pass: false`，说明有 task 处于 coding/coded 状态但对应设计文件不存在，这是流程违规，必须停止并报告。
 </HARD-GATE>
@@ -119,13 +119,13 @@ bash core/scripts/gate-check.sh {IDEA_DIR} task-workflow-integrity backend
 
 1. 查询可执行 task：
    ```bash
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --next-tasks code
+   node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --next-tasks code
    ```
    获取所有依赖已满足的 confirmed task 列表
 2. 对可执行 task 列表，所有 task 可并行启动（放在同一条消息中多个 Agent 调用）
 3. **subagent 启动前准备**：对每个将要执行的 task，运行：
    ```bash
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --start-task {task_id}
+   node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --start-task {task_id}
    cat > {IDEA_DIR}/.current-task-{task_id}-$(date +%s).json << 'TASK_EOF'
    {"role":"worker","task_id":"{task_id}","layer":"{layer}","idea_dir":"{IDEA_DIR}","stack":"backend"}
    TASK_EOF
@@ -133,7 +133,7 @@ bash core/scripts/gate-check.sh {IDEA_DIR} task-workflow-integrity backend
 4. 启动 worker agent（见下方 prompt 骨架）。Worker agent 内部负责：验证产出、标记 coded、更新 frontmatter
 5. agent 返回后，编排器只检查终态：
    ```bash
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --get-task-status {task_id}
+   node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --get-task-status {task_id}
    ```
    - 状态为 `coded` → 加入 `session_completed`，输出进度
    - 状态为 `failed` → 触发暂停机制
@@ -159,7 +159,7 @@ Worker agent 完成编码后，在 agent 内部执行验证和状态更新：
 2. 对每个 verify pattern 用 Glob 执行检查，确认本层关键产物已创建
 3. 验证通过后，agent 执行：
    ```bash
-   bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --finish-task {task_id} coded
+   node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --finish-task {task_id} coded
    ```
    并用 Edit 工具将 task 文件的 frontmatter `status:` 字段更新为 `done`
 4. 验证失败时，agent 执行 `--finish-task {task_id} failed` 并报告问题
@@ -223,8 +223,8 @@ Worker agent 完成编码后，在 agent 内部执行验证和状态更新：
 所有 task 执行完毕后，重新运行状态查询：
 
 ```bash
-bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --sync-layer-status
-bash {DDD_HELP}/scripts/backend-status.sh {IDEA_DIR} --brief
+node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --sync-layer-status
+node {DDD_HELP}/scripts/backend-status.mjs {IDEA_DIR} --brief
 ```
 
 根据返回结果输出：

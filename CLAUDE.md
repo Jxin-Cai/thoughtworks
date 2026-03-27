@@ -13,13 +13,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **frontend/**：2 agent（thinker + worker）+ 前端三层设计/编码技能 + 编码规范
 - **all/**：通过 symlink 组合 core/backend/frontend，全栈编排
 - Agent frontmatter 配置 `skills: [*-guide, *-spec]`，启动后按 `target_layer` 路由加载指令
-- `workflow.yaml` 是 DAG 唯一数据源；`workflow-status.sh` 管理状态机；`orchestration-status.sh` 检测恢复点
+- `workflow.yaml` 是 DAG 唯一数据源；`workflow-status.mjs` 管理状态机；`orchestration-status.mjs` 检测恢复点
 
 ## 关键文件
 
-- `core/scripts/workflow-status.sh` — 统一工作流状态管理（backend/frontend 入口脚本为薄包装）
-- `core/scripts/workflow-lib.sh` — Shell 共享库（纯 bash，兼容 macOS bash 3.2）
-- `core/scripts/orchestration-status.sh` — 编排恢复点检测
+- `core/scripts/workflow-status.mjs` — 统一工作流状态管理（backend/frontend 入口脚本为薄包装）
+- `core/scripts/workflow-lib.mjs` — 共享库
+- `core/scripts/orchestration-status.mjs` — 编排恢复点检测
 - `backend/skills/backend-help/workflow.yaml` — 后端 DAG
 - `frontend/skills/frontend-help/workflow.yaml` — 前端 DAG
 - `core/hooks/hooks.json` — Hook 配置唯一真本（SessionStart + SubagentStop）

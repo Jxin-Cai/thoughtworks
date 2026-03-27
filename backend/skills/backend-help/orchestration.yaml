@@ -55,7 +55,7 @@ steps:
         1. 按 workflow.yaml 中的层逐个评估
         2. 写入 {IDEA_DIR}/assessment.md
         3. 初始化 workflow-state:
-           bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init {idea-name} <需要开发的层>
+           node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --init {idea-name} <需要开发的层>
     postcondition:
       check: assessment-exists
 
@@ -71,7 +71,7 @@ steps:
         condition: "phase > 1"
         action:
           type: script
-          command: "bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-upstream {layer}"
+          command: "node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --check-upstream {layer}"
           expect-field: upstream_ready
           expect-value: true
 
@@ -88,7 +88,7 @@ steps:
         description: 标记确认（thought skill 内部已完成用户确认）
         action:
           type: script
-          command: "bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} confirmed"
+          command: "node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --set {layer} confirmed"
         for-each: layers-in-phase
 
       - id: code
@@ -137,7 +137,7 @@ steps:
       type: self
       instructions: "向用户展示实现摘要、各层完成状态、产出文件总列表"
 
-# resume-table 已由 core/scripts/orchestration-status.sh 程序化实现
+# resume-table 已由 core/scripts/orchestration-status.mjs 程序化实现
 # 以下表格仅作为逻辑文档保留
 resume-table:
   - condition: "requirement.md 不存在"

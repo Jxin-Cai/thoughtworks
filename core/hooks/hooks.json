@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/subagent-stop.sh",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/subagent-stop.mjs",
             "async": true
           }
         ]

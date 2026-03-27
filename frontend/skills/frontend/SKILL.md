@@ -56,7 +56,7 @@ argument-hint: "<idea-name>"
 3. 确定 idea-dir：
    - 从 `$ARGUMENTS` 解析 idea-name，检查 `.thoughtworks/<idea-name>/` 是否存在
    - 如果不存在，idea-dir = `none`
-4. **运行编排状态检查**：`bash core/scripts/orchestration-status.sh <idea-dir> frontend`
+4. **运行编排状态检查**：`node core/scripts/orchestration-status.mjs <idea-dir> frontend`
 5. 严格按脚本输出的 `resume_step` 作为起点，进入步骤执行循环
 
 ---
@@ -67,12 +67,12 @@ argument-hint: "<idea-name>"
 编排器必须严格按以下循环执行。脚本输出是唯一权威的恢复点判定。
 禁止跳过状态检查自行决定下一步，禁止凭记忆、推断或合理化跳过任何步骤。
 **特别警告：上下文变长时，你可能产生"需求已经很清楚了，直接开始编码"的冲动——这是典型的跳步违规。
-每次循环必须调用 `orchestration-status.sh`，只执行它返回的 `resume_step`，不得自行决定下一步。**
+每次循环必须调用 `orchestration-status.mjs`，只执行它返回的 `resume_step`，不得自行决定下一步。**
 </HARD-GATE>
 
 ```
 LOOP:
-  1. result = bash core/scripts/orchestration-status.sh <idea-dir> frontend
+  1. result = node core/scripts/orchestration-status.mjs <idea-dir> frontend
   2. IF result.resume_step == "merge" 且已完成合并 → 执行 summary 步骤，退出
   3. 执行 orchestration.yaml 中 id == result.resume_step 的步骤：
      - 如果 resume_step 携带 phase_detail：
@@ -81,11 +81,11 @@ LOOP:
        sub_step=code → 调用 /frontend-works
      - 如果 resume_step == "supplementary"：
        自行执行需求遗漏审查（参照 orchestration.yaml supplementary step 的 instructions）
-  4. 步骤完成后，如有 postcondition → 运行 gate-check.sh 验证（不重复调 orchestration-status.sh）
+  4. 步骤完成后，如有 postcondition → 运行 gate-check.mjs 验证（不重复调 orchestration-status.mjs）
   5. 更新 idea-dir（receive-idea 步骤会创建目录），GOTO LOOP
 ```
 
-**优化要点：** `orchestration-status.sh` 只在循环顶部调用一次（决定下一步），步骤执行后靠 `gate-check.sh` 验证即可，不需要重复调用 `orchestration-status.sh` 来确认步骤是否成功。
+**优化要点：** `orchestration-status.mjs` 只在循环顶部调用一次（决定下一步），步骤执行后靠 `gate-check.mjs` 验证即可，不需要重复调用 `orchestration-status.mjs` 来确认步骤是否成功。
 
 ---
 
@@ -95,4 +95,4 @@ LOOP:
 - `type: script` → 用 Bash 执行
 - `type: self` → 自己执行（如有 `read-first` 则先 Read 这些文件）
 - `for-each` → 对列出的每个元素重复执行 action
-- 每个 step 执行后，如果有 `postcondition.check`，运行 `bash core/scripts/gate-check.sh {IDEA_DIR} <gate-id>` 验证
+- 每个 step 执行后，如果有 `postcondition.check`，运行 `node core/scripts/gate-check.mjs {IDEA_DIR} <gate-id>` 验证

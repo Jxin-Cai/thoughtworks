@@ -59,10 +59,10 @@ agent:
 
 解析 `$ARGUMENTS` 确定 idea-name。
 
-检查前置条件（必须用 gate-check.sh 脚本验证，不得凭推断）：
+检查前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-bash core/scripts/gate-check.sh {IDEA_DIR} frontend-requirement-exists
+node core/scripts/gate-check.mjs {IDEA_DIR} frontend-requirement-exists
 ```
 
 <HARD-GATE>
@@ -140,7 +140,7 @@ bash core/scripts/gate-check.sh {IDEA_DIR} frontend-requirement-exists
 ### 通用启动前准备（每个层都执行）
 
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set {layer-id} designing
+node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --set {layer-id} designing
 cat > {IDEA_DIR}/.current-task-{layer-id}-$(date +%s).json << 'TASK_EOF'
 {"role":"thinker","layer":"{layer-id}","idea_dir":"{IDEA_DIR}","stack":"frontend"}
 TASK_EOF
@@ -157,7 +157,7 @@ TASK_EOF
 每个 Phase 的 Thinker 完成后，执行增量校验仅针对当前层：
 
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-output-validate.sh {IDEA_DIR} --layer {layer-id}
+node {FRONTEND_HELP}/scripts/frontend-output-validate.mjs {IDEA_DIR} --layer {layer-id}
 ```
 
 校验失败时重启 thinker，在 prompt 开头追加：
@@ -184,7 +184,7 @@ bash {FRONTEND_HELP}/scripts/frontend-output-validate.sh {IDEA_DIR} --layer {lay
 
 ```bash
 # 对每个 task 文件提取 frontmatter 后拼接参数，格式：task_id:layer:depends_on:description:file
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init-tasks {idea-name} \
+node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --init-tasks {idea-name} \
   "arch-001:frontend-architecture::Entity Order:frontend-architecture/001-entity-order.md" \
   "comp-001:frontend-components:arch-001:Order 组件:frontend-components/001-order-components.md" \
   "impl-001:frontend-checklist:comp-001:Order 实现:frontend-checklist/001-order-checklist.md"
@@ -199,7 +199,7 @@ bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init-tasks
 所有 Phase 完成后，执行全量汇总校验：
 
 ```bash
-bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --check-all --summary
+node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --check-all --summary
 ```
 
 如果校验不通过（`status` 为 `fail`），对 `failed_rules` 涉及的层执行 `--check --layer {layer-id}` 获取完整失败详情，根据失败的规则判断需要重新执行哪个 Phase 的 Thinker。

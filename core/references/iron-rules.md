@@ -12,6 +12,6 @@
 
 5. **Thinker 只产设计，Worker 只写代码** — 用户的调整请求一律路由到 Thinker，不影响 Worker
 
-6. **门控脚本强制执行** — 每个 step 执行前后的门控检查必须通过 `gate-check.sh` 脚本执行，不得凭记忆或推断判断门控是否通过。用法：`bash {CORE}/scripts/gate-check.sh {IDEA_DIR} <gate-id>`
+6. **门控脚本强制执行** — 每个 step 执行前后的门控检查必须通过 `gate-check.mjs` 脚本执行，不得凭记忆或推断判断门控是否通过。用法：`node {CORE}/scripts/gate-check.mjs {IDEA_DIR} <gate-id>`
 
-7. **流程完整性不可妥协** — 无论上下文多长、之前已完成多少步骤、用户需求看起来多简单，**编排器必须严格按 `orchestration-status.sh` 返回的 `resume_step` 执行，禁止跳过任何步骤**。上下文膨胀导致的"已经理解了需求"的感觉不能替代实际的流程执行。每个步骤是否完成的唯一判据是 `gate-check.sh` 的输出，不是编排器的"判断"
+7. **流程完整性不可妥协** — 无论上下文多长、之前已完成多少步骤、用户需求看起来多简单，**编排器必须严格按 `orchestration-status.mjs` 返回的 `resume_step` 执行，禁止跳过任何步骤**。上下文膨胀导致的"已经理解了需求"的感觉不能替代实际的流程执行。每个步骤是否完成的唯一判据是 `gate-check.mjs` 的输出，不是编排器的"判断"

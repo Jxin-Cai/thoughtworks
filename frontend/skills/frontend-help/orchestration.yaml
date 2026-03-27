@@ -54,7 +54,7 @@ steps:
         1. 扫描项目中已有的 OHS 层代码（Controller/Router/Handler），提取 API 端点列表，评估前端工作
         2. 写入 {IDEA_DIR}/frontend-assessment.md
         3. 从 workflow.yaml 解析所有前端层 id，初始化状态:
-           bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --init {idea-name} <所有层 id>
+           node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --init {idea-name} <所有层 id>
     postcondition:
       check: frontend-assessment-exists
 
@@ -69,7 +69,7 @@ steps:
     description: 标记各层为 confirmed（thought skill 内部已完成用户确认）
     action:
       type: script
-      command: "bash {FRONTEND_HELP}/scripts/frontend-workflow-status.sh {IDEA_DIR} --set {layer-id} confirmed"
+      command: "node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --set {layer-id} confirmed"
     for-each: "workflow.yaml 中所有前端层 id"
     postcondition:
       action:
@@ -112,7 +112,7 @@ steps:
       name: merge
       args: "{idea-name}"
 
-# resume-table 已由 core/scripts/orchestration-status.sh 程序化实现
+# resume-table 已由 core/scripts/orchestration-status.mjs 程序化实现
 # 以下表格仅作为逻辑文档保留
 resume-table:
   - condition: "frontend-requirement.md 不存在"

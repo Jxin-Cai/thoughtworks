@@ -66,11 +66,11 @@ agent:
 - `--layers`：可选，逗号分隔的层列表（如 `domain` 或 `infr,application`）。如不提供，执行所有评估为"需要开发"的层
 - `--modification`：可选，修改说明（中断处理时由 Decision-Maker 传入）
 
-检查前置条件（必须用 gate-check.sh 脚本验证，不得凭推断）：
+检查前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-bash core/scripts/gate-check.sh {IDEA_DIR} requirement-exists
-bash core/scripts/gate-check.sh {IDEA_DIR} assessment-exists
+node core/scripts/gate-check.mjs {IDEA_DIR} requirement-exists
+node core/scripts/gate-check.mjs {IDEA_DIR} assessment-exists
 ```
 
 <HARD-GATE>
@@ -127,11 +127,11 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 1. **确定要执行的层**：根据 `--layers` 参数（如有）过滤出本次要执行的层
 2. **按 Phase 分组**：将要执行的层按 workflow.yaml 中的 `phase` 字段分组（phase 值相同的层属于同一 Phase）
 3. **按 phase 从小到大遍历**：对每个 Phase 中的目标层，先执行启动前准备（见下方），再启动 thinker subagent。同一 Phase 内多层可**并行启动**（放在同一条消息的多个 Agent 调用中）
-4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，对当前 Phase 的每个层执行增量校验：`backend-workflow-status.sh --check --layer {layer}`，仅校验刚完成的层（避免全量扫描）
+4. **等待当前 Phase 完成**：当前 Phase 所有 subagent 返回后，对当前 Phase 的每个层执行增量校验：`backend-workflow-status.mjs --check --layer {layer}`，仅校验刚完成的层（避免全量扫描）
 5. **进入下一 Phase**：当前 Phase 全部 done 后，继续下一个 Phase，重复步骤 3-4
 6. 所有目标 Phase 完成后：
    - 扫描 `backend-designs/` 下各层子目录（domain/, infr/, application/, ohs/），提取每个 task 文件的 frontmatter，初始化 `task-workflow-state.yaml`（见下方）
-   - 执行 `backend-workflow-status.sh --check-all --summary` 获取精简摘要（仅含 status/total/failed/failed_rules）
+   - 执行 `backend-workflow-status.mjs --check-all --summary` 获取精简摘要（仅含 status/total/failed/failed_rules）
 7. 校验通过 → 进入 Step 4；校验失败 → 只重启失败层的 thinker，附加失败原因
 
 ### Task 工作流状态初始化
@@ -140,7 +140,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 
 ```bash
 # 对每个 task 文件提取 frontmatter 后拼接参数，格式：task_id:layer:depends_on:description:file
-bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init-tasks {idea-name} \
+node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --init-tasks {idea-name} \
   "domain-001:domain::Order 聚合:domain/001-order-aggregate.md" \
   "infr-001:infr:domain-001:Order 仓储:infr/001-order-repository.md" \
   "application-001:application:domain-001:订单管理:application/001-order-management.md" \
@@ -155,7 +155,7 @@ bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --init-tasks {idea
 
 1. **标记状态为 designing**：
 ```bash
-bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --set {layer} designing
+node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --set {layer} designing
 ```
 
 2. **写入任务文件**（供 SubagentStop hook 收敛状态，文件名含时间戳避免并发冲突）：
@@ -189,13 +189,13 @@ TASK_EOF
 
 ```bash
 # 对当前 Phase 的每个层逐个校验（而非 --check-all 全量）
-bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check --layer {layer}
+node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --check --layer {layer}
 ```
 
 所有 Phase 完成后，执行一次最终汇总校验：
 
 ```bash
-bash {DDD_HELP}/scripts/backend-workflow-status.sh {IDEA_DIR} --check-all --summary
+node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --check-all --summary
 ```
 
 根据 `status` 判断：
