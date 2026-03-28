@@ -13,10 +13,19 @@ agent:
 
 ---
 
+## 路径变量
+
+| 变量 | 路径（相对于当前 skill） |
+|------|---------------------|
+| `{FRONTEND_HELP}` | `../frontend-help` |
+| `{SCRIPTS}` | `../../scripts`（通过 symlink 指向 core 共享脚本） |
+
+---
+
 ## 铁律
 
 <HARD-GATE>
-使用 Read 工具加载 `core/references/iron-rules.md`，严格遵守其中所有条目。
+使用 Read 工具加载 `../../../core/references/iron-rules.md`，严格遵守其中所有条目。
 </HARD-GATE>
 
 **本技能附加铁律：**
@@ -38,8 +47,8 @@ agent:
 验证前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-node core/scripts/gate-check.mjs {IDEA_DIR} frontend-requirement-exists
-node core/scripts/gate-check.mjs {IDEA_DIR} frontend-designs-exist
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} frontend-requirement-exists
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} frontend-designs-exist
 ```
 
 <HARD-GATE>
@@ -80,7 +89,7 @@ node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --next-task
 <HARD-GATE>
 在进入编码循环前，必须执行工作流完整性校验：
 ```bash
-node core/scripts/gate-check.mjs {IDEA_DIR} task-workflow-integrity frontend
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} task-workflow-integrity frontend
 ```
 必须返回 `pass: true`。如果返回 `pass: false`，说明有 task 处于 coding/coded 状态但对应设计文件不存在，这是流程违规，必须停止并报告。
 </HARD-GATE>

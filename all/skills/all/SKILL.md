@@ -14,17 +14,18 @@ argument-hint: "<需求描述或文件路径>"
 
 ## 路径变量
 
-| 变量 | 路径（从项目根目录） |
+| 变量 | 路径（相对于当前 skill） |
 |------|---------------------|
-| `{DDD_HELP}` | `backend/skills/backend-help` |
-| `{FRONTEND_HELP}` | `frontend/skills/frontend-help` |
+| `{DDD_HELP}` | `../backend-help` |
+| `{FRONTEND_HELP}` | `../frontend-help` |
+| `{SCRIPTS}` | `../../scripts`（通过 symlink 指向 core 共享脚本） |
 
 ---
 
 ## 铁律
 
 <HARD-GATE>
-使用 Read 工具加载 `core/references/iron-rules.md`，严格遵守其中所有条目。
+使用 Read 工具加载 `../../../core/references/iron-rules.md`，严格遵守其中所有条目。
 </HARD-GATE>
 
 **本技能附加铁律：**
@@ -64,7 +65,7 @@ argument-hint: "<需求描述或文件路径>"
 5. 确定 idea-dir：
    - 从 `$ARGUMENTS` 解析 idea-name，检查 `.thoughtworks/<idea-name>/` 是否存在
    - 如果 `$ARGUMENTS` 为空或目录不存在，idea-dir = `none`
-6. **运行编排状态检查**：`node core/scripts/orchestration-status.mjs <idea-dir> all`
+6. **运行编排状态检查**：`node {SCRIPTS}/orchestration-status.mjs <idea-dir> all`
 7. 严格按脚本输出的 `resume_step` 作为起点，进入步骤执行循环
 
 ---
@@ -80,7 +81,7 @@ argument-hint: "<需求描述或文件路径>"
 
 ```
 LOOP:
-  1. result = node core/scripts/orchestration-status.mjs <idea-dir> all
+  1. result = node {SCRIPTS}/orchestration-status.mjs <idea-dir> all
   2. IF result.resume_step == "merge" 且已完成合并 → 执行 summary 步骤，退出
   3. 根据 result.resume_step 执行对应步骤：
 
@@ -108,7 +109,7 @@ LOOP:
      - supplementary 的执行逻辑：
        1. Read requirement.md，识别后端遗漏 → 有则生成 supplementary-tasks.md 并执行 → touch .supplementary-reviewed
        2. Read frontend-requirement.md，识别前端遗漏 → 有则追加 supplementary-tasks.md 并执行 → touch .frontend-supplementary-reviewed
-  4. 步骤完成后，如有 postcondition → 运行 gate-check.mjs 验证（不重复调 orchestration-status.mjs）
+  4. 步骤完成后，如有 postcondition → 运行 {SCRIPTS}/gate-check.mjs 验证（不重复调 orchestration-status.mjs）
   5. 更新 idea-dir（receive-requirement 步骤会创建目录），GOTO LOOP
 ```
 
@@ -121,13 +122,13 @@ LOOP:
 - `type: skill` → 调用对应 slash 命令
 - `type: script` → 用 Bash 执行
 - `type: self` → 自己执行（如有 `read-first` 则先 Read 这些文件）
-- 每个 step 执行后，如果有 `postcondition.check`，运行 `node core/scripts/gate-check.mjs {IDEA_DIR} <gate-id>` 验证
+- 每个 step 执行后，如果有 `postcondition.check`，运行 `node {SCRIPTS}/gate-check.mjs {IDEA_DIR} <gate-id>` 验证
 
 ---
 
 ## 全栈编排步骤参考
 
-> 以下表格为参考文档，实际执行由 `core/scripts/orchestration-status.mjs` 驱动。
+> 以下表格为参考文档，实际执行由 `{SCRIPTS}/orchestration-status.mjs` 驱动。
 
 ```
 Step 1:   接收需求
@@ -156,7 +157,7 @@ Step 4:   全栈完成汇总
 
 ## 合理化预防
 
-使用 Read 工具加载 `core/references/rationalization-prevention.md`，熟记其中所有条目。
+使用 Read 工具加载 `../../../core/references/rationalization-prevention.md`，熟记其中所有条目。
 
 **本技能附加预防：**
 

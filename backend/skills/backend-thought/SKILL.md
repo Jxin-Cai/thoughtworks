@@ -17,10 +17,19 @@ agent:
 
 ---
 
+## 路径变量
+
+| 变量 | 路径（相对于当前 skill） |
+|------|---------------------|
+| `{DDD_HELP}` | `../backend-help` |
+| `{SCRIPTS}` | `../../scripts`（通过 symlink 指向 core 共享脚本） |
+
+---
+
 ## 铁律
 
 <HARD-GATE>
-使用 Read 工具加载 `core/references/iron-rules.md`，严格遵守其中所有条目。
+使用 Read 工具加载 `../../../core/references/iron-rules.md`，严格遵守其中所有条目。
 </HARD-GATE>
 
 **本技能附加铁律：**
@@ -69,8 +78,8 @@ agent:
 检查前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-node core/scripts/gate-check.mjs {IDEA_DIR} requirement-exists
-node core/scripts/gate-check.mjs {IDEA_DIR} assessment-exists
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} requirement-exists
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} assessment-exists
 ```
 
 <HARD-GATE>

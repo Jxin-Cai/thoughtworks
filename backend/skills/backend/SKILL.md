@@ -14,16 +14,17 @@ argument-hint: "<需求描述或文件路径>"
 
 ## 路径变量
 
-| 变量 | 路径（从项目根目录） |
+| 变量 | 路径（相对于当前 skill） |
 |------|---------------------|
-| `{DDD_HELP}` | `../backend-help`（相对于当前 skill）或 `backend/skills/backend-help`（从项目根） |
+| `{DDD_HELP}` | `../backend-help` |
+| `{SCRIPTS}` | `../../scripts`（通过 symlink 指向 core 共享脚本） |
 
 ---
 
 ## 铁律
 
 <HARD-GATE>
-使用 Read 工具加载 `core/references/iron-rules.md`，严格遵守其中所有条目。
+使用 Read 工具加载 `../../../core/references/iron-rules.md`，严格遵守其中所有条目。
 </HARD-GATE>
 
 **本技能附加铁律：**
@@ -55,7 +56,7 @@ argument-hint: "<需求描述或文件路径>"
 3. 确定 idea-dir：
    - 从 `$ARGUMENTS` 解析 idea-name，检查 `.thoughtworks/<idea-name>/` 是否存在
    - 如果 `$ARGUMENTS` 为空或目录不存在，idea-dir = `none`
-4. **运行编排状态检查**：`node core/scripts/orchestration-status.mjs <idea-dir> backend`
+4. **运行编排状态检查**：`node {SCRIPTS}/orchestration-status.mjs <idea-dir> backend`
 5. 严格按脚本输出的 `resume_step` 作为起点，进入步骤执行循环
 
 ---
@@ -71,7 +72,7 @@ argument-hint: "<需求描述或文件路径>"
 
 ```
 LOOP:
-  1. result = node core/scripts/orchestration-status.mjs <idea-dir> backend
+  1. result = node {SCRIPTS}/orchestration-status.mjs <idea-dir> backend
   2. IF result.resume_step == "merge" 且已完成合并 → 执行 summary 步骤，退出
   3. 执行 orchestration.yaml 中 id == result.resume_step 的步骤：
      - 如果 resume_step == "phase-loop"：
@@ -94,13 +95,13 @@ LOOP:
 - `type: skill` → 调用对应 slash 命令
 - `type: script` → 用 Bash 执行
 - `type: self` → 自己执行（如有 `read-first` 则先 Read 这些文件）
-- 每个 step 执行后，如果有 `postcondition.check`，运行 `node core/scripts/gate-check.mjs {IDEA_DIR} <gate-id>` 验证
+- 每个 step 执行后，如果有 `postcondition.check`，运行 `node {SCRIPTS}/gate-check.mjs {IDEA_DIR} <gate-id>` 验证
 
 ---
 
 ## 合理化预防
 
-使用 Read 工具加载 `core/references/rationalization-prevention.md`，熟记其中所有条目。
+使用 Read 工具加载 `../../../core/references/rationalization-prevention.md`，熟记其中所有条目。
 
 **本技能附加预防：**
 
