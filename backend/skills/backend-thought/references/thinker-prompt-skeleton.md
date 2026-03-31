@@ -18,11 +18,11 @@ Agent(
     {主 agent 根据评估结论列出的该层需要完成的具体工作项，每项一行}
 
     {仅 domain 层追加以下内容：}
-    ## 聚合结构要求
+    ## 领域建模结构要求
 
-    requirement.md 的聚合分析章节列出了所有识别的聚合及其依赖关系。
-    为每个聚合输出独立的 task 文件（`{nnn}-{aggregate-slug}.md`，写入 `backend-designs/domain/` 目录），每个 task 包含该聚合的完整设计。
-    小聚合（如共享值对象较多的 2 个聚合）可合并为一个 task，但单个 task 不超过 800 行。
+    requirement.md 的领域建模分析章节列出了识别出的领域建模单元及其依赖关系。
+    为每个领域建模单元输出独立的 task 文件（`{nnn}-{domain-topic-slug}.md`，写入 `backend-designs/domain/` 目录），每个 task 包含该领域主题的完整设计。
+    领域建模单元可以是聚合、领域服务，或二者结合；强相关的小型单元可合并为一个 task，但单个 task 不超过 800 行。
 
     你的设计方案完成后，必须回头逐条验证上述每个工作项都有对应的设计产出。
 
@@ -58,8 +58,8 @@ Agent(
     每个 task 一个文件，命名格式：`{nnn}-{topic-slug}.md`
 
     ## Task 拆分规则
-    - domain 层：每个聚合一个 task（小聚合可合并）
-    - infr 层：每个聚合的仓储实现一个 task
+    - domain 层：每个领域建模单元一个 task（聚合、领域服务或混合建模，小型相关单元可合并）
+    - infr 层：每个实现主题一个 task（常见为仓储实现或外部集成主题）
     - application 层：每个用例组一个 task
     - ohs 层：每个 API 资源组一个 task
     - 单个 task 文件不超过 800 行

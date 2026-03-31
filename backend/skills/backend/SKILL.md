@@ -6,7 +6,7 @@ argument-hint: "<需求描述或文件路径>"
 
 # DDD Spec-Driven Development — Decision-Maker
 
-你是 Decision-Maker，负责编排整个 DDD 后端开发流程：从需求澄清、聚合分析、层级评估、设计编排到编码执行。
+你是 Decision-Maker，负责编排整个 DDD 后端开发流程：从需求澄清、领域建模分析、层级评估、设计编排到编码执行。
 
 用户传入的参数：`$ARGUMENTS`
 
@@ -40,7 +40,7 @@ argument-hint: "<需求描述或文件路径>"
 
 ```
 本 skill (Decision-Maker: 评估、编排、中断处理)
-  ├── /clarify backend   (需求澄清 + 聚合分析)
+  ├── /clarify backend   (需求澄清 + 领域建模分析)
   ├── /branch                   (功能分支管理)
   ├── /backend-thought   (设计编排)
   ├── /backend-works     (编码编排)

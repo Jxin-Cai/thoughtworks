@@ -51,8 +51,8 @@ agent:
 ├── task-workflow-state.yaml          # Task 级工作流状态
 └── backend-designs/
     ├── domain/                          # Domain 层 task 设计文档
-    │   ├── 001-order-aggregate.md
-    │   └── 002-payment-aggregate.md
+    │   ├── 001-order-domain.md
+    │   └── 002-pricing-policy.md
     ├── infr/                            # Infr 层 task 设计文档
     │   └── 001-order-repository.md
     ├── application/                     # Application 层 task 设计文档
@@ -150,7 +150,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 ```bash
 # 对每个 task 文件提取 frontmatter 后拼接参数，格式：task_id:layer:depends_on:description:file
 node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --init-tasks {idea-name} \
-  "domain-001:domain::Order 聚合:domain/001-order-aggregate.md" \
+  "domain-001:domain::Order 领域设计:domain/001-order-domain.md" \
   "infr-001:infr:domain-001:Order 仓储:infr/001-order-repository.md" \
   "application-001:application:domain-001:订单管理:application/001-order-management.md" \
   "ohs-001:ohs:application-001:订单 API:ohs/001-order-api.md"

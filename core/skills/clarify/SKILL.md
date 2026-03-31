@@ -18,7 +18,7 @@ argument-hint: "<backend|frontend> <需求描述或 idea-name>"
 
 | scenario | 含义 | payload |
 |----------|------|---------|
-| `backend` | 后端 DDD 需求澄清 + 聚合分析 | 需求描述文本 |
+| `backend` | 后端 DDD 需求澄清 + 领域建模分析 | 需求描述文本 |
 | `frontend` | 前端需求澄清（基于 OHS 契约） | idea-name |
 
 如果第一个词既不是 `backend` 也不是 `frontend`，使用 AskUserQuestion 询问用户选择场景。
@@ -39,7 +39,7 @@ argument-hint: "<backend|frontend> <需求描述或 idea-name>"
 
 ### 当 scenario = `backend`
 
-使用 Read 工具加载 `references/clarify-backend.md` — 后端澄清维度、聚合分析步骤、产出模板。
+使用 Read 工具加载 `references/clarify-backend.md` — 后端澄清维度、领域建模分析步骤、产出模板。
 
 然后按以下步骤顺序执行，每一步的具体操作细节见上方加载的引用文件：
 
@@ -53,13 +53,13 @@ argument-hint: "<backend|frontend> <需求描述或 idea-name>"
 
 按 `clarify-backend.md` 的「完成检查表」逐条确认所有 7 个维度已覆盖后，才能进入 Step 3。
 
-#### Step 3: 聚合识别
+#### Step 3: 领域建模分析
 
-按 `clarify-backend.md` 的「聚合识别」章节执行 DDD 战略分析。
+按 `clarify-backend.md` 的「领域建模分析」章节执行 DDD 战略分析。
 
-#### Step 4: 聚合确认
+#### Step 4: 领域建模方案确认
 
-按 `clarify-backend.md` 的「聚合确认」章节执行。这是 HARD-GATE，用户确认后才能继续。
+按 `clarify-backend.md` 的「领域建模方案确认」章节执行。这是 HARD-GATE，用户确认后才能继续。
 
 #### Step 5: 目录创建与需求写入
 
@@ -70,7 +70,7 @@ argument-hint: "<backend|frontend> <需求描述或 idea-name>"
 
 ```
 需求已写入 .thoughtworks/<idea-name>/requirement.md
-聚合分析：识别了 N 个聚合，建议实现顺序为 A → B → C
+领域建模分析：识别了 N 个建模单元，建议实现顺序为 A → B → C
 ```
 
 ---

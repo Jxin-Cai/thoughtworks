@@ -44,7 +44,7 @@ argument-hint: "<需求描述或文件路径>"
 
 ```
 本 skill (全栈编排器: 接收需求、调度澄清、评估、编排设计和编码)
-  ├── /clarify backend    (后端需求澄清 + 聚合分析)
+  ├── /clarify backend    (后端需求澄清 + 领域建模分析)
   ├── /clarify frontend   (前端需求澄清)
   ├── /branch                    (功能分支管理)
   ├── /backend-thought    (后端设计编排)

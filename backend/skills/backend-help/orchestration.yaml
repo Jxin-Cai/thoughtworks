@@ -19,7 +19,7 @@ steps:
         - 空 → AskUserQuestion
 
   - id: clarify
-    description: 需求澄清与聚合分析
+    description: 需求澄清与领域建模分析
     gate:
       check: requirement-exists
       on-pass: skip

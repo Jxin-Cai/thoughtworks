@@ -1,6 +1,6 @@
 # Domain 层 Task 设计文档模板
 
-> 每个 task 文件对应一个聚合的完整设计。
+> 每个 task 文件对应一个领域建模单元的完整设计，可为聚合、领域服务，或二者结合。
 > 以下代码示例为 Java 参考格式。请根据 CONTEXT 中的 `backend_language` 使用对应语言的惯用写法和 spec 规范中的技术栈。
 
 按以下结构输出，所有占位符 `{...}` 替换为实际内容。没有的章节整节删除，不要留空章节。
@@ -14,16 +14,22 @@ layer: domain
 order: {N}
 status: pending
 depends_on: [{上游 task_id 列表，通常为空}]
-description: "{AggregateName} 聚合设计"
+description: "{DomainTopicName} 领域设计"
 ---
 
-# Domain: {AggregateName} 聚合
+# Domain: {DomainTopicName} 领域设计
 
 <!-- REQUIRED -->
 ## 结论
 
-（一句话概括：本聚合的核心职责和关键业务规则）
+（一句话概括：本领域建模单元的核心职责和关键业务规则）
 
+## 建模选择说明
+
+- **建模类型**：聚合 / 领域服务 / 混合
+- **选择原因**：说明为什么本 task 以该建模方式组织
+
+<!-- OPTIONAL -->
 ## 聚合根与实体
 
 ### {AggregateRootName}
@@ -130,8 +136,8 @@ public interface {ExternalDomain}AclService {
 
 ### {DomainServiceName}
 
-**职责**：（跨聚合编排逻辑描述）
-**编排步骤**：
+**职责**：（领域业务能力描述，可为规则、决策、计算、校验、策略或协调能力）
+**处理步骤**：
 1. ...
 2. ...
 
