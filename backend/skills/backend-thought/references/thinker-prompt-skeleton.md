@@ -28,6 +28,20 @@ Agent(
 
     ---
 
+    # DECISIONS ALREADY MADE（编排器已确认的事实 — 不需要你重新判断）
+
+    - idea_name: {idea}
+    - target_layer: {layer}
+    - backend_language: {BACKEND_LANG}
+    - this_layer_is_required_because: {从 assessment.md 该层评估部分提取 2-3 句结论}
+    - out_of_scope: {本次不涉及的层/能力，从 assessment.md 提取不需要开发的层列表}
+    - upstream_source:
+      {对每个上游层，标注来源类型：}
+      - {upstream_layer}: {implemented → scan code | designed → scan design | not_in_scope → scan historical code}
+    - task_granularity: {domain: 一个领域建模单元 | infr: 一个实现主题 | application: 一个用例组 | ohs: 一个资源组}
+
+    ---
+
     # TEMPLATE（产出骨架 — 写入文件的结构）
 
     使用 Read 工具加载设计文档模板：`{design-template 的绝对路径}`
@@ -80,4 +94,18 @@ Agent(
 2. **具体工作项** — 从评估结论中提炼出 numbered list，每项是一个可验证的工作目标
 3. **验证锚点** — 这些工作项将成为 thinker 反思循环中逐条验证的基准
 
-注意：设计指令和编码规范由 agent 启动时自行通过 `/backend-guide` 和 `/backend-spec` 加载，编排器无需预读内联。
+注意：设计指令和编码规范由 thinker agent 在完成必要扫描后、开始写设计方案前，通过 `/backend-load thinker {target_layer} {backend_language}` 自行加载，编排器无需预读内联。
+
+## DECISIONS 区块填充规则
+
+主 agent 在组装 prompt 时，需要从 `assessment.md` 和 `workflow.yaml` 中提取已确认的事实，直接注入 DECISIONS 区块：
+
+1. **this_layer_is_required_because** — 从 assessment.md 该层评估部分提取 2-3 句结论
+2. **out_of_scope** — 列出 assessment.md 中标记为"不需要开发"的层
+3. **upstream_source** — 对每个上游层（workflow.yaml `requires` 列出的），判断来源类型：
+   - 上游层状态为 coded → `implemented → scan code`
+   - 上游层状态为 designed/confirmed → `designed → scan design`
+   - 上游层未注册（不在本次开发范围）→ `not_in_scope → scan historical code`
+4. **task_granularity** — 根据 target_layer 填入对应的拆分单位
+
+这些字段是编排器的已确认决策，thinker 不需要重新判断，直接遵循即可。

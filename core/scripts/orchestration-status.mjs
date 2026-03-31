@@ -4,8 +4,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
 import { getTrackedLayers, getTrackedStatus } from './workflow-lib.mjs';
+import { checkGate as checkGateImpl } from './gate-check.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const IDEA_DIR = process.argv[2];
@@ -16,17 +16,12 @@ if (!IDEA_DIR || !STACK) {
   process.exit(1);
 }
 
-const REPO_ROOT = dirname(dirname(__dirname));
-const GATE_CHECK = resolve(__dirname, 'gate-check.mjs');
-const BACKEND_WORKFLOW_YAML = resolve(REPO_ROOT, 'backend/skills/backend-help/workflow.yaml');
+const BACKEND_WORKFLOW_YAML = resolve(dirname(dirname(__dirname)), 'backend/skills/backend-help/workflow.yaml');
 
 // ── 辅助函数 ──
 
 function checkGate(gateId, ...extra) {
-  try {
-    const result = execFileSync('node', [GATE_CHECK, IDEA_DIR, gateId, ...extra], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
-    return result.includes('pass: true');
-  } catch { return false; }
+  return checkGateImpl(IDEA_DIR, gateId, extra).pass;
 }
 
 function getPhaseForLayer(wfYaml, layerId) {

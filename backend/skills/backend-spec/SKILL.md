@@ -1,12 +1,34 @@
 ---
 name: backend-spec
-description: Backend DDD coding spec router for language and layer specific constraints
+description: Backend layer-specific design and coding constraints. In direct backend planning/coding scenarios, proactively load before writing solutions or code when the task touches domain/application/infr/ohs.
 argument-hint: "<language> <layer> e.g. java domain, python application, go ohs, java all"
 ---
 
 # DDD 后端项目规范加载器
 
 用户传入的参数：`$ARGUMENTS`
+
+## 何时应主动调用
+
+### 普通直接后端设计 / 编码场景
+
+当用户没有走 `/backend`、`/backend-thought`、`/backend-works` 等标准编排入口，但当前任务已经进入后端某层的方案设计、代码实现、重构、补接口、补仓储、改 controller / handler 等场景时，应主动调用本技能补充约束。
+
+### 最佳调用时机
+
+先完成代码仓扫描、文件路径识别和目标层判断，再在**开始输出方案或开始修改代码之前**立即调用。
+不要太早加载，避免规范被后续扫描上下文压缩。
+
+### 典型触发信号
+
+- **层级关键词**：domain、aggregate、entity、value object、domain service、application、command、repository、controller、handler、dto、request、response
+- **文件路径信号**：`domain/`、`application/`、`infr/`、`repository/`、`controller/`、`handler/`
+- **任务动作信号**：设计 application service、实现 repository、补 handler、设计领域模型、补 DTO / persistence model
+
+### 与 backend-load 的关系
+
+标准 DDD thinker / worker 流程优先通过 `backend-load` 一次性加载 guide + spec；本技能不替代该统一入口。
+当你处于普通直接后端设计 / 编码场景，且需要快速补充语言与层级约束时，应主动调用本技能。
 
 ## 路由规则
 

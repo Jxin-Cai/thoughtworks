@@ -2,7 +2,24 @@
 // 使用方式: import { ... } from './workflow-lib.mjs'
 import { readFileSync, writeFileSync, mkdirSync, rmdirSync, renameSync, existsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+
+// ── 进程内文件缓存（按 filepath + mtime 缓存，单次 CLI 调用内有效）──
+
+const _cache = new Map();
+
+function getCachedContent(filePath) {
+  if (!existsSync(filePath)) return null;
+  const mtime = statSync(filePath).mtimeMs;
+  const cached = _cache.get(filePath);
+  if (cached && cached.mtime === mtime) return cached.content;
+  const content = readFileSync(filePath, 'utf-8');
+  _cache.set(filePath, { mtime, content });
+  return content;
+}
+
+function invalidateCache(filePath) {
+  _cache.delete(filePath);
+}
 
 // ── 文件锁（防止并发写入竞态）──
 
@@ -18,8 +35,9 @@ function acquireLock(lockDir, maxWait = 3000) {
         try { rmdirSync(lockDir); } catch {}
         try { mkdirSync(lockDir); return; } catch {}
       }
-      // 短暂等待 100ms
-      spawnSync('sleep', ['0.1']);
+      // 短暂等待 100ms（busy-wait 替代 spawnSync sleep）
+      const deadline = Date.now() + 100;
+      while (Date.now() < deadline) { /* spin */ }
     }
   }
 }
@@ -38,6 +56,7 @@ export function lockedWrite(stateFile, content) {
     renameSync(tmpFile, stateFile);
   } finally {
     releaseLock(lockDir);
+    invalidateCache(stateFile);
   }
 }
 
@@ -51,14 +70,15 @@ export function lockedWriteTask(taskStateFile, content) {
     renameSync(tmpFile, taskStateFile);
   } finally {
     releaseLock(lockDir);
+    invalidateCache(taskStateFile);
   }
 }
 
 // ── YAML 读取函数（行级解析，与 shell 版行为对齐）──
 
 export function readIdea(stateFile) {
-  if (!existsSync(stateFile)) return '';
-  const content = readFileSync(stateFile, 'utf-8');
+  const content = getCachedContent(stateFile);
+  if (!content) return '';
   for (const line of content.split('\n')) {
     const m = line.match(/^idea:\s*(.*)/);
     if (m) return m[1].trim();
@@ -67,8 +87,8 @@ export function readIdea(stateFile) {
 }
 
 export function getTrackedLayers(stateFile) {
-  if (!existsSync(stateFile)) return [];
-  const content = readFileSync(stateFile, 'utf-8');
+  const content = getCachedContent(stateFile);
+  if (!content) return [];
   const lines = content.split('\n');
   let inLayers = false;
   const layers = [];
@@ -84,8 +104,8 @@ export function getTrackedLayers(stateFile) {
 }
 
 export function getTrackedStatus(stateFile, layer) {
-  if (!existsSync(stateFile)) return '';
-  const content = readFileSync(stateFile, 'utf-8');
+  const content = getCachedContent(stateFile);
+  if (!content) return '';
   const lines = content.split('\n');
   let inLayers = false;
   for (const line of lines) {
@@ -114,6 +134,7 @@ export function updateLayerStatus(stateFile, targetLayer, newStatus) {
     renameSync(tmpFile, stateFile);
   } finally {
     releaseLock(lockDir);
+    invalidateCache(stateFile);
   }
 }
 
@@ -159,8 +180,8 @@ export function extractDepends(filePath) {
 }
 
 export function getLayerPhase(workflowFile, layerId) {
-  if (!existsSync(workflowFile)) return '';
-  const content = readFileSync(workflowFile, 'utf-8');
+  const content = getCachedContent(workflowFile);
+  if (!content) return '';
   const lines = content.split('\n');
   let found = false;
   for (const line of lines) {
@@ -182,8 +203,8 @@ export function getWorkflowStatus(stateFile, layer) {
 // ════════════════════════════════════════════════════
 
 export function getTaskIds(taskStateFile) {
-  if (!existsSync(taskStateFile)) return [];
-  const content = readFileSync(taskStateFile, 'utf-8');
+  const content = getCachedContent(taskStateFile);
+  if (!content) return [];
   const lines = content.split('\n');
   let inTasks = false;
   const ids = [];
@@ -199,8 +220,8 @@ export function getTaskIds(taskStateFile) {
 }
 
 function _getTaskField(taskStateFile, taskId, field) {
-  if (!existsSync(taskStateFile)) return '';
-  const content = readFileSync(taskStateFile, 'utf-8');
+  const content = getCachedContent(taskStateFile);
+  if (!content) return '';
   const lines = content.split('\n');
   let inTasks = false, inTask = false;
   for (const line of lines) {
@@ -287,6 +308,7 @@ export function updateTaskStatus(taskStateFile, taskId, newStatus) {
     renameSync(tmpFile, taskStateFile);
   } finally {
     releaseLock(lockDir);
+    invalidateCache(taskStateFile);
   }
 }
 

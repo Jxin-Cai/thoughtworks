@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // gate-check.mjs — HARD-GATE 程序化检查脚本（从 gate-check.sh 迁移）
 // 用法: node gate-check.mjs <idea-dir> <gate-id> [extra-args...]
+//       node gate-check.mjs <idea-dir> --batch <gate1,gate2,...>
 // 输出: YAML 格式 { pass: true/false, reason: "..." }
 
 import { existsSync, readdirSync, readFileSync, statSync, rmSync } from 'node:fs';
@@ -14,266 +15,222 @@ const IDEA_DIR = process.argv[2];
 const GATE_ID = process.argv[3];
 const extraArgs = process.argv.slice(4);
 
-if (!IDEA_DIR || !GATE_ID) {
-  process.stderr.write('用法: node gate-check.mjs <idea-dir> <gate-id> [extra-args...]\n');
-  process.exit(1);
-}
+// ── 门控检查逻辑（返回结果，不直接退出） ──
 
-function gatePass() {
-  console.log('pass: true');
-  process.exit(0);
-}
+function checkGate(ideaDir, gateId, extra) {
+  switch (gateId) {
+    case 'idea-dir-exists':
+      return existsSync(ideaDir) && statSync(ideaDir).isDirectory()
+        ? { pass: true }
+        : { pass: false, reason: `idea directory does not exist: ${ideaDir}` };
 
-function gateFail(reason) {
-  console.log(`pass: false`);
-  console.log(`reason: "${reason}"`);
-  process.exit(0);
-}
+    case 'requirement-exists':
+      return existsSync(`${ideaDir}/requirement.md`)
+        ? { pass: true }
+        : { pass: false, reason: `requirement.md 不存在于 ${ideaDir}/` };
 
-// ── 门控检查 ──
+    case 'frontend-requirement-exists':
+      return existsSync(`${ideaDir}/frontend-requirement.md`)
+        ? { pass: true }
+        : { pass: false, reason: `frontend-requirement.md 不存在于 ${ideaDir}/` };
 
-switch (GATE_ID) {
-  case 'idea-dir-exists': {
-    existsSync(IDEA_DIR) && statSync(IDEA_DIR).isDirectory() ? gatePass() : gateFail(`idea directory does not exist: ${IDEA_DIR}`);
-    break;
-  }
+    case 'assessment-exists':
+      return existsSync(`${ideaDir}/assessment.md`)
+        ? { pass: true }
+        : { pass: false, reason: `assessment.md 不存在于 ${ideaDir}/` };
 
-  case 'requirement-exists': {
-    existsSync(`${IDEA_DIR}/requirement.md`) ? gatePass() : gateFail(`requirement.md 不存在于 ${IDEA_DIR}/`);
-    break;
-  }
+    case 'frontend-assessment-exists':
+      return existsSync(`${ideaDir}/frontend-assessment.md`)
+        ? { pass: true }
+        : { pass: false, reason: `frontend-assessment.md 不存在于 ${ideaDir}/` };
 
-  case 'frontend-requirement-exists': {
-    existsSync(`${IDEA_DIR}/frontend-requirement.md`) ? gatePass() : gateFail(`frontend-requirement.md 不存在于 ${IDEA_DIR}/`);
-    break;
-  }
+    case 'workflow-state-exists':
+      return existsSync(`${ideaDir}/workflow-state.yaml`)
+        ? { pass: true }
+        : { pass: false, reason: `workflow-state.yaml 不存在于 ${ideaDir}/` };
 
-  case 'assessment-exists': {
-    existsSync(`${IDEA_DIR}/assessment.md`) ? gatePass() : gateFail(`assessment.md 不存在于 ${IDEA_DIR}/`);
-    break;
-  }
+    case 'frontend-workflow-state-exists':
+      return existsSync(`${ideaDir}/frontend-workflow-state.yaml`)
+        ? { pass: true }
+        : { pass: false, reason: `frontend-workflow-state.yaml 不存在于 ${ideaDir}/` };
 
-  case 'frontend-assessment-exists': {
-    existsSync(`${IDEA_DIR}/frontend-assessment.md`) ? gatePass() : gateFail(`frontend-assessment.md 不存在于 ${IDEA_DIR}/`);
-    break;
-  }
-
-  case 'workflow-state-exists': {
-    existsSync(`${IDEA_DIR}/workflow-state.yaml`) ? gatePass() : gateFail(`workflow-state.yaml 不存在于 ${IDEA_DIR}/`);
-    break;
-  }
-
-  case 'frontend-workflow-state-exists': {
-    existsSync(`${IDEA_DIR}/frontend-workflow-state.yaml`) ? gatePass() : gateFail(`frontend-workflow-state.yaml 不存在于 ${IDEA_DIR}/`);
-    break;
-  }
-
-  case 'upstream-ready': {
-    const layer = extraArgs[0];
-    const stack = extraArgs[1] || 'backend';
-    if (!layer) { gateFail('upstream-ready 需要指定层名'); break; }
-    const repoRoot = dirname(dirname(__dirname));
-    let statusScript;
-    if (stack === 'frontend') {
-      statusScript = resolve(repoRoot, 'frontend/skills/frontend-help/scripts/frontend-workflow-status.mjs');
-    } else {
-      statusScript = resolve(repoRoot, 'backend/skills/backend-help/scripts/backend-workflow-status.mjs');
-    }
-    if (existsSync(statusScript)) {
+    case 'upstream-ready': {
+      const layer = extra[0];
+      const stack = extra[1] || 'backend';
+      if (!layer) return { pass: false, reason: 'upstream-ready 需要指定层名' };
+      const repoRoot = dirname(dirname(__dirname));
+      const statusScript = stack === 'frontend'
+        ? resolve(repoRoot, 'frontend/skills/frontend-help/scripts/frontend-workflow-status.mjs')
+        : resolve(repoRoot, 'backend/skills/backend-help/scripts/backend-workflow-status.mjs');
+      if (!existsSync(statusScript)) return { pass: false, reason: `workflow-status 脚本不存在: ${statusScript}` };
       try {
-        const result = execFileSync('node', [statusScript, IDEA_DIR, '--check-upstream', layer], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
-        if (result.includes('"upstream_ready": true') || result.includes('"upstream_ready":true')) {
-          gatePass();
-        } else {
-          gateFail(`层 ${layer} 的上游依赖未就绪`);
-        }
+        const result = execFileSync('node', [statusScript, ideaDir, '--check-upstream', layer], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
+        return (result.includes('"upstream_ready": true') || result.includes('"upstream_ready":true'))
+          ? { pass: true }
+          : { pass: false, reason: `层 ${layer} 的上游依赖未就绪` };
       } catch {
-        gateFail(`层 ${layer} 的上游依赖未就绪`);
+        return { pass: false, reason: `层 ${layer} 的上游依赖未就绪` };
       }
-    } else {
-      gateFail(`workflow-status 脚本不存在: ${statusScript}`);
     }
-    break;
-  }
 
-  case 'designs-exist': {
-    let found = false;
-    const designsDir = `${IDEA_DIR}/backend-designs`;
-    if (existsSync(designsDir)) {
-      // 新模式：按层分目录
-      try {
-        for (const entry of readdirSync(designsDir, { withFileTypes: true })) {
-          if (entry.isDirectory()) {
-            const layerDir = `${designsDir}/${entry.name}`;
-            const mdFiles = readdirSync(layerDir).filter(f => f.endsWith('.md'));
-            if (mdFiles.length > 0) { found = true; break; }
+    case 'designs-exist': {
+      const designsDir = `${ideaDir}/backend-designs`;
+      if (existsSync(designsDir)) {
+        try {
+          for (const entry of readdirSync(designsDir, { withFileTypes: true })) {
+            if (entry.isDirectory()) {
+              const mdFiles = readdirSync(`${designsDir}/${entry.name}`).filter(f => f.endsWith('.md'));
+              if (mdFiles.length > 0) return { pass: true };
+            }
           }
+        } catch {}
+        try {
+          if (readdirSync(designsDir).filter(f => f.endsWith('.md')).length > 0) return { pass: true };
+        } catch {}
+      }
+      return { pass: false, reason: 'backend-designs/ 目录不存在或无设计文件' };
+    }
+
+    case 'frontend-designs-exist': {
+      const designsDir = `${ideaDir}/frontend-designs`;
+      if (existsSync(designsDir)) {
+        try {
+          for (const entry of readdirSync(designsDir, { withFileTypes: true })) {
+            if (entry.isDirectory()) {
+              const mdFiles = readdirSync(`${designsDir}/${entry.name}`).filter(f => f.endsWith('.md'));
+              if (mdFiles.length > 0) return { pass: true };
+            }
+          }
+        } catch {}
+        try {
+          if (readdirSync(designsDir).filter(f => f.endsWith('.md')).length > 0) return { pass: true };
+        } catch {}
+      }
+      return { pass: false, reason: 'frontend-designs/ 目录不存在或无设计文件' };
+    }
+
+    case 'approved':
+      return existsSync(`${ideaDir}/.approved`)
+        ? { pass: true }
+        : { pass: false, reason: `.approved 标记不存在于 ${ideaDir}/` };
+
+    case 'frontend-approved':
+      return existsSync(`${ideaDir}/.frontend-approved`)
+        ? { pass: true }
+        : { pass: false, reason: `.frontend-approved 标记不存在于 ${ideaDir}/` };
+
+    case 'branch-ready': {
+      const ideaName = basename(ideaDir);
+      let currentBranch = '';
+      try { currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim(); } catch {}
+      return (currentBranch === `feature/${ideaName}` || currentBranch.startsWith('feature/'))
+        ? { pass: true }
+        : { pass: false, reason: `当前不在 feature 分支上（当前: ${currentBranch}）` };
+    }
+
+    case 'supplementary-tasks-exist': {
+      const stFile = `${ideaDir}/supplementary-tasks.md`;
+      if (existsSync(stFile)) {
+        try {
+          if (readFileSync(stFile, 'utf-8').trim().length > 0) return { pass: true };
+        } catch {}
+      }
+      return { pass: false, reason: 'supplementary-tasks.md 不存在或为空' };
+    }
+
+    case 'supplementary-reviewed':
+      return existsSync(`${ideaDir}/.supplementary-reviewed`)
+        ? { pass: true }
+        : { pass: false, reason: '.supplementary-reviewed 标记不存在' };
+
+    case 'frontend-supplementary-reviewed':
+      return existsSync(`${ideaDir}/.frontend-supplementary-reviewed`)
+        ? { pass: true }
+        : { pass: false, reason: '.frontend-supplementary-reviewed 标记不存在' };
+
+    case 'task-workflow-integrity': {
+      const checkStack = extra[0] || 'backend';
+      let taskState, dDir;
+      if (checkStack === 'backend') {
+        taskState = `${ideaDir}/task-workflow-state.yaml`;
+        dDir = `${ideaDir}/backend-designs`;
+      } else if (checkStack === 'frontend') {
+        taskState = `${ideaDir}/frontend-task-workflow-state.yaml`;
+        dDir = `${ideaDir}/frontend-designs`;
+      } else {
+        return { pass: false, reason: `无效 stack: ${checkStack}，可选: backend|frontend` };
+      }
+      if (!existsSync(taskState)) return { pass: false, reason: `task 状态文件不存在: ${basename(taskState)}` };
+      const content = readFileSync(taskState, 'utf-8');
+      const lines = content.split('\n');
+      let currentTask = '', currentStatus = '', currentFile = '';
+      const violations = [];
+      for (const line of lines) {
+        if (/^  [a-zA-Z].*:$/.test(line)) { currentTask = line.trim().replace(/:$/, ''); currentStatus = ''; currentFile = ''; }
+        else if (/^    status:/.test(line)) { currentStatus = line.replace(/^.*status:\s*/, '').trim(); }
+        else if (/^    file:/.test(line)) {
+          currentFile = line.replace(/^.*file:\s*/, '').trim();
+          if (currentStatus && currentFile && (currentStatus === 'coding' || currentStatus === 'coded')) {
+            if (!existsSync(`${dDir}/${currentFile}`)) violations.push(`task=${currentTask}(status=${currentStatus},file=${currentFile} 不存在)`);
+          }
+        }
+      }
+      return violations.length > 0
+        ? { pass: false, reason: `工作流完整性违规: ${violations.join(';')}` }
+        : { pass: true };
+    }
+
+    case 'stale-tasks': {
+      let cleaned = 0;
+      const now = Date.now();
+      try {
+        for (const entry of readdirSync(ideaDir)) {
+          if (!entry.startsWith('.current-task-') || !entry.endsWith('.json')) continue;
+          try {
+            if ((now - statSync(`${ideaDir}/${entry}`).mtimeMs) / 1000 > 1800) { rmSync(`${ideaDir}/${entry}`); cleaned++; }
+          } catch {}
         }
       } catch {}
-      // 旧模式回退
-      if (!found) {
-        try {
-          const mdFiles = readdirSync(designsDir).filter(f => f.endsWith('.md'));
-          if (mdFiles.length > 0) found = true;
-        } catch {}
-      }
-    }
-    found ? gatePass() : gateFail('backend-designs/ 目录不存在或无设计文件');
-    break;
-  }
-
-  case 'frontend-designs-exist': {
-    let found = false;
-    const designsDir = `${IDEA_DIR}/frontend-designs`;
-    if (existsSync(designsDir)) {
-      try {
-        for (const entry of readdirSync(designsDir, { withFileTypes: true })) {
-          if (entry.isDirectory()) {
-            const layerDir = `${designsDir}/${entry.name}`;
-            const mdFiles = readdirSync(layerDir).filter(f => f.endsWith('.md'));
-            if (mdFiles.length > 0) { found = true; break; }
-          }
-        }
-      } catch {}
-      if (!found) {
-        try {
-          const mdFiles = readdirSync(designsDir).filter(f => f.endsWith('.md'));
-          if (mdFiles.length > 0) found = true;
-        } catch {}
-      }
-    }
-    found ? gatePass() : gateFail('frontend-designs/ 目录不存在或无设计文件');
-    break;
-  }
-
-  case 'approved': {
-    existsSync(`${IDEA_DIR}/.approved`) ? gatePass() : gateFail(`.approved 标记不存在于 ${IDEA_DIR}/`);
-    break;
-  }
-
-  case 'frontend-approved': {
-    existsSync(`${IDEA_DIR}/.frontend-approved`) ? gatePass() : gateFail(`.frontend-approved 标记不存在于 ${IDEA_DIR}/`);
-    break;
-  }
-
-  case 'branch-ready': {
-    const ideaName = basename(IDEA_DIR);
-    let currentBranch = '';
-    try {
-      currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim();
-    } catch {}
-    if (currentBranch === `feature/${ideaName}` || currentBranch.startsWith('feature/')) {
-      gatePass();
-    } else {
-      gateFail(`当前不在 feature 分支上（当前: ${currentBranch}）`);
-    }
-    break;
-  }
-
-  case 'supplementary-tasks-exist': {
-    const stFile = `${IDEA_DIR}/supplementary-tasks.md`;
-    if (existsSync(stFile)) {
-      try {
-        const content = readFileSync(stFile, 'utf-8');
-        if (content.trim().length > 0) gatePass();
-        else gateFail('supplementary-tasks.md 不存在或为空');
-      } catch { gateFail('supplementary-tasks.md 不存在或为空'); }
-    } else {
-      gateFail('supplementary-tasks.md 不存在或为空');
-    }
-    break;
-  }
-
-  case 'supplementary-reviewed': {
-    existsSync(`${IDEA_DIR}/.supplementary-reviewed`) ? gatePass() : gateFail('.supplementary-reviewed 标记不存在');
-    break;
-  }
-
-  case 'frontend-supplementary-reviewed': {
-    existsSync(`${IDEA_DIR}/.frontend-supplementary-reviewed`) ? gatePass() : gateFail('.frontend-supplementary-reviewed 标记不存在');
-    break;
-  }
-
-  case 'task-workflow-integrity': {
-    const checkStack = extraArgs[0] || 'backend';
-    let taskState, designsDir;
-    if (checkStack === 'backend') {
-      taskState = `${IDEA_DIR}/task-workflow-state.yaml`;
-      designsDir = `${IDEA_DIR}/backend-designs`;
-    } else if (checkStack === 'frontend') {
-      taskState = `${IDEA_DIR}/frontend-task-workflow-state.yaml`;
-      designsDir = `${IDEA_DIR}/frontend-designs`;
-    } else {
-      gateFail(`无效 stack: ${checkStack}，可选: backend|frontend`);
-      break;
+      return { pass: true, ...(cleaned > 0 ? { cleaned } : {}) };
     }
 
-    if (!existsSync(taskState)) {
-      gateFail(`task 状态文件不存在: ${basename(taskState)}`);
-      break;
-    }
-
-    const content = readFileSync(taskState, 'utf-8');
-    const lines = content.split('\n');
-    let currentTask = '', currentStatus = '', currentFile = '';
-    const violations = [];
-
-    for (const line of lines) {
-      if (/^  [a-zA-Z].*:$/.test(line)) {
-        currentTask = line.trim().replace(/:$/, '');
-        currentStatus = '';
-        currentFile = '';
-      } else if (/^    status:/.test(line)) {
-        currentStatus = line.replace(/^.*status:\s*/, '').trim();
-      } else if (/^    file:/.test(line)) {
-        currentFile = line.replace(/^.*file:\s*/, '').trim();
-        if (currentStatus && currentFile && (currentStatus === 'coding' || currentStatus === 'coded')) {
-          if (!existsSync(`${designsDir}/${currentFile}`)) {
-            violations.push(`task=${currentTask}(status=${currentStatus},file=${currentFile} 不存在)`);
-          }
-        }
-      }
-    }
-
-    if (violations.length > 0) {
-      gateFail(`工作流完整性违规: ${violations.join(';')}`);
-    } else {
-      gatePass();
-    }
-    break;
+    default:
+      return { pass: false, reason: `未知门控 ID: ${gateId}` };
   }
+}
 
-  case 'stale-tasks': {
-    let cleaned = 0;
-    const now = Date.now();
-    try {
-      const entries = readdirSync(IDEA_DIR);
-      for (const entry of entries) {
-        if (!entry.startsWith('.current-task-') || !entry.endsWith('.json')) continue;
-        const taskFile = `${IDEA_DIR}/${entry}`;
-        try {
-          const mtime = statSync(taskFile).mtimeMs;
-          const ageSeconds = (now - mtime) / 1000;
-          if (ageSeconds > 1800) {
-            rmSync(taskFile);
-            cleaned++;
-          }
-        } catch {}
-      }
-    } catch {}
+// ── 输出格式化 ──
 
-    if (cleaned > 0) {
-      console.log('pass: true');
-      console.log(`cleaned: ${cleaned}`);
-    } else {
-      gatePass();
-    }
-    break;
-  }
+function printResult(result) {
+  console.log(`pass: ${result.pass}`);
+  if (result.reason) console.log(`reason: "${result.reason}"`);
+  if (result.cleaned) console.log(`cleaned: ${result.cleaned}`);
+}
 
-  default: {
-    console.log('pass: false');
-    console.log(`reason: "未知门控 ID: ${GATE_ID}"`);
+// ── 导出供内部模块直接调用 ──
+
+export { checkGate };
+
+// ── CLI 执行入口（仅当直接运行时） ──
+
+const isCLI = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
+
+if (isCLI) {
+  if (!IDEA_DIR || !GATE_ID) {
+    process.stderr.write('用法: node gate-check.mjs <idea-dir> <gate-id> [extra-args...]\n');
+    process.stderr.write('      node gate-check.mjs <idea-dir> --batch <gate1,gate2,...>\n');
     process.exit(1);
+  }
+
+  if (GATE_ID === '--batch') {
+    const gateIds = (extraArgs[0] || '').split(',').filter(Boolean);
+    if (gateIds.length === 0) { process.stderr.write('--batch 需要逗号分隔的门控列表\n'); process.exit(1); }
+    for (const gid of gateIds) {
+      const result = checkGate(IDEA_DIR, gid, extraArgs.slice(1));
+      console.log(`${gid}: ${result.pass ? 'pass' : `fail: ${result.reason}`}`);
+    }
+  } else {
+    const result = checkGate(IDEA_DIR, GATE_ID, extraArgs);
+    printResult(result);
   }
 }

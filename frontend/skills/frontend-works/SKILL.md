@@ -47,12 +47,11 @@ agent:
 验证前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} frontend-requirement-exists
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} frontend-designs-exist
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} --batch frontend-requirement-exists,frontend-designs-exist
 ```
 
 <HARD-GATE>
-两个检查都必须返回 `pass: true` 才能继续。如果 frontend-designs-exist 返回 `pass: false`，提示先运行 `/frontend-thought`。
+两个检查都必须显示 `pass`。如果 frontend-designs-exist 显示 `fail`，提示先运行 `/frontend-thought`。
 禁止跳过前置条件检查直接进入编码。上下文中出现过设计信息不等于设计文件存在。
 </HARD-GATE>
 
@@ -162,18 +161,8 @@ Worker agent 完成编码后，在 agent 内部执行验证和状态更新：
 
 ## 暂停机制
 
-### 触发条件
-- task 执行失败（agent 报错或产出不符合预期）
-- 实现清单内容不清晰
-- 实现过程中发现设计文档有问题
-
-### 暂停处理
-
-用 AskUserQuestion 提供选项：
-1. 修改设计文档后继续 → `--set-task {task_id} pending`
-2. 跳过此 task → `--set-task {task_id} coded`，同步层级状态
-3. 手动修复后重试
-4. 终止执行 → `--set-task {task_id} failed`，同步层级状态
+当 task 执行失败、实现清单不清晰、或发现设计文档有问题时触发暂停。
+使用 Read 工具加载 `references/pause-mechanism.md` 获取暂停处理模板和选项。
 
 ---
 
@@ -196,7 +185,4 @@ node {FRONTEND_HELP}/scripts/frontend-status.mjs {IDEA_DIR} --brief
 
 ## 断点续传
 
-`/frontend-works` 支持断点续传：
-- 每个 task 完成后立即更新 task 状态和 frontmatter status
-- 下次运行时通过 `--next-tasks code` 获取可执行 task，从第一个 confirmed impl task 继续
-- 已 coded 的 task 不会重复执行
+通过 `--next-tasks code` 获取可执行 task，已 coded 的 task 不会重复执行。task 级粒度断点。

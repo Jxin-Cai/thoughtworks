@@ -1,12 +1,12 @@
 # Worker 公共指令
 
-## 启动后第一步
+## 扫描完成后、开始写代码前必须执行
 
-你的 skills 配置已自动注入两个技能：
-- `backend-guide`：根据 CONTEXT 中的 `target_layer` 加载层级特有编码指令
-- `backend-spec`：根据 CONTEXT 中的 `backend_language` 和 `target_layer` 加载编码规范
+你的 skills 配置已注入 `backend-load`。在完成项目结构扫描、上游代码扫描并确认 `target_layer` 与 `backend_language` 后，使用 `/backend-load worker {target_layer} {backend_language}` 一次性加载本层 guide + spec。
 
-从 CONTEXT 中的 `backend_language` 字段获取后端语言（java/python/go，默认 java），使用 `{language} {target_layer}` 关键词通过 `backend-spec` 路由加载编码规范。
+不要在启动时提前加载，也不要在标准 DDD worker 链路里手工拆成 `/backend-guide` 与 `/backend-spec` 两次调用。
+
+如果你处于非编排入口的普通后端编码场景，只需要快速补充语言与层级约束，也可主动调用 `backend-spec`。
 
 ## 角色约束
 
@@ -48,9 +48,26 @@
 ## 完成前必须执行
 
 <HARD-GATE>
-在声称完成之前，必须验证：
+在声称完成之前，必须同时满足：
 
+### 验证 A: 产物存在性
 根据 `backend_language` 读取 `backend-help/workflow.yaml` 中当前层 `verify.{language}` 的 glob 模式，并用 Glob 执行检查，确认本层关键产物存在。仅当设计文档明确给出文件路径时，才可额外按文件路径做补充校验。
+
+### 验证 B: 实现清单覆盖
+逐条对照 prompt 中的实现清单，确认每一项都已落到具体文件：
+- 列出：实现项 → 落地文件路径
+- 若有未落地项，修复后重新验证
+
+A + B 都通过后才可执行 `--finish-task {task_id} coded`。
 
 如果任何文件未创建，修复后重新验证。禁止声称完成但未执行验证。
 </HARD-GATE>
+
+## 必须停下上报（而不是继续）的情况
+
+- 上游代码与设计文档签名不匹配
+- 设计文档中缺少必要签名，无法推导实现
+- 需要修改设计文档才能继续
+- 实现清单有项无法落地，但 verify glob 仍会通过
+
+遇到以上情况时，执行 `--finish-task {task_id} failed` 并在输出中说明原因。

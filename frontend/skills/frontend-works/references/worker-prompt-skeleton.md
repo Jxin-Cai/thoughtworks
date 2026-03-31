@@ -16,6 +16,31 @@ Agent(
 
     ---
 
+    # EXECUTION CONTRACT（编排器已确认的执行边界 — 不需要你重新判断）
+
+    task_id: {task_id}
+    target_layer: {所属层 layer-id}
+    ui_framework: react-ts
+
+    ## Must implement
+    {从实现清单提取的文件列表，每行一个}
+
+    ## May infer from code
+    - OHS 层 API 端点的具体 URL 和参数（通过扫描已有 OHS 代码确认）
+    - 组件内部状态管理细节（按 FSD 规范自主决定）
+
+    ## Must NOT change
+    - 设计文档（发现问题上报编排器）
+    - 不相关的已有代码
+    - 上游层接口
+
+    ## Escalate if
+    - OHS 层代码中找不到设计文档引用的 API 端点
+    - 设计文档中的组件定义与已有代码冲突
+    - 实现清单有项无法落地，但 verify glob 仍会通过
+
+    ---
+
     # CONTEXT
 
     ## 本 task 设计
@@ -62,3 +87,13 @@ Agent(
   "
 )
 ```
+
+## EXECUTION CONTRACT 区块填充规则
+
+主 agent 在组装 prompt 时，需要从 task 设计文档中提取已确认的执行边界，直接注入 EXECUTION CONTRACT 区块：
+
+1. **Must implement** — 从 task 文件末尾实现清单表格提取所有需创建的文件，每行一个
+2. **May infer from code** — 前端统一允许：OHS 层 API 端点的具体 URL/参数（扫描确认），组件内部状态管理细节（按 FSD 规范自主决定）
+3. **Must NOT change** 和 **Escalate if** — 固定内容，所有层通用
+
+这些字段是编排器的已确认决策，worker 不需要重新判断，直接遵循即可。

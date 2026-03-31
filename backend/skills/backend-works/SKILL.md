@@ -38,10 +38,6 @@ agent:
 
 ## 合理化预防
 
-使用 Read 工具加载 `../../../core/references/rationalization-prevention.md`，熟记其中所有条目。
-
-**本技能附加预防：**
-
 | 你可能会想 | 现实 |
 |-----------|------|
 | "这个 task 太简单，我直接写不用启动 agent" | 每个 task 必须通过独立 agent 执行，保持上下文隔离 |
@@ -50,6 +46,7 @@ agent:
 | "这个 task 的设计有问题，我来调整一下" | 触发暂停机制，让用户决定。你不能擅自修改设计 |
 | "文件已经创建了，不需要验证" | 必须用 Glob 验证。agent 可能声称完成但实际未写入 |
 | "依赖的 task 虽然没完成但我知道它会实现什么" | 必须等依赖 task 状态为 coded 后才能启动，不能预判 |
+| "Phase 顺序我已经知道了，不用再读 workflow.yaml" | workflow.yaml 是唯一数据源，每次启动都必须用 Read 工具重新读取 |
 
 ---
 
@@ -66,13 +63,11 @@ agent:
 验证前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} requirement-exists
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} assessment-exists
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} designs-exist
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} --batch requirement-exists,assessment-exists,designs-exist
 ```
 
 <HARD-GATE>
-三个检查都必须返回 `pass: true` 才能继续。如果 designs-exist 返回 `pass: false`，提示先运行 `/backend-thought`。
+三个检查都必须显示 `pass`。如果 designs-exist 显示 `fail`，提示先运行 `/backend-thought`。
 禁止跳过前置条件检查直接进入编码。上下文中出现过设计信息不等于设计文件存在。
 </HARD-GATE>
 
@@ -157,7 +152,7 @@ node {SCRIPTS}/gate-check.mjs {IDEA_DIR} task-workflow-integrity backend
 
 ### Worker agent prompt 骨架
 
-所有层统一使用 `tw-backend:agent-ddd-worker` 作为 `subagent_type`。agent 启动后自行通过 `/backend-load` 加载编码指令和编码规范。
+所有层统一使用 `tw-backend:agent-ddd-worker` 作为 `subagent_type`。agent 会在完成必要扫描、形成实现方案后、开始第一处代码写入前通过 `/backend-load` 加载编码指令和编码规范。
 
 使用 Read 工具加载 `references/worker-prompt-skeleton.md`，按其模板为每个 task 组装 prompt。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
 
@@ -188,42 +183,8 @@ Worker agent 完成编码后，在 agent 内部执行验证和状态更新：
 
 ## 暂停机制
 
-在以下情况暂停执行，输出暂停状态并用 AskUserQuestion 提供选项：
-
-### 触发条件
-- task 执行失败（agent 报错或产出不符合预期）
-- 实现清单内容不清晰，无法确定实现方式
-- 实现过程中发现设计文档有问题
-
-### 暂停输出
-
-```
-## 实现暂停
-
-**Idea:** <idea-name>
-**进度:** N/M task 完成
-
-### 本次 session 已完成
-- [x] domain-001: Order 聚合
-- [x] infr-001: Order 仓储实现
-
-### 遇到的问题
-**Task:** {task_id} — {description}
-<问题描述>
-
-**选项：**
-1. 修改设计文档后继续 — 回到 /backend-thought 修改设计，然后重新运行 /backend-works 从断点继续
-2. 跳过此 task 继续后续
-3. 手动修复后重试此 task
-4. 终止执行
-```
-
-用 AskUserQuestion 让用户选择。
-
-- 选择 1 → 将 task 状态设为 `pending`（`--set-task {task_id} pending`），提示用户修改设计后重新运行
-- 选择 2 → 将 task 状态设为 `coded`（标记跳过），同步层级状态，继续下一个 task
-- 选择 3 → 等待用户确认修复完成，重试当前 task
-- 选择 4 → 将 task 状态设为 `failed`（`--set-task {task_id} failed`），同步层级状态，输出完成汇总后终止
+当 task 执行失败、实现清单不清晰、或发现设计文档有问题时触发暂停。
+使用 Read 工具加载 `references/pause-mechanism.md` 获取暂停处理模板和选项。
 
 ---
 
@@ -281,8 +242,4 @@ node {DDD_HELP}/scripts/backend-status.mjs {IDEA_DIR} --brief
 
 ## 断点续传
 
-`/backend-works` 支持断点续传：
-- 每个 task 完成后立即更新 task 状态和 frontmatter status
-- 下次运行时通过 `--next-tasks code` 获取可执行 task，从第一个 confirmed task 继续
-- 已 coded 的 task 不会重复执行
-- task 级粒度断点：即使同层有多个 task，已完成的不会重复
+通过 `--next-tasks code` 获取可执行 task，已 coded 的 task 不会重复执行。task 级粒度断点。

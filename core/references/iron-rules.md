@@ -15,3 +15,11 @@
 6. **门控脚本强制执行** — 每个 step 执行前后的门控检查必须通过 `gate-check.mjs` 脚本执行，不得凭记忆或推断判断门控是否通过。用法：`node {CORE}/scripts/gate-check.mjs {IDEA_DIR} <gate-id>`
 
 7. **流程完整性不可妥协** — 无论上下文多长、之前已完成多少步骤、用户需求看起来多简单，**编排器必须严格按 `orchestration-status.mjs` 返回的 `resume_step` 执行，禁止跳过任何步骤**。上下文膨胀导致的"已经理解了需求"的感觉不能替代实际的流程执行。每个步骤是否完成的唯一判据是 `gate-check.mjs` 的输出，不是编排器的"判断"
+
+8. **冲突优先级** — 当多个信息来源产生矛盾时，按以下优先级从高到低裁决：
+   1. 编排器 prompt 中的 DECISIONS / EXECUTION CONTRACT（已确认事实）
+   2. 当前层 guide 指令（设计/编码约束）
+   3. backend-spec / frontend-spec 规范（语言/框架约束）
+   4. 当前 task 设计文档（方案参考）
+   5. 已实现代码结构（历史事实）
+   例外：**若已实现代码与设计文档签名冲突，worker 不得自行覆盖设计，必须上报**

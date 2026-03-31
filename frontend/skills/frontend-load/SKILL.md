@@ -52,11 +52,16 @@ argument-hint: "<role> <layer> [stack] [style] e.g. thinker architecture react-t
 1. **Guide 公共指令**：`../frontend-guide/references/thinker/common.md`
 2. **Guide 层级指令**：`../frontend-guide/references/thinker/{layer}.md`
 3. **Spec 公共规范**：`../frontend-spec/references/common.md`
-4. **Spec 技术栈规范**（全部）：
-   - `../frontend-spec/references/{stack}/components.md`
-   - `../frontend-spec/references/{stack}/api-client.md`
-   - `../frontend-spec/references/{stack}/routing.md`
-   - `../frontend-spec/references/{stack}/state.md`
+4. **Spec 技术栈规范**（按层级选择）：
+
+   | 层级 | Spec 文件 |
+   |------|----------|
+   | architecture | `{stack}/routing.md` + `{stack}/state.md` |
+   | components | `{stack}/components.md` + `{stack}/api-client.md` |
+   | checklist | 无（实现清单已包含必要约束，跳过 spec 加载） |
+
+   路径前缀：`../frontend-spec/references/`
+
 5. **UI 风格规范**（如指定）：`../frontend-spec/references/ui-styles/{style}.md`
 
 #### Worker 模式

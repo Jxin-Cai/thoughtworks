@@ -78,12 +78,11 @@ agent:
 检查前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} requirement-exists
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} assessment-exists
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} --batch requirement-exists,assessment-exists
 ```
 
 <HARD-GATE>
-两个检查都必须返回 `pass: true` 才能继续。如果任一返回 `pass: false`，提示用户先运行 `/backend <需求>` 完成需求澄清和层级评估。禁止跳过此检查直接进入设计。
+两个检查都必须显示 `pass`。如果任一显示 `fail`，提示用户先运行 `/backend <需求>` 完成需求澄清和层级评估。禁止跳过此检查直接进入设计。
 </HARD-GATE>
 
 读取 `.thoughtworks/<idea-name>/assessment.md`，确定哪些层需要开发。
@@ -127,7 +126,7 @@ subagent 之间信息隔离，因此设计文档模板和输入文档必须在 p
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 
-主 agent 统一使用 `tw-backend:agent-ddd-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/backend-load` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。动态 prompt 包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个区块。
+主 agent 统一使用 `tw-backend:agent-ddd-thinker` 作为 `subagent_type`。agent 会在完成必要扫描后、开始写设计方案前通过 `/backend-load` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。动态 prompt 包含 MISSION、TEMPLATE、CONTEXT、OUTPUT 四个区块。
 
 ### 执行方式（主 agent DAG 编排）
 

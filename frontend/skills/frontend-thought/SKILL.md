@@ -71,12 +71,11 @@ agent:
 检查前置条件（必须用 gate-check.mjs 脚本验证，不得凭推断）：
 
 ```bash
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} frontend-requirement-exists
-node {SCRIPTS}/gate-check.mjs {IDEA_DIR} frontend-assessment-exists
+node {SCRIPTS}/gate-check.mjs {IDEA_DIR} --batch frontend-requirement-exists,frontend-assessment-exists
 ```
 
 <HARD-GATE>
-两个检查都必须返回 `pass: true` 才能继续。如果返回 `pass: false`，提示用户先运行需求澄清和评估。禁止跳过此检查直接进入设计。
+两个检查都必须显示 `pass`。如果任一显示 `fail`，提示用户先运行需求澄清和评估。禁止跳过此检查直接进入设计。
 </HARD-GATE>
 
 项目中已有 OHS 层代码（Thinker 将从已有代码扫描 API 端点）。
