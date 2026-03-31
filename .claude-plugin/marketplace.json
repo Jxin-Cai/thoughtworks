@@ -41,6 +41,18 @@
         "name": "jxin",
         "email": "jxin@thoughtworks.com"
       }
+    },
+    {
+      "name": "tw-easy",
+      "source": "./easy",
+      "description": "Lightweight development: structured requirements clarification, then hand off to Claude Code native plan & code",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+      "repository": "https://github.com/Jxin-Cai/thoughtworks",
+      "author": {
+        "name": "jxin",
+        "email": "jxin@thoughtworks.com"
+      }
     }
   ]
 }

@@ -1,0 +1,16 @@
+{
+  "name": "tw-easy",
+  "description": "Lightweight development: structured requirements clarification, then hand off to Claude Code native plan & code",
+  "version": "1.0.0",
+  "author": {
+    "name": "jxin",
+    "email": "jxin@thoughtworks.com"
+  },
+  "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+  "repository": "https://github.com/Jxin-Cai/thoughtworks",
+  "license": "MIT",
+  "keywords": ["easy", "lightweight", "requirements", "clarification"],
+  "agents": [],
+  "skills": ["./skills/"],
+  "commands": ["./commands/"]
+}
