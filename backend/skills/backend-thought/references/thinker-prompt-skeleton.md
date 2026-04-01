@@ -10,6 +10,19 @@ Agent(
   max_turns: 20,
   description: "{Layer} 层思考",
   prompt: "
+    {仅当 --modification 参数存在时注入以下区块，否则省略：}
+
+    # MODIFICATION（设计修正指令 — 优先级高于 MISSION）
+
+    本次是对已有设计的修正，而非全新设计。你必须：
+    1. 先 Read 已有的设计文档（`{DESIGNS_DIR}/{layer}/` 目录下的 task 文件）
+    2. 根据以下修改说明，定向修改受影响的部分，保持未涉及部分不变
+    3. 修改完成后，仍需执行反思循环验证所有工作项覆盖
+
+    修改说明：{--modification 参数值}
+
+    ---
+
     # MISSION（工作目标 — 结论先行，先理解你要做什么）
 
     {主 agent 根据 assessment.md 中该层的评估结论，用 2-4 句话总结该层的核心工作目标}

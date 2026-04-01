@@ -191,6 +191,8 @@ TASK_EOF
 
 从 `workflow.yaml` 中读取该层的 `thinker-ref`（获取 agent name）和 `design-template`（指向 `assets/{layer}-design.md`）路径。
 
+**`--modification` 处理**：如果 `--modification` 参数存在，按 thinker-prompt-skeleton.md 中的 MODIFICATION 区块模板，在 MISSION 之前注入修改说明。编排器需将 `--modification` 的值填入 `{--modification 参数值}` 占位符，并将 `{DESIGNS_DIR}` 替换为实际路径。
+
 ### 产出验证
 
 每个 Phase 的 subagent 全部返回后，主 agent 对当前 Phase 中每个层单独执行增量校验：
@@ -237,5 +239,6 @@ node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --check-all --sum
 
 <HARD-GATE>
 展示完毕后，使用 AskUserQuestion 询问用户是否确认设计。
-用户确认后，本技能完成。你现在必须立即回到调用你的编排器，继续执行编排器的下一个步骤（标记 confirmed → 编码）。禁止停下来等待用户指令，禁止提示用户手动运行任何命令。
+用户确认后，执行 `touch {IDEA_DIR}/.design-confirmed` 写入确认标记。
+然后本技能完成。你现在必须立即回到调用你的编排器，继续执行编排器的下一个步骤（标记 confirmed → 编码）。禁止停下来等待用户指令，禁止提示用户手动运行任何命令。
 </HARD-GATE>

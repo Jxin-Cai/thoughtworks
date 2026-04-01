@@ -170,6 +170,11 @@ Worker agent 完成编码后，在 agent 内部执行验证和状态更新：
 
 编排器只读取终态（coded/failed），不参与验证过程。**每个 task 最多重试 2 次**，超过后触发暂停机制。
 
+**重试时的残留处理**：当 task 状态为 `coding`（turn 耗尽）或 `failed` 需要重试时，编排器在组装 worker prompt 时：
+1. 从 `workflow.yaml` 读取该层的 verify glob 模式
+2. 按 `worker-prompt-skeleton.md` 中的 PRIOR ATTEMPT 区块模板注入残留检测指引
+3. 将失败原因（如有）填入模板
+
 ### 进度输出
 
 每个 task 完成后输出：

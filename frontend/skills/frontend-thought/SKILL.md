@@ -226,5 +226,6 @@ node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --check-all
 
 <HARD-GATE>
 使用 AskUserQuestion 询问用户是否确认设计。
-用户确认后，本技能完成。你现在必须立即回到调用你的编排器，继续执行编排器的下一个步骤（标记 confirmed → 编码）。禁止停下来等待用户指令，禁止提示用户手动运行任何命令。
+用户确认后，执行 `touch {IDEA_DIR}/.frontend-design-confirmed` 写入确认标记。
+然后本技能完成。你现在必须立即回到调用你的编排器，继续执行编排器的下一个步骤（标记 confirmed → 编码）。禁止停下来等待用户指令，禁止提示用户手动运行任何命令。
 </HARD-GATE>

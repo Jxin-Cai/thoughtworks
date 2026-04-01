@@ -8,6 +8,20 @@ Agent(
   max_turns: 15,
   description: "Frontend: {task frontmatter description}",
   prompt: "
+    {仅当本次是重试（编排器检测到 task 之前状态为 coding/failed）时注入以下区块，否则省略：}
+
+    # PRIOR ATTEMPT（前次执行残留 — 必须先检查）
+
+    本 task 之前有一次未完成的执行尝试，项目中可能已有部分代码文件。你必须：
+    1. 先用 Glob 按 verify 模式扫描本层已有文件：`{verify glob 模式列表}`
+    2. 对已存在的文件用 Read 检查内容完整性
+    3. 已完整的文件 → 跳过不重写；不完整或有错的文件 → 用 Edit 修复而非重写
+    4. 尚不存在的文件 → 正常创建
+
+    前次失败原因：{编排器从暂停机制获取的失败描述，无则填"turn 耗尽，原因未知"}
+
+    ---
+
     # TASK
 
     根据以下实现清单，逐项创建前端代码文件：

@@ -109,6 +109,16 @@ function checkGate(ideaDir, gateId, extra) {
       return { pass: false, reason: 'frontend-designs/ 目录不存在或无设计文件' };
     }
 
+    case 'design-confirmed':
+      return existsSync(`${ideaDir}/.design-confirmed`)
+        ? { pass: true }
+        : { pass: false, reason: `.design-confirmed 标记不存在，thought 技能可能未完成用户确认` };
+
+    case 'frontend-design-confirmed':
+      return existsSync(`${ideaDir}/.frontend-design-confirmed`)
+        ? { pass: true }
+        : { pass: false, reason: `.frontend-design-confirmed 标记不存在，thought 技能可能未完成用户确认` };
+
     case 'approved':
       return existsSync(`${ideaDir}/.approved`)
         ? { pass: true }

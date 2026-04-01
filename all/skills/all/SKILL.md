@@ -91,12 +91,12 @@ LOOP:
      | backend:clarify         | /clarify backend {payload} |
      | frontend:clarify        | /clarify frontend {idea-name} |
      | branch                  | /branch {idea-name} |
-     | backend:assessment      | 自行执行后端层级评估（参照 backend orchestration.yaml assessment step） |
+     | backend:assessment      | 自行执行后端层级评估：1) Read `{DDD_HELP}/workflow.yaml` 获取所有层定义；2) Read `core/skills/clarify/references/assessment-dimensions.md` 获取评估维度；3) 逐层评估是否需要开发，写入 `{IDEA_DIR}/assessment.md`；4) `node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --init {idea-name} <需要开发的层>` 初始化状态 |
      | backend:phase-loop      | 根据 phase_detail 执行后端设计/确认/编码 |
      | backend:mark-approved   | touch {IDEA_DIR}/.approved |
-     | frontend:assessment     | 自行执行前端评估（参照 frontend orchestration.yaml assessment step） |
+     | frontend:assessment     | 自行执行前端评估：1) Read `{FRONTEND_HELP}/workflow.yaml` 获取前端层定义；2) 扫描已有 OHS 层代码提取 API 端点；3) 评估前端工作范围，写入 `{IDEA_DIR}/frontend-assessment.md`；4) `node {FRONTEND_HELP}/scripts/frontend-workflow-status.mjs {IDEA_DIR} --init {idea-name} <所有层 id>` 初始化状态 |
      | frontend:design         | /frontend-thought {idea-name} |
-     | frontend:confirm-layers | 标记各层 confirmed + touch .frontend-approved |
+     | frontend:confirm-layers | 先验证 `node {SCRIPTS}/gate-check.mjs {IDEA_DIR} frontend-design-confirmed`（pass 才继续，fail 须重新调用 /frontend-thought），然后标记各层 confirmed + touch .frontend-approved |
      | frontend:code           | /frontend-works {idea-name} |
      | frontend:mark-approved  | touch {IDEA_DIR}/.frontend-approved |
      | supplementary           | 自行执行需求遗漏审查（参照 backend/frontend orchestration.yaml supplementary step） |
@@ -104,7 +104,7 @@ LOOP:
 
      - backend:phase-loop 的 phase_detail：
        sub_step=design → /backend-thought
-       sub_step=confirm → node backend-workflow-status.mjs --set {layer} confirmed
+       sub_step=confirm → 先验证 `node {SCRIPTS}/gate-check.mjs {IDEA_DIR} design-confirmed`（pass 才继续，fail 须重新调用 /backend-thought），然后 node backend-workflow-status.mjs --set {layer} confirmed
        sub_step=code → /backend-works
      - supplementary 的执行逻辑：
        1. Read requirement.md，识别后端遗漏 → 有则生成 supplementary-tasks.md 并执行 → touch .supplementary-reviewed

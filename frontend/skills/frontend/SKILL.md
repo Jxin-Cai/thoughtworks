@@ -78,7 +78,7 @@ LOOP:
   3. 执行 orchestration.yaml 中 id == result.resume_step 的步骤：
      - 如果 resume_step 携带 phase_detail：
        sub_step=design → 调用 /frontend-thought
-       sub_step=confirm → 标记各层 confirmed + touch .frontend-approved
+       sub_step=confirm → 先验证 `node {SCRIPTS}/gate-check.mjs {IDEA_DIR} frontend-design-confirmed`（pass 才继续，fail 说明 thought 技能未完成用户确认，须重新调用 /frontend-thought），然后标记各层 confirmed + touch .frontend-approved
        sub_step=code → 调用 /frontend-works
      - 如果 resume_step == "supplementary"：
        自行执行需求遗漏审查（参照 orchestration.yaml supplementary step 的 instructions）

@@ -78,7 +78,7 @@ LOOP:
      - 如果 resume_step == "phase-loop"：
        使用 result.phase_detail 确定 current_phase / sub_step / layers
        sub_step=design → 调用 /backend-thought
-       sub_step=confirm → 运行 backend-workflow-status.mjs --set {layer} confirmed
+       sub_step=confirm → 先验证 `node {SCRIPTS}/gate-check.mjs {IDEA_DIR} design-confirmed`（pass 才继续，fail 说明 thought 技能未完成用户确认，须重新调用 /backend-thought），然后运行 backend-workflow-status.mjs --set {layer} confirmed
        sub_step=code → 调用 /backend-works
      - 如果 resume_step == "supplementary"：
        自行执行需求遗漏审查（参照 orchestration.yaml supplementary step 的 instructions）

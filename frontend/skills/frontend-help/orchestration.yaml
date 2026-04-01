@@ -92,8 +92,31 @@ steps:
         2. 对比已完成的前端代码，识别出不属于前端三层但在需求中提到的事项
            （如 Dockerfile、nginx 配置、环境变量配置、构建脚本等）
         3. 如果有遗漏：
-           - 生成 {IDEA_DIR}/supplementary-tasks.md（如已存在则追加），每个遗漏需求一项，checklist 格式
-           - 向用户展示遗漏清单，确认后逐项用 Agent（subagent_type: general-purpose, max_turns: 10）执行
+           - 生成 {IDEA_DIR}/supplementary-tasks.md（如已存在则追加），每个遗漏需求一项，checklist 格式，每项包含：
+             - 任务描述
+             - 预期产出文件路径
+             - 验证方式（glob 模式）
+           - 向用户展示遗漏清单，确认后逐项用 Agent 执行，每个子任务遵循以下结构：
+             ```
+             Agent(subagent_type: general-purpose, max_turns: 10, prompt: "
+               # TASK
+               {任务描述}
+
+               # CONTEXT
+               - 项目需求：使用 Read 工具加载 `{IDEA_DIR}/frontend-requirement.md`
+               - 已有代码：使用 Glob/Grep 扫描项目中与本任务相关的已有文件
+
+               # OUTPUT
+               {预期产出文件路径列表}
+
+               # VERIFY
+               完成后，用 Glob 验证以下文件已创建：
+               {预期产出文件的 glob 模式}
+             ")
+             ```
+           - agent 返回后，编排器用 Glob 验证预期产出文件存在：
+             - 验证通过 → 在 supplementary-tasks.md 对应项标注 `[done]`
+             - 验证失败 → 重试 1 次，仍失败则标注 `[failed]` 并继续下一项
         4. 如果无遗漏：告知用户所有需求项均已覆盖
         5. 审查完成（无论是否有遗漏）：touch {IDEA_DIR}/.frontend-supplementary-reviewed
     postcondition:
