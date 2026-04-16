@@ -383,7 +383,8 @@ export function getNextExecutableTasks(taskStateFile, phase = 'design') {
 }
 
 export function initTaskState(taskStateFile, idea, taskSpecs) {
-  let content = `idea: ${idea}\n\ntasks:`;
+  // 构建新 tasks 的 map（保留顺序）
+  const newTasks = new Map();
   for (const spec of taskSpecs) {
     const parts = spec.split(':');
     const tid = parts[0] || '';
@@ -392,8 +393,31 @@ export function initTaskState(taskStateFile, idea, taskSpecs) {
     const desc = parts[3] || '';
     const tfile = parts[4] || '';
     const depsYaml = deps ? `[${deps.split(',').join(', ')}]` : '[]';
-    content += `\n  ${tid}:\n    layer: ${tl}\n    status: pending\n    depends_on: ${depsYaml}\n    description: "${desc}"\n    file: ${tfile}`;
+    newTasks.set(tid, `\n  ${tid}:\n    layer: ${tl}\n    status: pending\n    depends_on: ${depsYaml}\n    description: "${desc}"\n    file: ${tfile}`);
   }
+
+  // 如果文件已存在，合并：保留已有 tasks（不覆盖），追加新 tasks
+  if (existsSync(taskStateFile)) {
+    const existing = readFileSync(taskStateFile, 'utf-8');
+    // 解析已有的 task ids
+    const existingIds = new Set();
+    for (const m of existing.matchAll(/^  ([a-zA-Z][\w-]*):/gm)) {
+      existingIds.add(m[1]);
+    }
+    // 只追加不存在的新 tasks
+    let appended = '';
+    for (const [tid, block] of newTasks) {
+      if (!existingIds.has(tid)) appended += block;
+    }
+    if (appended) {
+      lockedWriteTask(taskStateFile, existing.trimEnd() + appended);
+    }
+    return;
+  }
+
+  // 文件不存在，全新创建
+  let content = `idea: ${idea}\n\ntasks:`;
+  for (const [, block] of newTasks) content += block;
   lockedWriteTask(taskStateFile, content);
 }
 
