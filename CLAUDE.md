@@ -4,25 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-基于契约驱动设计的 Claude Code 插件，采用 core/ + backend/ + frontend/ + all/ 四层子插件架构。设计与实现严格分离：Thinker agent 产设计文档，Worker agent 按设计写代码。跨层一致性通过扫描上游已实现代码获取。
+基于契约驱动设计的 Claude Code 插件（单一 "tw" 插件），扁平目录结构。设计与实现严格分离：Thinker agent 产设计文档，Worker agent 按设计写代码。跨层一致性通过扫描上游已实现代码获取。
 
 ## 架构要点
 
-- **core/**：内部共享层（branch/merge/clarify 技能、hook、脚本库），不对外暴露，通过 symlink 引用
-- **backend/**：2 agent（thinker + worker）+ DDD 四层设计/编码技能 + 编码规范
-- **frontend/**：2 agent（thinker + worker）+ 前端三层设计/编码技能 + 编码规范
-- **all/**：通过 symlink 组合 core/backend/frontend，全栈编排
-- Agent frontmatter 配置 `skills: [*-guide, *-spec]`，启动后按 `target_layer` 路由加载指令
+- **单一插件 "tw"**：通过不同入口 skill（/all /backend /frontend /easy）区分编排路径
+- **agents/**：4 个 agent（backend thinker/worker + frontend thinker/worker）
+- **skills/**：19 个 skill 目录，含后端 DDD 四层 + 前端三层 + 共享（branch/clarify/merge）+ 编排入口
+- **scripts/**：共享脚本库（工作流状态、编排检测、门控检查）
+- Agent frontmatter 配置 `skills: [*-help, *-load]`，启动后按 `target_layer` 路由加载指令
 - `workflow.yaml` 是 DAG 唯一数据源；`workflow-status.mjs` 管理状态机；`orchestration-status.mjs` 检测恢复点
 
 ## 关键文件
 
-- `core/scripts/workflow-status.mjs` — 统一工作流状态管理（backend/frontend 入口脚本为薄包装）
-- `core/scripts/workflow-lib.mjs` — 共享库
-- `core/scripts/orchestration-status.mjs` — 编排恢复点检测
-- `backend/skills/backend-help/workflow.yaml` — 后端 DAG
-- `frontend/skills/frontend-help/workflow.yaml` — 前端 DAG
-- `core/hooks/hooks.json` — Hook 配置唯一真本（SessionStart + SubagentStop）
+- `scripts/workflow-status.mjs` — 统一工作流状态管理（backend/frontend 入口脚本为薄包装）
+- `scripts/workflow-lib.mjs` — 共享库
+- `scripts/orchestration-status.mjs` — 编排恢复点检测
+- `skills/backend-help/workflow.yaml` — 后端 DAG
+- `skills/frontend-help/workflow.yaml` — 前端 DAG
+- `hooks/hooks.json` — Hook 配置唯一真本（SessionStart + SubagentStop）
 
 ## 产出目录
 

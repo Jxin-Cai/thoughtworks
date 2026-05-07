@@ -1,0 +1,20 @@
+{
+  "name": "tw",
+  "description": "ThoughtWorks DDD Spec-Driven Development framework",
+  "version": "3.0.0",
+  "author": {
+    "name": "jxin",
+    "email": "jxin@thoughtworks.com"
+  },
+  "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+  "repository": "https://github.com/Jxin-Cai/thoughtworks",
+  "license": "MIT",
+  "keywords": ["ddd", "domain-driven-design", "fullstack", "code-generation"],
+  "agents": [
+    "./agents/agent-ddd-thinker.md",
+    "./agents/agent-ddd-worker.md",
+    "./agents/agent-frontend-thinker.md",
+    "./agents/agent-frontend-worker.md"
+  ],
+  "skills": ["./skills/"]
+}

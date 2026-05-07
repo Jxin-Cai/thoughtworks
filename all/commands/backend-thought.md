@@ -1,1 +1,0 @@
-../../backend/commands/backend-thought.md

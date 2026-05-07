@@ -1,1 +1,0 @@
-../../backend/agents/agent-ddd-thinker.md

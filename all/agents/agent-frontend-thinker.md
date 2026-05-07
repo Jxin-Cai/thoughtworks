@@ -1,1 +1,0 @@
-../../frontend/agents/agent-frontend-thinker.md
