@@ -6,7 +6,7 @@
 
 ```
 Agent(
-  subagent_type: "tw-backend:agent-ddd-thinker",
+  subagent_type: "tw:agent-ddd-thinker",
   max_turns: 20,
   description: "{Layer} 层思考",
   prompt: "

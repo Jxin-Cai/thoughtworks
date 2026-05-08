@@ -18,7 +18,7 @@ agent:
 - **tools**：`Read, Write, Edit, Glob, Grep`
 - **model**：`opus`
 
-主 agent 统一使用 `tw-frontend:agent-frontend-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/frontend-load` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
+主 agent 统一使用 `tw:agent-frontend-thinker` 作为 `subagent_type`。agent 启动后自行通过 `/frontend-load` 加载设计指令和编码规范。层级差异通过 CONTEXT 中的 `target_layer` 字段传递。
 
 ---
 

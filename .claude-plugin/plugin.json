@@ -1,7 +1,7 @@
 {
   "name": "tw",
   "description": "ThoughtWorks DDD Spec-Driven Development framework",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "author": {
     "name": "jxin",
     "email": "jxin@thoughtworks.com"

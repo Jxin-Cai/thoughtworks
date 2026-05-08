@@ -10,7 +10,7 @@
       "name": "tw",
       "source": "./",
       "description": "ThoughtWorks DDD Spec-Driven Development framework",
-      "version": "3.0.0",
+      "version": "3.0.1",
       "homepage": "https://github.com/Jxin-Cai/thoughtworks",
       "repository": "https://github.com/Jxin-Cai/thoughtworks",
       "author": {

@@ -1,5 +1,5 @@
 # DDD 工作流定义
-# tw-backend-thought / tw-backend-works 读取此文件决定执行顺序
+# backend-thought / backend-works 读取此文件决定执行顺序
 
 name: ddd-layered
 version: 3

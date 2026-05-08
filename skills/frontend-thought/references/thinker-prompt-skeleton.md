@@ -4,7 +4,7 @@
 
 ```
 Agent(
-  subagent_type: "tw-frontend:agent-frontend-thinker",
+  subagent_type: "tw:agent-frontend-thinker",
   max_turns: 20,
   description: "Frontend {layer-id} 设计",
   prompt: "

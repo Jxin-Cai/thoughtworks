@@ -4,7 +4,7 @@
 
 ```
 Agent(
-  subagent_type: "tw-frontend:agent-frontend-worker",
+  subagent_type: "tw:agent-frontend-worker",
   max_turns: 15,
   description: "Frontend: {task frontmatter description}",
   prompt: "

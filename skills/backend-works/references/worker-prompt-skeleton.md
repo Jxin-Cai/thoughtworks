@@ -6,7 +6,7 @@
 
 ```
 Agent(
-  subagent_type: "tw-backend:agent-ddd-worker",
+  subagent_type: "tw:agent-ddd-worker",
   max_turns: 15,
   description: "{layer}: {task frontmatter description}",
   prompt: "

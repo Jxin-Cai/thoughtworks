@@ -1,5 +1,5 @@
 # Frontend 工作流定义
-# tw-frontend-thought / tw-frontend-works 读取此文件决定执行顺序
+# frontend-thought / frontend-works 读取此文件决定执行顺序
 
 name: frontend-layered
 version: 2
