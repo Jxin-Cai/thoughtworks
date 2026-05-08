@@ -1,0 +1,22 @@
+{
+  "name": "thoughtworks",
+  "description": "ThoughtWorks Claude Code plugins marketplace",
+  "owner": {
+    "name": "jxin",
+    "email": "jxin@thoughtworks.com"
+  },
+  "plugins": [
+    {
+      "name": "tw",
+      "source": "./",
+      "description": "ThoughtWorks DDD Spec-Driven Development framework",
+      "version": "3.0.0",
+      "homepage": "https://github.com/Jxin-Cai/thoughtworks",
+      "repository": "https://github.com/Jxin-Cai/thoughtworks",
+      "author": {
+        "name": "jxin",
+        "email": "jxin@thoughtworks.com"
+      }
+    }
+  ]
+}
