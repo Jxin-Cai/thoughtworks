@@ -61,7 +61,7 @@ export async function main(argv) {
     if (!currentStatus) return true;
     const validTransitions = new Set([
       'pending:designing', 'designing:designed', 'designed:confirmed',
-      'confirmed:coding', 'coding:coded',
+      'pending:confirmed', 'confirmed:coding', 'coding:coded',
       'designing:failed', 'coding:failed', 'failed:pending',
       'designing:designing', 'designed:designing',
     ]);

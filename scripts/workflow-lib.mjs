@@ -272,7 +272,7 @@ export function validateTaskTransition(taskStateFile, taskId, newStatus) {
   const key = `${currentStatus}:${newStatus}`;
   const validTransitions = new Set([
     'pending:designing', 'designing:designed', 'designed:confirmed',
-    'confirmed:coding', 'coding:coded',
+    'pending:confirmed', 'confirmed:coding', 'coding:coded',
     'designing:failed', 'coding:failed', 'failed:pending',
     'designing:designing', 'designed:designing',
   ]);
