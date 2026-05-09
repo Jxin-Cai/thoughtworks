@@ -274,6 +274,7 @@ export function validateTaskTransition(taskStateFile, taskId, newStatus) {
     'pending:designing', 'designing:designed', 'designed:confirmed',
     'confirmed:coding', 'coding:coded',
     'designing:failed', 'coding:failed', 'failed:pending',
+    'designing:designing', 'designed:designing',
   ]);
   // 任何状态 → failed 或 → pending 允许
   if (newStatus === 'failed' || newStatus === 'pending') return true;

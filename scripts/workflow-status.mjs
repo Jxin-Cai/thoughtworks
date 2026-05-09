@@ -63,6 +63,7 @@ export async function main(argv) {
       'pending:designing', 'designing:designed', 'designed:confirmed',
       'confirmed:coding', 'coding:coded',
       'designing:failed', 'coding:failed', 'failed:pending',
+      'designing:designing', 'designed:designing',
     ]);
     if (newStatus === 'failed' || newStatus === 'pending') return true;
     if (validTransitions.has(`${currentStatus}:${newStatus}`)) return true;
