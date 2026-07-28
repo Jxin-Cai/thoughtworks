@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // orchestration-status.mjs — 程序化编排恢复点检测（从 orchestration-status.sh 迁移）
 // 用法: node orchestration-status.mjs <idea-dir|none> <stack>
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getTrackedLayers, getTrackedStatus } from './workflow-lib.mjs';
 import { checkGate as checkGateImpl } from './gate-check.mjs';
@@ -16,24 +16,10 @@ if (!IDEA_DIR || !STACK) {
   process.exit(1);
 }
 
-const BACKEND_WORKFLOW_YAML = resolve(dirname(__dirname), 'skills/backend-help/workflow.yaml');
-
 // ── 辅助函数 ──
 
 function checkGate(gateId, ...extra) {
   return checkGateImpl(IDEA_DIR, gateId, extra).pass;
-}
-
-function getPhaseForLayer(wfYaml, layerId) {
-  if (!existsSync(wfYaml)) return '';
-  const lines = readFileSync(wfYaml, 'utf-8').split('\n');
-  let found = false;
-  for (const line of lines) {
-    if (line.match(new RegExp(`^  - id: ${layerId}$`))) { found = true; continue; }
-    if (found && /^  - id:/.test(line)) break;
-    if (found && /phase:/.test(line)) return line.replace(/.*phase:\s*/, '').trim();
-  }
-  return '';
 }
 
 function subStepPriority(s) {
@@ -56,37 +42,30 @@ function emitResult(resumeStep, reason, currentPhase, subStep, layers) {
 
 // ── 共享层检查函数 ──
 
-function _checkBackendLayers(stepPrefix) {
+function _checkBackendSubdomains(stepPrefix) {
   const stateFile = `${IDEA_DIR}/workflow-state.yaml`;
   const tracked = getTrackedLayers(stateFile);
   if (tracked.length === 0) {
-    emitResult(`${stepPrefix}assessment`, 'workflow-state.yaml has no tracked layers');
+    emitResult(`${stepPrefix}assessment`, 'workflow-state.yaml has no tracked subdomains');
     return false;
   }
-  let firstIncompletePhase = '', firstIncompleteSub = '', incompleteLayers = '';
-  for (const layer of tracked) {
-    const st = getTrackedStatus(stateFile, layer);
-    const phase = getPhaseForLayer(BACKEND_WORKFLOW_YAML, layer);
-    let layerSubStep = '';
+  let firstSubStep = '', incompleteSubdomains = '';
+  for (const subdomain of tracked) {
+    const st = getTrackedStatus(stateFile, subdomain);
+    let subStep = '';
     switch (st) {
       case 'coded': continue;
-      case 'pending': case 'failed': case 'designing': layerSubStep = 'design'; break;
-      case 'designed': layerSubStep = 'confirm'; break;
-      case 'confirmed': case 'coding': layerSubStep = 'code'; break;
+      case 'pending': case 'failed': case 'designing': subStep = 'design'; break;
+      case 'designed': subStep = 'confirm'; break;
+      case 'confirmed': case 'coding': subStep = 'code'; break;
     }
-    if (!firstIncompletePhase || parseInt(phase) < parseInt(firstIncompletePhase)) {
-      firstIncompletePhase = phase;
-      firstIncompleteSub = layerSubStep;
-      incompleteLayers = layer;
-    } else if (phase === firstIncompletePhase) {
-      if (subStepPriority(layerSubStep) < subStepPriority(firstIncompleteSub)) {
-        firstIncompleteSub = layerSubStep;
-      }
-      incompleteLayers += ` ${layer}`;
+    if (!firstSubStep || subStepPriority(subStep) < subStepPriority(firstSubStep)) {
+      firstSubStep = subStep;
     }
+    incompleteSubdomains += (incompleteSubdomains ? ' ' : '') + subdomain;
   }
-  if (firstIncompletePhase) {
-    emitResult(`${stepPrefix}phase-loop`, `backend layer(s) incomplete in phase ${firstIncompletePhase}`, firstIncompletePhase, firstIncompleteSub, incompleteLayers);
+  if (firstSubStep) {
+    emitResult(`${stepPrefix}subdomain-loop`, `backend subdomain(s) incomplete`, '', firstSubStep, incompleteSubdomains);
     return false;
   }
   return true;
@@ -152,8 +131,8 @@ function checkBackend() {
   if (!checkGate('assessment-exists')) { emitResult('assessment', 'assessment.md does not exist'); return; }
   addCompleted('assessment');
   if (!checkGate('workflow-state-exists')) { emitResult('assessment', 'workflow-state.yaml not initialized (assessment step incomplete)'); return; }
-  if (!_checkBackendLayers('')) return;
-  addCompleted('phase-loop');
+  if (!_checkBackendSubdomains('')) return;
+  addCompleted('subdomain-loop');
   if (!checkGate('approved')) { emitResult('mark-approved', 'all layers coded, .approved not yet set'); return; }
   addCompleted('mark-approved');
   if (!checkGate('supplementary-reviewed')) { emitResult('supplementary', 'requirement review not done yet'); return; }
@@ -201,8 +180,8 @@ function checkAll() {
   if (!checkGate('assessment-exists')) { emitResult('backend:assessment', 'assessment.md does not exist'); return; }
   addCompleted('backend:assessment');
   if (!checkGate('workflow-state-exists')) { emitResult('backend:assessment', 'workflow-state.yaml not initialized'); return; }
-  if (!_checkBackendLayers('backend:')) return;
-  addCompleted('backend:phase-loop');
+  if (!_checkBackendSubdomains('backend:')) return;
+  addCompleted('backend:subdomain-loop');
   if (!checkGate('approved')) { emitResult('backend:mark-approved', 'all backend layers coded, .approved not yet set'); return; }
   addCompleted('backend:mark-approved');
   // Frontend 子检查

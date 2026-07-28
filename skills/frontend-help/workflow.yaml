@@ -1,48 +1,31 @@
-# Frontend 工作流定义
+# Frontend 垂直 Feature 工作流定义
 # frontend-thought / frontend-works 读取此文件决定执行顺序
 
-name: frontend-layered
-version: 2
-description: 前端工作流（3 层拆分：architecture → components → checklist）
+name: frontend-vertical
+version: 3
+description: 前端垂直 Feature 工作流——每个 Feature 经历完整的 design→confirm→code 生命周期
 
-layers:
-  - id: frontend-architecture
-    phase: 1
-    design-template: ../frontend-thought/assets/frontend-architecture-design.md
-    thinker-ref: ../../agents/agent-frontend-thinker.md
-    worker-ref: null
-    requires: []
-    verify:
-      - pattern: "frontend-designs/frontend-architecture/*.md"
-        description: 验证架构设计 task 文件已创建
+# Features 在 assessment 阶段动态定义（非静态列表）
+# 每个 Feature 经过: pending → designing → designed → confirmed → coding → coded
 
-  - id: frontend-components
-    phase: 2
-    design-template: ../frontend-thought/assets/frontend-components-design.md
-    thinker-ref: ../../agents/agent-frontend-thinker.md
-    worker-ref: null
-    requires: [frontend-architecture]
-    verify:
-      - pattern: "frontend-designs/frontend-components/*.md"
-        description: 验证组件设计 task 文件已创建
+agents:
+  thinker: ../../agents/agent-frontend-thinker.md
+  worker: ../../agents/agent-frontend-worker.md
 
-  - id: frontend-checklist
-    phase: 3
-    design-template: ../frontend-thought/assets/frontend-checklist-design.md
-    thinker-ref: ../../agents/agent-frontend-thinker.md
-    worker-ref: ../../agents/agent-frontend-worker.md
-    requires: [frontend-architecture, frontend-components]
-    verify:
-      - pattern: "**/src/pages/**/*.tsx"
-        description: 验证页面组件已创建
-      - pattern: "**/src/features/**/*.{ts,tsx}"
-        description: 验证 Feature slice 已创建
-      - pattern: "**/src/entities/**/*.{ts,tsx}"
-        description: 验证 Entity slice 已创建
-      - pattern: "**/src/shared/api/**/*.ts"
-        description: 验证 API 客户端基础封装已创建
-      - pattern: "**/src/app/router/**/*.{ts,tsx}"
-        description: 验证路由配置已创建
+design-template: ../frontend-thought/assets/feature-design.md
+
+# 验证模式：Worker 实现后自检产物
+verify:
+  - pattern: "**/src/pages/**/*.tsx"
+    description: 页面组件
+  - pattern: "**/src/features/**/*.{ts,tsx}"
+    description: Feature slice
+  - pattern: "**/src/entities/**/*.{ts,tsx}"
+    description: Entity slice
+  - pattern: "**/src/shared/api/**/*.ts"
+    description: API 客户端
+  - pattern: "**/src/app/router/**/*.{ts,tsx}"
+    description: 路由配置
 
 state-machine:
   states: [pending, designing, designed, confirmed, coding, coded, failed]
@@ -53,6 +36,9 @@ state-machine:
     - from: designing
       to: designed
       trigger: subagent-stop
+    - from: designing
+      to: designing
+      trigger: thinker-start
     - from: designed
       to: confirmed
       trigger: user-confirm

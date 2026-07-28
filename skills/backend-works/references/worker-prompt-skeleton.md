@@ -1,124 +1,67 @@
 # Worker Subagent Prompt 骨架
 
-编排器为每个 task 构建 worker subagent prompt 时使用以下结构。
+编排器为每个子域构建 worker subagent prompt 时使用以下结构。
 
 ## Prompt 模板
 
 ```
 Agent(
   subagent_type: "tw:agent-ddd-worker",
-  max_turns: 15,
-  description: "{layer}: {task frontmatter description}",
+  max_turns: 20,
+  description: "{subdomain_name} 垂直实现",
   prompt: "
-    {仅当本次是重试（编排器检测到 task 之前状态为 coding/failed）时注入以下区块，否则省略：}
+    {如有重试，插入 PRIOR ATTEMPT 块}
 
-    # PRIOR ATTEMPT（前次执行残留 — 必须先检查）
+    # TASK
 
-    本 task 之前有一次未完成的执行尝试，项目中可能已有部分代码文件。你必须：
-    1. 先用 Glob 按 verify 模式扫描本层已有文件：`{verify glob 模式列表}`
-    2. 对已存在的文件用 Read 检查内容完整性
-    3. 已完整的文件 → 跳过不重写；不完整或有错的文件 → 用 Edit 修复而非重写
-    4. 尚不存在的文件 → 正常创建
+    实现子域「{subdomain_name}」的完整垂直切片代码（Domain → Infrastructure → Application → OHS）。
 
-    前次失败原因：{编排器从暂停机制获取的失败描述，无则填"turn 耗尽，原因未知"}
+    实现清单：
+    {从设计文档末尾的「实现清单」表格中提取}
 
-    ---
+    # EXECUTION CONTRACT
 
-    # TASK（实现清单）
+    - subdomain_name: {subdomain_name}
+    - backend_language: {BACKEND_LANG}
+    - implementation_order: domain → infr → application → ohs（严格按依赖顺序）
+    - must_implement: {实现清单中的所有类}
+    - may_infer: DDL 完整字段、PO 对象、DTO 字段（从设计文档推导）
+    - must_NOT_change: 设计文档、其他子域的代码、不相关文件
+    - escalate_if: 签名冲突、缺失信息、需修改其他子域
 
-    根据以下实现清单，逐项创建/修改代码文件：
+    # CONTEXT
 
-    {task 文件末尾的实现清单表格}
-
-    ---
-
-    # EXECUTION CONTRACT（编排器已确认的执行边界 — 不需要你重新判断）
-
-    task_id: {task_id}
-    target_layer: {layer}
-    backend_language: {BACKEND_LANG}
-
-    ## Must implement
-    {从实现清单提取的文件/类列表，每行一个}
-
-    ## May infer from code
-    {该层允许自主推导的内容，由编排器根据 layer guide 填充：}
-    {domain: 无，严格按设计}
-    {infr: DDL 完整字段从领域模型推导、PO 字段从 DDL 推导、Domain↔PO 转换细节}
-    {application: 无，严格按设计}
-    {ohs: DTO 字段可从 Command/领域模型推导}
-
-    ## Must NOT change
-    - 设计文档（发现问题上报编排器）
-    - 不相关的已有代码
-    - 上游层接口
-
-    ## Escalate if
-    - 上游代码与设计文档签名不匹配
-    - 设计文档缺少必要签名，无法推导实现
-    - 实现清单有项无法落地，但 verify glob 仍会通过
-
-    ---
-
-    # CONTEXT（设计文档 — 读取作为上下文）
-
-    ## 目标层级
-    target_layer: {layer}
-
-    ## 后端语言
-    backend_language: {BACKEND_LANG}
-
-    ## 本 task 设计
-    使用 Read 工具加载本 task 设计文档：`{当前 task 文件的绝对路径}`
-    重点关注实现清单表格中每个实现项对应的设计章节、字段定义、方法签名和业务规则。
-
-    ## 上游 task 设计（只读参考）
-    {列出 task frontmatter depends_on 中引用的上游 task 文件绝对路径列表，格式如下：}
-    如需参考上游设计，使用 Read 工具按需加载：
-    - `{上游 task 文件绝对路径 1}`
-    - `{上游 task 文件绝对路径 2}`
-
-    ## 上游已实现代码（只读参考）
-    如需参考上游层的已实现代码（如 Domain 层的模型类、Repository 接口），使用 Glob/Grep 工具按需扫描。
-
-    ---
-
-    # OUTPUT
-
-    在项目中创建/修改代码文件。
-
-    保持代码变更最小化，只实现当前实现清单涉及的类。
-
-    重要：CONTEXT 是你的参考约束，不要将它们复制到代码注释中。
-
-    ---
+    - 设计文档：使用 Read 加载 {子域设计文件绝对路径}
+    - 项目结构扫描：
+      - `**/domain/**/*.{ext}` — 已有领域模型
+      - `**/infr/**/*.{ext}` — 已有基础设施
+      - `**/ohs/**/Response.{ext}` — 复用统一响应包装
+      - `**/ohs/**/*Advice.{ext}` — 复用全局异常处理
 
     # VERIFY & FINALIZE
 
-    编码完成后，你必须执行以下验证和状态更新：
+    实现完成后按以下 Glob 模式验证各层产物：
+    {从 workflow.yaml 的 verify.{BACKEND_LANG} 中列出每层的 pattern}
 
-    1. 从 workflow.yaml 读取本层 verify.{BACKEND_LANG} 下的 glob 模式
-    2. 对每个 pattern 用 Glob 验证关键产物已创建
-    3. 验证通过 → 执行：
-       node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --finish-task {task_id} coded
-       并用 Edit 将 task 文件 frontmatter 的 status 更新为 done
-    4. 验证失败 → 执行：
-       node {DDD_HELP}/scripts/backend-workflow-status.mjs {IDEA_DIR} --finish-task {task_id} failed
-       并报告缺失的产物列表
+    全部通过 → 运行:
+    STACK=backend node {SCRIPTS}/workflow-status.mjs {IDEA_DIR} --set {subdomain_name} coded
+
+    如有未通过 → 运行:
+    STACK=backend node {SCRIPTS}/workflow-status.mjs {IDEA_DIR} --set {subdomain_name} failed
+    并报告缺失的产物。
   "
 )
 ```
 
-## EXECUTION CONTRACT 区块填充规则
+## PRIOR ATTEMPT 块模板（仅在重试时使用）
 
-主 agent 在组装 prompt 时，需要从 task 设计文档和 layer guide 中提取已确认的执行边界，直接注入 EXECUTION CONTRACT 区块：
+```
+# PRIOR ATTEMPT FAILURE
 
-1. **Must implement** — 从 task 文件末尾实现清单表格提取所有需创建的文件/类，每行一个
-2. **May infer from code** — 根据 target_layer 填充该层允许自主推导的内容：
-   - `domain` → 无，严格按设计
-   - `infr` → DDL 完整字段从领域模型推导、PO 字段从 DDL 推导、Domain↔PO 转换细节
-   - `application` → 无，严格按设计
-   - `ohs` → DTO 字段可从 Command/领域模型推导
-3. **Must NOT change** 和 **Escalate if** — 固定内容，所有层通用
+上次实现验证发现以下问题，请在本次输出中修正：
 
-这些字段是编排器的已确认决策，worker 不需要重新判断，直接遵循即可。
+验证失败的 patterns：
+{列出 Glob 未命中的 pattern 和对应描述}
+
+失败原因：{subagent 上次的失败报告}
+```

@@ -1,110 +1,78 @@
-# DDD 工作流定义
+# DDD 垂直子域工作流定义
 # backend-thought / backend-works 读取此文件决定执行顺序
 
-name: ddd-layered
-version: 3
-description: DDD 四层架构工作流（支持 Java/Python/Go）
+name: ddd-vertical
+version: 4
+description: DDD 垂直子域工作流——每个子域经历完整的 design→confirm→code 生命周期
 
-layers:
-  - id: domain
-    phase: 1
-    design-template: ../backend-thought/assets/domain-design.md
-    thinker-ref: ../../agents/agent-ddd-thinker.md
-    worker-ref: ../../agents/agent-ddd-worker.md
-    requires: []
-    verify:
-      java:
-        - pattern: "**/domain/**/model/*.java"
-          description: 验证领域模型类已创建
-        - pattern: "**/domain/**/repository/*.java"
-          description: 验证仓储接口已创建
-      python:
-        - pattern: "**/domain/**/model/*.py"
-          description: 验证领域模型类已创建
-        - pattern: "**/domain/**/repository/*.py"
-          description: 验证仓储接口已创建
-      go:
-        - pattern: "**/domain/**/model/*.go"
-          description: 验证领域模型类已创建
-        - pattern: "**/domain/**/repository/*.go"
-          description: 验证仓储接口已创建
+# 子域在 assessment 阶段动态定义（非静态列表）
+# 每个子域经过: pending → designing → designed → confirmed → coding → coded
 
-  - id: infr
-    phase: 2
-    design-template: ../backend-thought/assets/infr-design.md
-    thinker-ref: ../../agents/agent-ddd-thinker.md
-    worker-ref: ../../agents/agent-ddd-worker.md
-    requires: [domain]
-    verify:
-      java:
-        - pattern: "**/infr/repository/**/*RepositoryImpl.java"
-          description: 验证仓储实现已创建
-        - pattern: "**/infr/repository/**/*Mapper.java"
-          description: 验证 Mapper 已创建
-        - pattern: "**/infr/repository/**/*PO.java"
-          description: 验证 PO 已创建
-      python:
-        - pattern: "**/infr/repository/**/*_repository_impl.py"
-          description: 验证仓储实现已创建
-        - pattern: "**/infr/repository/**/*_model.py"
-          description: 验证 ORM Model 已创建
-      go:
-        - pattern: "**/infr/repository/**/*_repository_impl.go"
-          description: 验证仓储实现已创建
-        - pattern: "**/infr/repository/**/*_model.go"
-          description: 验证 GORM Model 已创建
+agents:
+  thinker: ../../agents/agent-ddd-thinker.md
+  worker: ../../agents/agent-ddd-worker.md
 
-  - id: application
-    phase: 2
-    design-template: ../backend-thought/assets/application-design.md
-    thinker-ref: ../../agents/agent-ddd-thinker.md
-    worker-ref: ../../agents/agent-ddd-worker.md
-    requires: [domain]
-    verify:
-      java:
-        - pattern: "**/application/**/*ApplicationService.java"
-          description: 验证应用服务已创建
-        - pattern: "**/application/**/*Command.java"
-          description: 验证 Command 已创建
-      python:
-        - pattern: "**/application/**/*_application_service.py"
-          description: 验证应用服务已创建
-        - pattern: "**/application/**/*_command.py"
-          description: 验证 Command 已创建
-      go:
-        - pattern: "**/application/**/*_application_service.go"
-          description: 验证应用服务已创建
-        - pattern: "**/application/**/*_command.go"
-          description: 验证 Command 已创建
+design-template: ../backend-thought/assets/subdomain-design.md
 
-  - id: ohs
-    phase: 3
-    design-template: ../backend-thought/assets/ohs-design.md
-    thinker-ref: ../../agents/agent-ddd-thinker.md
-    worker-ref: ../../agents/agent-ddd-worker.md
-    requires: [application, domain]
-    verify:
-      java:
-        - pattern: "**/ohs/**/*Controller.java"
-          description: 验证 Controller 已创建
-        - pattern: "**/ohs/**/*Request.java"
-          description: 验证 Request DTO 已创建
-        - pattern: "**/ohs/**/*Response.java"
-          description: 验证 Response DTO 已创建
-      python:
-        - pattern: "**/ohs/**/*_router.py"
-          description: 验证 Router 已创建
-        - pattern: "**/ohs/**/*_request.py"
-          description: 验证 Request DTO 已创建
-        - pattern: "**/ohs/**/*_response.py"
-          description: 验证 Response DTO 已创建
-      go:
-        - pattern: "**/ohs/**/*_handler.go"
-          description: 验证 Handler 已创建
-        - pattern: "**/ohs/**/*_request.go"
-          description: 验证 Request DTO 已创建
-        - pattern: "**/ohs/**/*_response.go"
-          description: 验证 Response DTO 已创建
+# 验证模式：Worker 实现后按层自检产物是否存在
+verify:
+  java:
+    domain:
+      - pattern: "**/domain/**/model/*.java"
+        description: 领域模型类
+      - pattern: "**/domain/**/repository/*.java"
+        description: 仓储接口
+    infr:
+      - pattern: "**/infr/repository/**/*RepositoryImpl.java"
+        description: 仓储实现
+      - pattern: "**/infr/repository/**/*PO.java"
+        description: PO 对象
+    application:
+      - pattern: "**/application/**/*ApplicationService.java"
+        description: 应用服务
+      - pattern: "**/application/**/*Command.java"
+        description: Command 对象
+    ohs:
+      - pattern: "**/ohs/**/*Controller.java"
+        description: Controller
+      - pattern: "**/ohs/**/*Request.java"
+        description: Request DTO
+  python:
+    domain:
+      - pattern: "**/domain/**/model/*.py"
+        description: 领域模型类
+      - pattern: "**/domain/**/repository/*.py"
+        description: 仓储接口
+    infr:
+      - pattern: "**/infr/repository/**/*_repository_impl.py"
+        description: 仓储实现
+      - pattern: "**/infr/repository/**/*_model.py"
+        description: ORM Model
+    application:
+      - pattern: "**/application/**/*_application_service.py"
+        description: 应用服务
+      - pattern: "**/application/**/*_command.py"
+        description: Command
+    ohs:
+      - pattern: "**/ohs/**/*_router.py"
+        description: Router
+  go:
+    domain:
+      - pattern: "**/domain/**/model/*.go"
+        description: 领域模型
+      - pattern: "**/domain/**/repository/*.go"
+        description: 仓储接口
+    infr:
+      - pattern: "**/infr/repository/**/*_repository_impl.go"
+        description: 仓储实现
+      - pattern: "**/infr/repository/**/*_model.go"
+        description: GORM Model
+    application:
+      - pattern: "**/application/**/*_application_service.go"
+        description: 应用服务
+    ohs:
+      - pattern: "**/ohs/**/*_handler.go"
+        description: Handler
 
 state-machine:
   states: [pending, designing, designed, confirmed, coding, coded, failed]
@@ -115,6 +83,9 @@ state-machine:
     - from: designing
       to: designed
       trigger: subagent-stop
+    - from: designing
+      to: designing
+      trigger: thinker-start  # 允许幂等重入
     - from: designed
       to: confirmed
       trigger: user-confirm

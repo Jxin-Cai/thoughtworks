@@ -10,23 +10,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **单一插件 "tw"**：通过不同入口 skill（/all /backend /frontend /easy）区分编排路径
 - **agents/**：4 个 agent（backend thinker/worker + frontend thinker/worker）
-- **skills/**：19 个 skill 目录，含后端 DDD 四层 + 前端三层 + 共享（branch/clarify/merge）+ 编排入口
+- **垂直子域模式**：一个 Thinker 设计一个子域的全部 4 层（Domain→Infr→App→OHS），一个 Worker 实现完整垂直切片
+- **原则驱动**：`backend-principles/` 取代按层拆分的 guide+spec，通过 7 条设计原则 + 参考实现引导模型
 - **scripts/**：共享脚本库（工作流状态、编排检测、门控检查）
-- Agent frontmatter 配置 `skills: [*-help, *-load]`，启动后按 `target_layer` 路由加载指令
-- `workflow.yaml` 是 DAG 唯一数据源；`workflow-status.mjs` 管理状态机；`orchestration-status.mjs` 检测恢复点
+- Agent frontmatter 配置 `skills: [backend-help, backend-load]`，启动后按 role+language 路由加载原则和参考实现
+- `workflow.yaml` 定义状态机；`workflow-status.mjs` 管理子域级状态；`orchestration-status.mjs` 检测恢复点
 
 ## 关键文件
 
-- `scripts/workflow-status.mjs` — 统一工作流状态管理（backend/frontend 入口脚本为薄包装）
+- `skills/backend-principles/references/architecture.md` — DDD 7 条设计原则（根因引导）
+- `skills/backend-principles/references/{lang}/reference-impl.md` — 完整垂直切片参考实现
+- `scripts/workflow-status.mjs` — 子域级工作流状态管理
 - `scripts/workflow-lib.mjs` — 共享库
 - `scripts/orchestration-status.mjs` — 编排恢复点检测
-- `skills/backend-help/workflow.yaml` — 后端 DAG
+- `skills/backend-help/workflow.yaml` — 后端工作流定义（状态机 + verify patterns）
 - `skills/frontend-help/workflow.yaml` — 前端 DAG
 - `hooks/hooks.json` — Hook 配置唯一真本（SessionStart + SubagentStop）
 
 ## 产出目录
 
-运行时产出在 `.thoughtworks/<idea-name>/` 下，含需求文档、评估、工作流状态、按层分目录的 task 设计文件。每个 task 文件 ≤800 行，frontmatter 含 `task_id`。层级状态从 task 状态聚合推导。
+运行时产出在 `.thoughtworks/<idea-name>/` 下：
+- `requirement.md`、`assessment.md` — 需求和评估
+- `workflow-state.yaml` — 子域级状态
+- `backend-designs/{nnn}-{subdomain}.md` — 每个子域一个全层设计文件（≤800 行）
 
 ## 约束
 

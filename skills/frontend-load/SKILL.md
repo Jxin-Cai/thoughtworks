@@ -1,14 +1,21 @@
 ---
 name: frontend-load
-description: Unified loader for frontend guide + spec (replaces separate frontend-guide + frontend-spec calls)
-argument-hint: "<role> <layer> [stack] [style] e.g. thinker architecture react-ts, worker common react-ts"
+description: 前端统一加载器——加载 FSD 架构原则、角色手册、参考实现和技术栈约定
+argument-hint: "<role> <stack> [style] e.g. thinker react-ts, worker react-ts minimalist-luxury"
 ---
 
 # 前端统一加载器
 
-将 `frontend-guide`（设计/编码指令）和 `frontend-spec`（编码规范）合并为一次调用。
+加载 FSD 架构原则 + 角色手册 + 参考实现 + 技术栈约定 + 可选 UI 风格。
 
 用户传入的参数：`$ARGUMENTS`
+
+## 何时调用
+
+- Thinker：完成需求与项目扫描后、开始写设计方案前
+- Worker：完成项目结构扫描后、开始写代码前
+
+禁止在 agent 启动时提前加载。
 
 ## 路由规则
 
@@ -16,63 +23,33 @@ argument-hint: "<role> <layer> [stack] [style] e.g. thinker architecture react-t
 
 | 关键词 | 角色 |
 |--------|------|
-| `thinker`、`design`、`think` | thinker |
-| `worker`、`code`、`implement` | worker |
+| `thinker`、`design` | thinker |
+| `worker`、`code` | worker |
 
-### 第二步：识别层级
+### 第二步：识别技术栈
 
-| 关键词 | 层级 |
-|--------|------|
-| `architecture`、`arch` | architecture |
-| `components`、`component`、`comp` | components |
-| `checklist`、`check` | checklist |
-| `frontend`、`common` | common（Worker 通用） |
+| 关键词 | 栈 |
+|--------|---|
+| `react-ts`、`react`、`typescript` | react-ts |
 
-### 第三步：识别技术栈
+未指定时默认 `react-ts`。
 
-| 关键词 | 技术栈 |
-|--------|--------|
-| `react-ts`、`react` | react-ts |
-| 无匹配 | react-ts（默认） |
+### 第三步：识别 UI 风格（可选）
 
-### 第四步：识别 UI 风格（可选）
+| 关键词 | 风格文件 |
+|--------|---------|
+| `minimalist-luxury`、`minimalist` | `../frontend-spec/references/ui-styles/minimalist-luxury.md` |
+| `tech-futuristic`、`tech` | `../frontend-spec/references/ui-styles/tech-futuristic.md` |
+| `classic-elegant`、`classic` | `../frontend-spec/references/ui-styles/classic-elegant.md` |
 
-| 关键词 | 风格 |
-|--------|------|
-| `minimalist-luxury` | minimalist-luxury |
-| `tech-futuristic` | tech-futuristic |
-| `classic-elegant` | classic-elegant |
+### 第四步：加载文件
 
-### 第五步：加载文件
+按以下顺序依次用 Read 工具加载，文件间用 `---` 分隔：
 
-按以下顺序依次使用 Read 工具加载，每个 reference 之间用 `---` 分隔：
+1. **架构原则**：`../frontend-principles/references/architecture.md`
+2. **角色手册**：`../frontend-principles/references/{role}-playbook.md`
+3. **参考实现**：`../frontend-principles/references/{stack}/reference-impl.md`
+4. **技术栈约定**：`../frontend-principles/references/{stack}/conventions.md`
+5. （如有 style）**UI 风格规范**：对应的 ui-styles 文件
 
-#### Thinker 模式
-
-1. **Guide 公共指令**：`../frontend-guide/references/thinker/common.md`
-2. **Guide 层级指令**：`../frontend-guide/references/thinker/{layer}.md`
-3. **Spec 公共规范**：`../frontend-spec/references/common.md`
-4. **Spec 技术栈规范**（按层级选择）：
-
-   | 层级 | Spec 文件 |
-   |------|----------|
-   | architecture | `{stack}/routing.md` + `{stack}/state.md` |
-   | components | `{stack}/components.md` + `{stack}/api-client.md` |
-   | checklist | 无（实现清单已包含必要约束，跳过 spec 加载） |
-
-   路径前缀：`../frontend-spec/references/`
-
-5. **UI 风格规范**（如指定）：`../frontend-spec/references/ui-styles/{style}.md`
-
-#### Worker 模式
-
-1. **Guide Worker 公共指令**：`../frontend-guide/references/worker/common.md`
-2. **Spec 公共规范**：`../frontend-spec/references/common.md`
-3. **Spec 技术栈规范**（全部）：
-   - `../frontend-spec/references/{stack}/components.md`
-   - `../frontend-spec/references/{stack}/api-client.md`
-   - `../frontend-spec/references/{stack}/routing.md`
-   - `../frontend-spec/references/{stack}/state.md`
-4. **UI 风格规范**（如指定）：`../frontend-spec/references/ui-styles/{style}.md`
-
-如果 `$ARGUMENTS` 为空或无法匹配，提示用户可用的参数格式：`/frontend-load <role> <layer> [stack] [style]`。
+如果 `$ARGUMENTS` 为空，提示用户格式：`/frontend-load <role> <stack> [style]`。
