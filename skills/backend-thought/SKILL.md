@@ -120,9 +120,40 @@ node {DDD_HELP}/scripts/backend-output-validate.mjs {IDEA_DIR} --subdomain {subd
 
 失败时重启 thinker（最多 2 次），附加上次失败信息。超过 2 次暂停询问用户。
 
+### 设计审查（对抗性质量校验）
+
+每个子域设计验证通过后，启动多维对抗审查 Workflow：
+
+1. **确定审查力度**：读取 assessment.md 中该子域的复杂度标注：
+   - `simple` → mode=`light`（3 reviewer，无盲验证）
+   - `normal`（默认）→ mode=`standard`（3 reviewer + 盲验证）
+   - `complex` → mode=`deep`（3 reviewer + 盲验证 + 交叉评审）
+   - 若 `$ARGUMENTS` 含 `--review-mode <mode>` 则覆盖
+
+2. **调用 Workflow**：
+
+```
+Workflow({
+  name: 'design-review',
+  args: {
+    designPath: "{IDEA_DIR}/backend-designs/{nnn}-{subdomain-slug}.md",
+    requirementPath: "{IDEA_DIR}/requirement.md",
+    principlesPath: "skills/backend-principles/references/architecture.md",
+    subdomain: "{subdomain}",
+    language: "{BACKEND_LANG}",
+    mode: "{review_mode}"
+  }
+})
+```
+
+3. **结果处理**：
+   - `status: "pass"` → 继续下一步
+   - `status: "revise"` → 用 `--modification` 重新调用 Thinker（最多 1 次修订），修改内容从 `modifications[]` 拼接
+   - 修订后再次审查仍为 `revise` → 暂停，向用户展示审查报告，由用户决定是否接受当前设计
+
 ### Workflow State 初始化
 
-所有子域设计完成后：
+所有子域设计完成（含审查通过）后：
 
 ```bash
 STACK=backend node {SCRIPTS}/workflow-status.mjs {IDEA_DIR} --init {idea-name} {subdomain1} {subdomain2} ...

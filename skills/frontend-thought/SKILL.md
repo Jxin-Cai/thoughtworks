@@ -108,9 +108,40 @@ TASK_EOF
 
 每个 subagent 返回后验证设计文件存在。失败最多重试 2 次。
 
+### 设计审查（对抗性质量校验）
+
+每个 Feature 设计验证通过后，启动多维对抗审查 Workflow：
+
+1. **确定审查力度**：读取 frontend-assessment.md 中该 Feature 的复杂度标注：
+   - `simple` → mode=`light`
+   - `normal`（默认）→ mode=`standard`
+   - `complex` → mode=`deep`
+   - 若 `$ARGUMENTS` 含 `--review-mode <mode>` 则覆盖
+
+2. **调用 Workflow**：
+
+```
+Workflow({
+  name: 'design-review',
+  args: {
+    designPath: "{IDEA_DIR}/frontend-designs/{nnn}-{feature-slug}.md",
+    requirementPath: "{IDEA_DIR}/frontend-requirement.md",
+    principlesPath: "skills/frontend-principles/references/architecture.md",
+    subdomain: "{feature}",
+    language: "react-ts",
+    mode: "{review_mode}"
+  }
+})
+```
+
+3. **结果处理**：
+   - `status: "pass"` → 继续下一步
+   - `status: "revise"` → 用 `--modification` 重新调用 Thinker（最多 1 次修订）
+   - 修订后仍为 `revise` → 暂停，向用户展示审查报告
+
 ### Workflow State 初始化
 
-所有 Feature 设计完成后：
+所有 Feature 设计完成（含审查通过）后：
 
 ```bash
 STACK=frontend node {SCRIPTS}/workflow-status.mjs {IDEA_DIR} --init {idea-name} {feature1} {feature2} ...

@@ -98,6 +98,39 @@ Prompt 包含：
 # 用 Glob 按 verify patterns 检查各层产物
 ```
 
+5. **代码审查（对抗性质量校验）**：
+
+产物验证通过后，启动多维对抗审查 Workflow：
+
+**确定审查力度**：读取 assessment.md 中该子域的复杂度标注：
+- `simple` → mode=`light`（4 reviewer，无对抗验证）
+- `normal`（默认）→ mode=`standard`（4 reviewer + 对抗验证 + 自动修复）
+- `complex` → mode=`deep`（4 reviewer + 对抗验证 + 自动修复）
+- 若 `$ARGUMENTS` 含 `--review-mode <mode>` 则覆盖
+
+**调用 Workflow**：
+
+```
+Workflow({
+  name: 'code-review',
+  args: {
+    designPath: "{IDEA_DIR}/backend-designs/{nnn}-{subdomain-slug}.md",
+    codePaths: ["{从 verify patterns 推导出的 glob 列表}"],
+    conventionsPath: "skills/backend-principles/references/{BACKEND_LANG}/conventions.md",
+    subdomain: "{subdomain}",
+    language: "{BACKEND_LANG}",
+    mode: "{review_mode}",
+    ideaDir: "{IDEA_DIR}"
+  }
+})
+```
+
+**结果处理**：
+- `status: "pass"` → 保持 `coded` 状态
+- `status: "fixed"` → 保持 `coded` 状态（workflow 已自动修复代码）
+- `status: "needs_fix"` → 重新调用 Worker（最多 1 次），prompt 追加审查 findings 作为修复指引
+- `status: "blocked"` → 标记 `failed`，向用户报告回归问题
+
 ### 循环逻辑
 
 - 查询 `--next-subdomains code` → 启动 → 等待返回 → 再次查询

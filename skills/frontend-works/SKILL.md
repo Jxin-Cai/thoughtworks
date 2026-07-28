@@ -91,6 +91,35 @@ TASK_EOF
 
 4. **subagent 返回后**：SubagentStop hook 自动将 `coding` → `coded`。
 
+5. **代码审查（对抗性质量校验）**：
+
+产物验证通过后，启动多维对抗审查 Workflow：
+
+**确定审查力度**：读取 frontend-assessment.md 中该 Feature 的复杂度标注（同设计审查逻辑）。
+
+**调用 Workflow**：
+
+```
+Workflow({
+  name: 'code-review',
+  args: {
+    designPath: "{IDEA_DIR}/frontend-designs/{nnn}-{feature-slug}.md",
+    codePaths: ["**/src/features/{feature}/**/*.*", "**/src/entities/{feature}/**/*.*", "**/src/pages/**/*.*"],
+    conventionsPath: "skills/frontend-principles/references/react-ts/conventions.md",
+    subdomain: "{feature}",
+    language: "react-ts",
+    mode: "{review_mode}",
+    ideaDir: "{IDEA_DIR}"
+  }
+})
+```
+
+**结果处理**：
+- `status: "pass"` → 保持 `coded`
+- `status: "fixed"` → 保持 `coded`（workflow 已自动修复）
+- `status: "needs_fix"` → 重新调用 Worker（最多 1 次）
+- `status: "blocked"` → 标记 `failed`，向用户报告
+
 ### 循环逻辑
 
 - 查询就绪 Feature → 启动 → 等待 → 再次查询
