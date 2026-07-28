@@ -67,21 +67,32 @@ node {SCRIPTS}/gate-check.mjs {IDEA_DIR} --batch requirement-exists,assessment-e
 
 ---
 
-## Step 3: 子域设计（subagent 执行）
+## Step 3: 子域设计（并行 subagent 执行）
 
-为每个需要设计的子域启动独立 Thinker subagent。
+为每个需要设计的子域启动独立 Thinker subagent，**无依赖的子域并行启动**。
 
-### 执行方式
+### 执行方式（并行批次）
 
 1. **确定子域列表**：从 assessment.md 提取子域及其依赖关系
-2. **按依赖排序**：无依赖的子域先设计（可并行），有依赖的等上游子域 designed 后再启动
-3. **对每个子域执行启动准备**（见下方），然后启动 subagent
-4. **subagent 返回后**：执行产出验证
-5. **所有子域完成后**：初始化 `workflow-state.yaml`，执行汇总校验
+2. **计算并行批次**：所有无依赖（或依赖已 `designed`/`confirmed`/`coded`）的子域组成当前批次
+3. **对批次内所有子域同时执行启动准备**（标记 designing + 写任务文件）
+4. **在同一个 tool call 消息中并行启动所有 Thinker subagent**
+5. **所有并行 subagent 返回后**：逐个执行产出验证 + 设计审查
+6. **展示进度**：`node {SCRIPTS}/progress-view.mjs {IDEA_DIR} backend`
+7. **检查下一批**：上游 designed 后可能解锁了下游子域，重复步骤 2-6
+8. **所有子域完成后**：初始化 `workflow-state.yaml`，执行汇总校验
+
+### 并行批次判定规则
+
+子域 X 可进入当前批次的条件：
+- X 的 status 为 `pending`（或 `failed` 待重试）
+- X 的 `depends_on` 列表中所有子域的 status 已为 `designed`、`confirmed` 或 `coded`
+
+如果当前批次只有 1 个子域，退化为单子域执行（无并行开销）。
 
 ### subagent 启动前准备
 
-对每个子域：
+对**批次内每个**子域：
 
 1. **标记状态为 designing**：
 ```bash
@@ -97,6 +108,19 @@ TASK_EOF
 
 > SubagentStop hook 自动将 `designing` → `designed`。
 
+### 并行启动 subagent
+
+<HARD-GATE>
+批次内有多个子域时，必须在**同一个 Agent tool call 块中**并行启动所有 Thinker subagent。
+禁止逐个启动等待返回再启动下一个。
+</HARD-GATE>
+
+```
+// 并行启动示例（2 个子域）
+Agent(subagent_type: "tw:agent-ddd-thinker", prompt: subdomain_A_prompt)
+Agent(subagent_type: "tw:agent-ddd-thinker", prompt: subdomain_B_prompt)
+```
+
 ### 构建 subagent prompt
 
 使用 Read 工具加载 `references/thinker-prompt-skeleton.md`，按其模板组装 prompt。
@@ -110,9 +134,9 @@ TASK_EOF
 
 **`--modification` 处理**：如存在，在 MISSION 前注入修改说明块。
 
-### 产出验证
+### 产出验证（逐子域串行）
 
-每个 subagent 返回后验证：
+并行 subagent 全部返回后，**逐个**验证每个子域产出：
 
 ```bash
 node {DDD_HELP}/scripts/backend-output-validate.mjs {IDEA_DIR} --subdomain {subdomain}
@@ -120,7 +144,7 @@ node {DDD_HELP}/scripts/backend-output-validate.mjs {IDEA_DIR} --subdomain {subd
 
 失败时重启 thinker（最多 2 次），附加上次失败信息。超过 2 次暂停询问用户。
 
-### 设计审查（对抗性质量校验）
+### 设计审查（逐子域串行，对抗性质量校验）
 
 每个子域设计验证通过后，启动多维对抗审查 Workflow：
 
@@ -150,6 +174,12 @@ Workflow({
    - `status: "pass"` → 继续下一步
    - `status: "revise"` → 用 `--modification` 重新调用 Thinker（最多 1 次修订），修改内容从 `modifications[]` 拼接
    - 修订后再次审查仍为 `revise` → 暂停，向用户展示审查报告，由用户决定是否接受当前设计
+
+### 错误处理（并行场景）
+
+- 批次内某子域失败**不影响**同批其他子域的验证和审查流程
+- 失败子域不阻塞下一批次的启动（只要下一批的依赖不包含该失败子域）
+- 失败子域在所有批次完成后集中重试
 
 ### Workflow State 初始化
 

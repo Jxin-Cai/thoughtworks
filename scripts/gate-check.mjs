@@ -204,6 +204,23 @@ function checkGate(ideaDir, gateId, extra) {
       return { pass: true, ...(cleaned > 0 ? { cleaned } : {}) };
     }
 
+    case 'verify-build-pass': {
+      const vSubdomain = extra[0];
+      if (!vSubdomain) return { pass: false, reason: 'verify-build-pass 需要指定子域名' };
+      const verifyFile = `${ideaDir}/verify-${vSubdomain}.json`;
+      if (!existsSync(verifyFile)) return { pass: false, reason: `验证结果文件不存在: verify-${vSubdomain}.json` };
+      try {
+        const data = JSON.parse(readFileSync(verifyFile, 'utf-8'));
+        if (data.compile && data.compile.status === 'fail') {
+          const errors = (data.compile.errors || []).slice(0, 5).join('; ');
+          return { pass: false, reason: `编译失败: ${errors || '(无详细错误)'}` };
+        }
+        return { pass: true };
+      } catch (e) {
+        return { pass: false, reason: `验证结果文件解析失败: ${e.message}` };
+      }
+    }
+
     default:
       return { pass: false, reason: `未知门控 ID: ${gateId}` };
   }

@@ -66,21 +66,24 @@ node {SCRIPTS}/gate-check.mjs {IDEA_DIR} --batch frontend-requirement-exists,fro
 
 ---
 
-## Step 3: Feature 设计（subagent 执行）
+## Step 3: Feature 设计（并行 subagent 执行）
 
-为每个需要设计的 Feature 启动独立 Thinker subagent。
+为每个需要设计的 Feature 启动独立 Thinker subagent，**无依赖的 Feature 并行启动**。
 
-### 执行方式
+### 执行方式（并行批次）
 
 1. **确定 Feature 列表**：从 frontend-assessment.md 提取 Feature 及依赖关系
-2. **按依赖排序**：无依赖的 Feature 先设计（可并行）
-3. **对每个 Feature 执行启动准备**，然后启动 subagent
-4. **subagent 返回后**：执行产出验证
-5. **所有 Feature 完成后**：初始化 `frontend-workflow-state.yaml`，执行汇总校验
+2. **计算并行批次**：所有无依赖（或依赖已 `designed`/`confirmed`/`coded`）的 Feature 组成当前批次
+3. **对批次内所有 Feature 同时执行启动准备**（标记 designing + 写任务文件）
+4. **在同一个 tool call 消息中并行启动所有 Thinker subagent**
+5. **所有并行 subagent 返回后**：逐个执行产出验证 + 设计审查
+6. **展示进度**：`node {SCRIPTS}/progress-view.mjs {IDEA_DIR} frontend`
+7. **检查下一批**：上游 designed 后可能解锁了下游 Feature，重复步骤 2-6
+8. **所有 Feature 完成后**：初始化 `frontend-workflow-state.yaml`，执行汇总校验
 
 ### subagent 启动前准备
 
-对每个 Feature：
+对**批次内每个** Feature：
 
 1. **标记状态为 designing**：
 ```bash
@@ -94,6 +97,13 @@ cat > {IDEA_DIR}/.current-task-{feature}-$(date +%s).json << 'TASK_EOF'
 TASK_EOF
 ```
 
+### 并行启动 subagent
+
+<HARD-GATE>
+批次内有多个 Feature 时，必须在**同一个 Agent tool call 块中**并行启动所有 Thinker subagent。
+禁止逐个启动等待返回再启动下一个。
+</HARD-GATE>
+
 ### 构建 subagent prompt
 
 使用 `tw:agent-frontend-thinker` 作为 subagent_type。每个 Feature 的 prompt 包含：
@@ -104,9 +114,9 @@ TASK_EOF
 - **CONTEXT**：frontend-requirement.md 路径 + 后端 OHS API 契约 + 已有前端代码扫描指引
 - **OUTPUT**：写入路径 `frontend-designs/{nnn}-{feature-slug}.md`
 
-### 产出验证
+### 产出验证（逐 Feature 串行）
 
-每个 subagent 返回后验证设计文件存在。失败最多重试 2 次。
+并行 subagent 全部返回后，逐个验证设计文件存在。失败最多重试 2 次。
 
 ### 设计审查（对抗性质量校验）
 

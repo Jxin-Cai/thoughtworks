@@ -1,7 +1,7 @@
 {
   "name": "tw",
   "description": "ThoughtWorks DDD Spec-Driven Development framework",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "author": {
     "name": "jxin",
     "email": "jxin@thoughtworks.com"
@@ -14,7 +14,8 @@
     "./agents/agent-ddd-thinker.md",
     "./agents/agent-ddd-worker.md",
     "./agents/agent-frontend-thinker.md",
-    "./agents/agent-frontend-worker.md"
+    "./agents/agent-frontend-worker.md",
+    "./agents/agent-verifier.md"
   ],
   "skills": ["./skills/"]
 }

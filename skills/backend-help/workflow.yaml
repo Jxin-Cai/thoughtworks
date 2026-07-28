@@ -101,3 +101,15 @@ state-machine:
     - from: failed
       to: pending
       trigger: retry
+
+# 编译验证命令模板（由 Verifier Agent 使用）
+verify-build:
+  java:
+    compile: "mvn compile -q -DskipTests"
+    compile-module: "mvn compile -pl {module} -q -DskipTests"
+  python:
+    compile: "python -m py_compile {files}"
+  go:
+    compile: "go build ./..."
+  typescript:
+    compile: "npx tsc --noEmit"
